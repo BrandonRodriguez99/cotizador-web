@@ -255,7 +255,7 @@ export function deleteConcepto(id, hard = false) {
 }
 
 export async function getCotizaciones() {
-  return fetchJson('cotizaciones');
+  return fetchJson('cotizaciones', { headers: authHeaders() });
 }
 
 export async function getCotizacionById(id) {
@@ -299,7 +299,7 @@ export async function getDashboard() {
 }
 
 export async function getOrdenesCompra() {
-  return fetchJson('ordenescompra');
+  return fetchJson('ordenescompra', { headers: authHeaders() });
 }
 
 export async function createOrdenCompra(data) {
