@@ -302,6 +302,10 @@ export async function getOrdenesCompra() {
   return fetchJson('ordenescompra', { headers: authHeaders() });
 }
 
+export async function deleteOrdenCompra(id) {
+  return fetchJson(`ordenescompra/${id}`, { method: 'DELETE', headers: authHeaders() });
+}
+
 export async function createOrdenCompra(data) {
   return postJson('ordenescompra', data);
 }

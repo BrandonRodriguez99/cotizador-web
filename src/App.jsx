@@ -20,6 +20,7 @@ import {
   createOrdenCompra,
   approveOrdenCompra,
   rejectOrdenCompra,
+  deleteOrdenCompra,
 } from './api'
 import { CATALOG_DEFINITIONS } from './catalogConfig'
 import CatalogFormModal from './CatalogFormModal'
@@ -266,6 +267,11 @@ function App() {
 
   async function handleRejectOrden(id, aprobador, motivo) {
     await rejectOrdenCompra(id, aprobador, motivo)
+    await loadOrdenes()
+  }
+
+  async function handleDeleteOrden(id) {
+    await deleteOrdenCompra(id)
     await loadOrdenes()
   }
 
@@ -819,6 +825,7 @@ function App() {
             onCreateOrden={handleCreateOrden}
             onApproveOrden={handleApproveOrden}
             onRejectOrden={handleRejectOrden}
+            onDeleteOrden={handleDeleteOrden}
           />
         ) : activeView === 'historial' ? (
           <HistorialCotizaciones

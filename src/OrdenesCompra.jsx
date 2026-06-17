@@ -5,6 +5,7 @@ import {
   uploadFacturaArchivo, downloadFacturaArchivo,
   getSolicitudFondos, createSolicitudFondos, approveSolicitudFondos, getSolicitudesFondosPendientes,
   getEvaluacionProveedor, saveEvaluacionProveedor,
+  deleteOrdenCompra,
 } from './api'
 
 function formatMoney(value) {
@@ -1028,7 +1029,7 @@ function emptyOrderForm(folioValue) {
 // ── Componente principal ───────────────────────────────────────────────────────
 export default function OrdenesCompra({
   proveedores = [], unidadesNegocio = [], folio, ordenes = [],
-  currentUser, currentUserRol, onCreateOrden, onApproveOrden, onRejectOrden,
+  currentUser, currentUserRol, onCreateOrden, onApproveOrden, onRejectOrden, onDeleteOrden,
 }) {
   const rolApprover = ROLE_TO_APPROVER[currentUserRol] || null
   const [activeSection, setActiveSection] = useState('crear')
@@ -1202,6 +1203,17 @@ export default function OrdenesCompra({
     setModal(null)
     setSuccessMsg(msg)
     setTimeout(() => setSuccessMsg(null), 6000)
+  }
+
+  async function handleDeleteOrden(order) {
+    if (!window.confirm(`¿Eliminar la orden ${order.Folio}? Esta acción no se puede deshacer.`)) return
+    try {
+      await onDeleteOrden(order.OrdenCompraId)
+      setSuccessMsg(`Orden ${order.Folio} eliminada correctamente.`)
+      setTimeout(() => setSuccessMsg(null), 6000)
+    } catch (err) {
+      alert('Error al eliminar: ' + err.message)
+    }
   }
 
   const misOrdenes = useMemo(
@@ -1715,6 +1727,11 @@ export default function OrdenesCompra({
                               onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
                               PDF
                             </button>
+                            <button type="button" className="ghost-button"
+                              style={{ fontSize:'11px', padding:'3px 8px', color:'#b45309', borderColor:'#fde68a' }}
+                              onClick={() => openModal('factura', order)}>
+                              Factura
+                            </button>
                             {isAprobada && (
                               <>
                                 <button type="button" className="ghost-button"
@@ -1733,6 +1750,13 @@ export default function OrdenesCompra({
                                   Eval. Servicios
                                 </button>
                               </>
+                            )}
+                            {(isAdmin || isAutorizador) && (
+                              <button type="button" className="ghost-button"
+                                style={{ fontSize:'11px', padding:'3px 8px', color:'#dc2626', borderColor:'#fecaca' }}
+                                onClick={() => handleDeleteOrden(order)}>
+                                Eliminar
+                              </button>
                             )}
                           </div>
                         </td>
