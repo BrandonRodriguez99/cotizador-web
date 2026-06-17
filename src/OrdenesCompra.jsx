@@ -1717,7 +1717,7 @@ export default function OrdenesCompra({
                           </span>
                         </td>
                         <td>{order.Proveedor}</td>
-                        <td>{order.CreadoPor}</td>
+                        <td>{order.Creador}</td>
                         <td>{formatMoney(order.Total)}</td>
                         <td><StatusBadge status={status} /></td>
                         <td>
