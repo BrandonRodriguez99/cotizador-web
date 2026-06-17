@@ -1666,11 +1666,14 @@ export default function OrdenesCompra({
               })()}
             </div>
 
-            <details style={{ marginTop: '24px' }}>
-              <summary style={{ cursor: 'pointer', color: '#6b7280', fontSize: '13px', userSelect: 'none', padding: '8px 0' }}>
-                Ver historial completo ({filtrarOrdenes(ordenes).length}{hasFiltros ? ` de ${ordenes.length}` : ''})
-              </summary>
-              <div className="table-wrap" style={{ marginTop: '12px' }}>
+            <div style={{ marginTop: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0 }}>Historial de Órdenes</h2>
+                <span style={{ fontSize: '12px', color: '#6b7280', background: '#f3f4f6', borderRadius: '999px', padding: '2px 10px' }}>
+                  {filtrarOrdenes(ordenes).length}{hasFiltros ? ` de ${ordenes.length}` : ''} orden{filtrarOrdenes(ordenes).length !== 1 ? 'es' : ''}
+                </span>
+              </div>
+              <div className="table-wrap">
                 <table className="participants-table">
                   <thead>
                     <tr>
@@ -1731,7 +1734,7 @@ export default function OrdenesCompra({
                   </tbody>
                 </table>
               </div>
-            </details>
+            </div>
           </div>
         )}
       </div>
