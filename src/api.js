@@ -419,6 +419,14 @@ export async function downloadOrdenCompraPdf(id) {
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
+export async function getMe(token) {
+  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export async function login(correo, password) {
   const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',

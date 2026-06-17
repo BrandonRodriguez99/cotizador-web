@@ -21,6 +21,7 @@ import {
   approveOrdenCompra,
   rejectOrdenCompra,
   deleteOrdenCompra,
+  getMe,
 } from './api'
 import { CATALOG_DEFINITIONS } from './catalogConfig'
 import CatalogFormModal from './CatalogFormModal'
@@ -143,6 +144,22 @@ function App() {
     const sequence = getNextOrderSequence()
     return `OC-${year}-${String(sequence).padStart(6, '0')}`
   }
+
+  // Sincronizar rol desde DB al iniciar sesión (detecta cambios de rol por admin)
+  useEffect(() => {
+    if (!token) return
+    getMe(token).then((data) => {
+      if (!data) return
+      const rolActual = usuario?.rol
+      if (data.usuario.rol !== rolActual) {
+        window.localStorage.setItem('cotizador-token', data.token)
+        window.localStorage.setItem('cotizador-usuario', JSON.stringify(data.usuario))
+        setToken(data.token)
+        setUsuario(data.usuario)
+      }
+    }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     async function loadCatalogs() {
