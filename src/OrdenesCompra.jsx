@@ -1226,6 +1226,7 @@ export default function OrdenesCompra({
   const TABS = [
     { key: 'crear', label: 'Nueva orden' },
     { key: 'misOrdenes', label: `Mis órdenes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
+    { key: 'historial', label: 'Órdenes de Compra' },
     { key: 'autorizar', label: 'Autorizar' },
   ]
 
@@ -1666,74 +1667,80 @@ export default function OrdenesCompra({
               })()}
             </div>
 
-            <div style={{ marginTop: '32px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0 }}>Historial de Órdenes</h2>
-                <span style={{ fontSize: '12px', color: '#6b7280', background: '#f3f4f6', borderRadius: '999px', padding: '2px 10px' }}>
-                  {filtrarOrdenes(ordenes).length}{hasFiltros ? ` de ${ordenes.length}` : ''} orden{filtrarOrdenes(ordenes).length !== 1 ? 'es' : ''}
-                </span>
-              </div>
-              <div className="table-wrap">
-                <table className="participants-table">
-                  <thead>
-                    <tr>
-                      <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Creado por</th>
-                      <th>Total</th><th>Estado</th><th>Documentos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtrarOrdenes(ordenes).map((order) => {
-                      const status = getOrderStatus(order)
-                      const tipoLabel = (order.Tipo||'compras').toLowerCase()
-                      const isAprobada = status === 'Aprobada'
-                      return (
-                        <tr key={order.OrdenCompraId}>
-                          <td><strong>{order.Folio}</strong></td>
-                          <td>
-                            <span style={{ fontSize:'11px', fontWeight:600, padding:'2px 8px', borderRadius:'999px',
-                              background: tipoLabel === 'servicios' ? '#f5f3ff' : '#eff6ff',
-                              color: tipoLabel === 'servicios' ? '#7c3aed' : '#1d4ed8' }}>
-                              {tipoLabel === 'servicios' ? 'Servicios' : 'Compras'}
-                            </span>
-                          </td>
-                          <td>{order.Proveedor}</td>
-                          <td>{order.Creador}</td>
-                          <td>{formatMoney(order.Total)}</td>
-                          <td><StatusBadge status={status} /></td>
-                          <td>
-                            <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
-                              <button type="button" className="ghost-button"
-                                style={{ fontSize:'11px', padding:'3px 8px' }}
-                                onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
-                                PDF
-                              </button>
-                              {isAprobada && (
-                                <>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize:'11px', padding:'3px 8px', color:'#15803d', borderColor:'#bbf7d0' }}
-                                    onClick={() => openModal('solicitud', order, !isAdmin)}>
-                                    Sol. Fondos
-                                  </button>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize:'11px', padding:'3px 8px', color:'#1d4ed8', borderColor:'#bfdbfe' }}
-                                    onClick={() => openModal('evaluacion-compras', order)}>
-                                    Eval. Compras
-                                  </button>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize:'11px', padding:'3px 8px', color:'#7c3aed', borderColor:'#ddd6fe' }}
-                                    onClick={() => openModal('evaluacion-servicios', order)}>
-                                    Eval. Servicios
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+          </div>
+        )}
+
+        {/* ── HISTORIAL DE ÓRDENES ── */}
+        {activeSection === 'historial' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0 }}>Órdenes de Compra</h2>
+              <span style={{ fontSize: '12px', color: '#6b7280', background: '#f3f4f6', borderRadius: '999px', padding: '2px 10px' }}>
+                {filtrarOrdenes(ordenes).length}{hasFiltros ? ` de ${ordenes.length}` : ''} orden{filtrarOrdenes(ordenes).length !== 1 ? 'es' : ''}
+              </span>
+            </div>
+            <div className="table-wrap">
+              <table className="participants-table">
+                <thead>
+                  <tr>
+                    <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Creado por</th>
+                    <th>Total</th><th>Estado</th><th>Documentos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtrarOrdenes(ordenes).length === 0 ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af', padding: '32px' }}>No hay órdenes registradas.</td></tr>
+                  ) : filtrarOrdenes(ordenes).map((order) => {
+                    const status = getOrderStatus(order)
+                    const tipoLabel = (order.Tipo||'compras').toLowerCase()
+                    const isAprobada = status === 'Aprobada'
+                    return (
+                      <tr key={order.OrdenCompraId}>
+                        <td><strong>{order.Folio}</strong></td>
+                        <td>
+                          <span style={{ fontSize:'11px', fontWeight:600, padding:'2px 8px', borderRadius:'999px',
+                            background: tipoLabel === 'servicios' ? '#f5f3ff' : '#eff6ff',
+                            color: tipoLabel === 'servicios' ? '#7c3aed' : '#1d4ed8' }}>
+                            {tipoLabel === 'servicios' ? 'Servicios' : 'Compras'}
+                          </span>
+                        </td>
+                        <td>{order.Proveedor}</td>
+                        <td>{order.CreadoPor}</td>
+                        <td>{formatMoney(order.Total)}</td>
+                        <td><StatusBadge status={status} /></td>
+                        <td>
+                          <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
+                            <button type="button" className="ghost-button"
+                              style={{ fontSize:'11px', padding:'3px 8px' }}
+                              onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
+                              PDF
+                            </button>
+                            {isAprobada && (
+                              <>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#15803d', borderColor:'#bbf7d0' }}
+                                  onClick={() => openModal('solicitud', order, !isAdmin)}>
+                                  Sol. Fondos
+                                </button>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#1d4ed8', borderColor:'#bfdbfe' }}
+                                  onClick={() => openModal('evaluacion-compras', order)}>
+                                  Eval. Compras
+                                </button>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#7c3aed', borderColor:'#ddd6fe' }}
+                                  onClick={() => openModal('evaluacion-servicios', order)}>
+                                  Eval. Servicios
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
