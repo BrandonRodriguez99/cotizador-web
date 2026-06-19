@@ -58,37 +58,31 @@ export default function CatalogFormModal({
   function handleSubmit(event) {
     event.preventDefault()
 
-    // Sanitize form to avoid circular values (DOM nodes, events) and coerce number fields
+    // Solo enviar los campos definidos en definition.fields (no campos internos del DB)
+    const allowedFields = definition?.fields?.map((f) => f.name) || []
     const safeForm = {}
-    for (const [k, v] of Object.entries(form || {})) {
-      if (v === undefined) {
-        safeForm[k] = ''
+
+    for (const fieldName of allowedFields) {
+      const v = form[fieldName]
+      if (v === undefined || v === null) {
+        safeForm[fieldName] = v ?? null
         continue
       }
-
-      if (v !== null && typeof v === 'object') {
-        try {
-          // if value is serializable, keep as-is
-          JSON.stringify(v)
-          safeForm[k] = v
-        } catch (err) {
-          // fallback to string representation to avoid circular errors
-          safeForm[k] = String(v)
-        }
+      if (typeof v === 'object') {
+        try { JSON.stringify(v); safeForm[fieldName] = v }
+        catch { safeForm[fieldName] = String(v) }
       } else {
-        safeForm[k] = v
+        safeForm[fieldName] = v
       }
     }
 
-    // coerce numeric fields according to definition
-    if (definition && Array.isArray(definition.fields)) {
-      definition.fields.forEach((f) => {
-        if (f.type === 'number' && safeForm[f.name] !== undefined && safeForm[f.name] !== '') {
-          const n = Number(safeForm[f.name])
-          safeForm[f.name] = Number.isFinite(n) ? n : safeForm[f.name]
-        }
-      })
-    }
+    // Coerce numeric fields
+    definition?.fields?.forEach((f) => {
+      if (f.type === 'number' && safeForm[f.name] !== undefined && safeForm[f.name] !== '' && safeForm[f.name] !== null) {
+        const n = Number(safeForm[f.name])
+        safeForm[f.name] = Number.isFinite(n) ? n : safeForm[f.name]
+      }
+    })
 
     onSubmit(safeForm)
   }
