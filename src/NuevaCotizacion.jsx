@@ -524,7 +524,9 @@ export default function NuevaCotizacion({
                 {costRows.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={{ padding: '24px', color: '#6b7280' }}>
-                      No hay conceptos agregados a la cotización.
+                      {editingCotizacionId
+                        ? 'Esta cotización no tiene costos guardados en la base de datos. Agrega los conceptos de costo nuevamente.'
+                        : 'No hay conceptos agregados a la cotización.'}
                     </td>
                   </tr>
                 ) : (

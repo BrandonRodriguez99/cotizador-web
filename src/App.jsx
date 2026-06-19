@@ -350,12 +350,12 @@ function App() {
 
       const costosMapeados = costos.map(c => ({
         ConceptoCostoId: c.CotizacionCostoId,
-        Nombre: c.Concepto,
-        TipoCalculo: c.TipoCalculo,
-        Formula: c.Formula,
-        TipoCosto: c.TipoCosto,
-        CostoUnitario: c.CostoUnitario,
-        quantityOverride: c.Cantidad,
+        Nombre: c.Concepto || '',
+        TipoCalculo: c.TipoCalculo || '',
+        Formula: c.Formula || '',
+        TipoCosto: c.TipoCosto || 'Directos',
+        CostoUnitario: Number(c.CostoUnitario) || 0,
+        quantityOverride: c.Cantidad ?? '',
       }))
 
       setEditingCotizacion({ id: cotizacion.CotizacionId, initialConcepts: costosMapeados })
