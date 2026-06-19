@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { getCotizacionById } from './api'
 
 const POR_PAGINA = 15
@@ -128,7 +128,72 @@ function imprimirCotizacion(data) {
   win.document.close()
 }
 
-export default function HistorialCotizaciones({ cotizaciones, loading, error, onVerCotizacion, onDeleteCotizacion }) {
+function AccionesMenu({ cotizacion, onVer, onPdf, onEditar, onEliminar, descargando }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const itemStyle = {
+    display: 'flex', alignItems: 'center', gap: '8px',
+    width: '100%', padding: '8px 16px', fontSize: '13px',
+    background: 'none', border: 'none', cursor: 'pointer',
+    textAlign: 'left', color: '#111827', whiteSpace: 'nowrap',
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: open ? '#f3f4f6' : 'none', border: '1px solid #e5e7eb',
+          borderRadius: '6px', padding: '4px 8px', cursor: 'pointer',
+          fontSize: '16px', lineHeight: 1, color: '#6b7280',
+        }}
+        title="Acciones"
+      >
+        ⋮
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', right: 0, top: '100%', marginTop: '4px',
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 50, minWidth: '150px',
+        }}>
+          <button type="button" style={itemStyle}
+            onClick={() => { setOpen(false); onVer() }}>
+            👁 Ver detalle
+          </button>
+          <button type="button" style={itemStyle}
+            onClick={() => { setOpen(false); onEditar() }}>
+            ✏️ Editar
+          </button>
+          <button type="button"
+            style={{ ...itemStyle, opacity: descargando ? 0.6 : 1 }}
+            disabled={descargando}
+            onClick={() => { setOpen(false); onPdf() }}>
+            📄 {descargando ? 'Generando...' : 'PDF'}
+          </button>
+          <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }} />
+          <button type="button"
+            style={{ ...itemStyle, color: '#dc2626' }}
+            onClick={() => { setOpen(false); onEliminar() }}>
+            🗑 Eliminar
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function HistorialCotizaciones({ cotizaciones, loading, error, onVerCotizacion, onEditarCotizacion, onDeleteCotizacion }) {
   const [texto, setTexto]         = useState('')
   const [estado, setEstado]       = useState('')
   const [desde, setDesde]         = useState('')
@@ -274,33 +339,14 @@ export default function HistorialCotizaciones({ cotizaciones, loading, error, on
                   <td>{fmtMoney(c.TotalConGanancia)}</td>
                   <td>{fmtFecha(c.FechaCreacion)}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        type="button"
-                        className="primary-button"
-                        style={{ padding: '4px 10px', fontSize: '13px' }}
-                        onClick={() => onVerCotizacion(c.CotizacionId)}
-                      >
-                        Ver
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost-button"
-                        style={{ padding: '4px 10px', fontSize: '13px' }}
-                        disabled={descargando === c.CotizacionId}
-                        onClick={() => handleDescargar(c.CotizacionId)}
-                      >
-                        {descargando === c.CotizacionId ? '...' : 'PDF'}
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost-button"
-                        style={{ padding: '4px 10px', fontSize: '13px', color: '#dc2626', borderColor: '#fca5a5' }}
-                        onClick={() => onDeleteCotizacion(c.CotizacionId, c.Folio)}
-                      >
-                        Eliminar
-                      </button>
-                    </div>
+                    <AccionesMenu
+                      cotizacion={c}
+                      descargando={descargando === c.CotizacionId}
+                      onVer={() => onVerCotizacion(c.CotizacionId)}
+                      onEditar={() => onEditarCotizacion && onEditarCotizacion(c.CotizacionId)}
+                      onPdf={() => handleDescargar(c.CotizacionId)}
+                      onEliminar={() => onDeleteCotizacion(c.CotizacionId, c.Folio)}
+                    />
                   </td>
                 </tr>
               ))

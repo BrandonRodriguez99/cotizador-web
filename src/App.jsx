@@ -850,6 +850,7 @@ function App() {
             loading={cotizacionesLoading}
             error={cotizacionesError}
             onVerCotizacion={loadDetallesCotizacion}
+            onEditarCotizacion={loadDetallesCotizacion}
             onDeleteCotizacion={handleDeleteCotizacion}
           />
           ) : activeView === 'aprobaciones' ? (
