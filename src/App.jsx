@@ -912,6 +912,8 @@ function App() {
             onVerCotizacion={loadDetallesCotizacion}
             onEditarCotizacion={handleEditarCotizacion}
             onDeleteCotizacion={handleDeleteCotizacion}
+            currentUser={creadoPor}
+            currentUserRol={usuario?.rol}
           />
           ) : activeView === 'aprobaciones' ? (
             <section className="panel card">

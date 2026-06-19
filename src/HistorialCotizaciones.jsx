@@ -128,7 +128,7 @@ function imprimirCotizacion(data) {
   win.document.close()
 }
 
-function AccionesMenu({ cotizacion, onVer, onPdf, onEditar, onEliminar, descargando }) {
+function AccionesMenu({ cotizacion, onVer, onPdf, onEditar, onEliminar, descargando, currentUser, currentUserRol }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -171,29 +171,35 @@ function AccionesMenu({ cotizacion, onVer, onPdf, onEditar, onEliminar, descarga
             onClick={() => { setOpen(false); onVer() }}>
             👁 Ver detalle
           </button>
-          <button type="button" style={itemStyle}
-            onClick={() => { setOpen(false); onEditar() }}>
-            ✏️ Editar
-          </button>
+          {cotizacion.CreadoPor === currentUser && (
+            <button type="button" style={itemStyle}
+              onClick={() => { setOpen(false); onEditar() }}>
+              ✏️ Editar
+            </button>
+          )}
           <button type="button"
             style={{ ...itemStyle, opacity: descargando ? 0.6 : 1 }}
             disabled={descargando}
             onClick={() => { setOpen(false); onPdf() }}>
             📄 {descargando ? 'Generando...' : 'PDF'}
           </button>
-          <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }} />
-          <button type="button"
-            style={{ ...itemStyle, color: '#dc2626' }}
-            onClick={() => { setOpen(false); onEliminar() }}>
-            🗑 Eliminar
-          </button>
+          {(currentUserRol === 'admin' || currentUserRol === 'autorizador1' || currentUserRol === 'autorizador2') && (
+            <>
+              <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }} />
+              <button type="button"
+                style={{ ...itemStyle, color: '#dc2626' }}
+                onClick={() => { setOpen(false); onEliminar() }}>
+                🗑 Eliminar
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-export default function HistorialCotizaciones({ cotizaciones, loading, error, onVerCotizacion, onEditarCotizacion, onDeleteCotizacion }) {
+export default function HistorialCotizaciones({ cotizaciones, loading, error, onVerCotizacion, onEditarCotizacion, onDeleteCotizacion, currentUser, currentUserRol }) {
   const [texto, setTexto]         = useState('')
   const [estado, setEstado]       = useState('')
   const [desde, setDesde]         = useState('')
@@ -346,6 +352,8 @@ export default function HistorialCotizaciones({ cotizaciones, loading, error, on
                       onEditar={() => onEditarCotizacion && onEditarCotizacion(c.CotizacionId)}
                       onPdf={() => handleDescargar(c.CotizacionId)}
                       onEliminar={() => onDeleteCotizacion(c.CotizacionId, c.Folio)}
+                      currentUser={currentUser}
+                      currentUserRol={currentUserRol}
                     />
                   </td>
                 </tr>
