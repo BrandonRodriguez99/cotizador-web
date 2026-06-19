@@ -259,7 +259,7 @@ export async function getCotizaciones() {
 }
 
 export async function getCotizacionById(id) {
-  return fetchJson(`cotizaciones/${id}`);
+  return fetchJson(`cotizaciones/${id}`, { headers: authHeaders() });
 }
 
 export async function deleteCotizacion(id) {
@@ -292,6 +292,14 @@ export async function generateFolio() {
 
 export async function createCotizacion(data) {
   return postJson('cotizaciones', data);
+}
+
+export async function updateCotizacion(id, data) {
+  return fetchJson(`cotizaciones/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
 }
 
 export async function getDashboard() {

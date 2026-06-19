@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import {
   getClientes,
@@ -119,6 +119,8 @@ function App() {
   const [ordenesLoading, setOrdenesLoading] = useState(false)
   const [ordenesError, setOrdenesError] = useState(null)
   const [orderFolio, setOrderFolio] = useState('')
+  const [editingCotizacion, setEditingCotizacion] = useState(null)
+  const skipFolioGenRef = useRef(false)
 
   function getNextOrderSequence() {
     if (typeof window === 'undefined' || !window.localStorage) {
@@ -317,6 +319,60 @@ function App() {
     }
   }
 
+  async function handleEditarCotizacion(cotizacionId) {
+    try {
+      const { cotizacion, costos, participantes: partic } = await getCotizacionById(cotizacionId)
+
+      setSelectedCliente(String(cotizacion.ClienteId || ''))
+      setSelectedCurso(String(cotizacion.CursoId || ''))
+      setSelectedCoach(String(cotizacion.CoachId || ''))
+      setSelectedModalidad(String(cotizacion.ModalidadId || ''))
+      setSelectedUnidadNegocio(String(cotizacion.UnidadNegocioId || ''))
+      setDuracionDias(String(cotizacion.DuracionDias || ''))
+      setSesionesPorDia(String(cotizacion.SesionesPorDia || ''))
+      setParticipantesCantidad(String(cotizacion.ParticipantesCantidad || ''))
+      setFechaInicio(cotizacion.FechaInicio ? String(cotizacion.FechaInicio).substring(0, 10) : '')
+      setFechaFin(cotizacion.FechaFin ? String(cotizacion.FechaFin).substring(0, 10) : '')
+      setObservaciones(cotizacion.Observaciones || '')
+      setMargenPctDirectos(String(cotizacion.MargenUtilidadPctDirectos ?? 35))
+      setMargenPctIndirectos(String(cotizacion.MargenUtilidadPctIndirectos ?? 10))
+      setFolio(cotizacion.Folio)
+
+      const participantesMapeados = partic.map(p => ({
+        EmpleadoId: p.EmpleadoId || null,
+        NombreCompleto: p.NombreCompleto,
+        Empresa: p.Empresa,
+        Factura2: p.Factura2,
+        Factura3: p.Factura3,
+        observaciones: p.Observaciones,
+      }))
+      setParticipantesSeleccionados(participantesMapeados)
+
+      const costosMapeados = costos.map(c => ({
+        ConceptoCostoId: c.CotizacionCostoId,
+        Nombre: c.Concepto,
+        TipoCalculo: c.TipoCalculo,
+        Formula: c.Formula,
+        TipoCosto: c.TipoCosto,
+        CostoUnitario: c.CostoUnitario,
+        quantityOverride: c.Cantidad,
+      }))
+
+      setEditingCotizacion({ id: cotizacion.CotizacionId, initialConcepts: costosMapeados })
+      skipFolioGenRef.current = true
+      setActiveView('cotizacion')
+    } catch (err) {
+      alert('No se pudo cargar la cotización para editar: ' + err.message)
+    }
+  }
+
+  async function handleCotizacionSaved() {
+    resetCotizacionForm()
+    setEditingCotizacion(null)
+    await loadHistorial()
+    setActiveView('historial')
+  }
+
   useEffect(() => {
     async function generateAutomaticFolio() {
       try {
@@ -328,7 +384,11 @@ function App() {
       }
     }
     if (activeView === 'cotizacion') {
-      generateAutomaticFolio()
+      if (skipFolioGenRef.current) {
+        skipFolioGenRef.current = false
+      } else {
+        generateAutomaticFolio()
+      }
     } else {
       setFolio('')
     }
@@ -547,7 +607,7 @@ function App() {
         : activeView === 'ordenesCompra'
           ? 'Ordenes de Compra'
           : activeView === 'cotizacion'
-            ? 'Nueva Cotización'
+            ? (editingCotizacion ? 'Editar Cotización' : 'Nueva Cotización')
             : activeView === 'historial'
               ? 'Historial de Cotizaciones'
               : activeView === 'aprobaciones'
@@ -562,7 +622,7 @@ function App() {
         : activeView === 'ordenesCompra'
           ? 'Ordenes de Compra > Nueva Orden'
           : activeView === 'cotizacion'
-            ? 'Cotizaciones > Nueva Cotización'
+            ? (editingCotizacion ? 'Cotizaciones > Editar Cotización' : 'Cotizaciones > Nueva Cotización')
             : activeView === 'historial'
               ? 'Cotizaciones > Historial de Cotizaciones'
               : activeView === 'aprobaciones'
@@ -850,7 +910,7 @@ function App() {
             loading={cotizacionesLoading}
             error={cotizacionesError}
             onVerCotizacion={loadDetallesCotizacion}
-            onEditarCotizacion={loadDetallesCotizacion}
+            onEditarCotizacion={handleEditarCotizacion}
             onDeleteCotizacion={handleDeleteCotizacion}
           />
           ) : activeView === 'aprobaciones' ? (
@@ -1046,7 +1106,9 @@ function App() {
               setMargenPctDirectos={setMargenPctDirectos}
               margenPctIndirectos={margenPctIndirectos}
               setMargenPctIndirectos={setMargenPctIndirectos}
-              onSaved={resetCotizacionForm}
+              editingCotizacionId={editingCotizacion?.id ?? null}
+              initialConcepts={editingCotizacion?.initialConcepts ?? []}
+              onSaved={handleCotizacionSaved}
             />
           )}
       </main>

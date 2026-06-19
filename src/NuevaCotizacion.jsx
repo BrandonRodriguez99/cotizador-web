@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createCotizacion, enviarCotizacionAprobacion } from './api'
+import { createCotizacion, updateCotizacion, enviarCotizacionAprobacion } from './api'
 
 function formatMoney(value) {
   return `$ ${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -97,6 +97,8 @@ export default function NuevaCotizacion({
   searchParticipantesInput,
   setSearchParticipantesInput,
   participantesDisponibles,
+  editingCotizacionId,
+  initialConcepts,
   onSaved,
 }) {
   const [selectedConceptId, setSelectedConceptId] = useState('')
@@ -120,10 +122,12 @@ export default function NuevaCotizacion({
   }, [duracionDias, sesionesPorDia, participantesCantidad])
 
   useEffect(() => {
-    if (!selectedConcepts.length && conceptos?.length) {
+    if (initialConcepts && initialConcepts.length > 0) {
+      setSelectedConcepts(initialConcepts)
+    } else if (!editingCotizacionId) {
       setSelectedConcepts([])
     }
-  }, [conceptos])
+  }, [editingCotizacionId, initialConcepts])
 
   function getQuantity(concepto) {
     const evaluation = evaluateFormula(concepto.Formula, formulaContext)
@@ -272,16 +276,17 @@ export default function NuevaCotizacion({
     setSaving(true)
     try {
       const payload = buildPayload()
-      const res = await createCotizacion(payload)
-      if (res && res.cotizacionId) {
-        setCotizacionId(null)
-        setSelectedConceptId('')
-        setSelectedConcepts([])
-        if (typeof onSaved === 'function') {
-          onSaved()
-        }
-        try { window.alert('Cotización guardada correctamente.') } catch (e) {}
+      if (editingCotizacionId) {
+        await updateCotizacion(editingCotizacionId, payload)
+      } else {
+        const res = await createCotizacion(payload)
+        if (!res?.cotizacionId) return
       }
+      setCotizacionId(null)
+      setSelectedConceptId('')
+      setSelectedConcepts([])
+      if (typeof onSaved === 'function') onSaved()
+      try { window.alert(editingCotizacionId ? 'Cotización actualizada correctamente.' : 'Cotización guardada correctamente.') } catch (e) {}
     } catch (err) {
       console.error(err)
       try { window.alert('Error guardando cotización: ' + (err.message || err)) } catch (e) {}
@@ -631,8 +636,7 @@ export default function NuevaCotizacion({
                 Generar Cotización (PDF)
               </button>
               <button type="button" className="secondary-button btn-with-icon" onClick={handleSave} disabled={saving}>
-           
-                {saving ? 'Guardando...' : 'Guardar Cotización'}
+                {saving ? 'Guardando...' : editingCotizacionId ? 'Actualizar Cotización' : 'Guardar Cotización'}
               </button>
             </div>
           </section>
@@ -653,7 +657,9 @@ export default function NuevaCotizacion({
             </div>
             <div className="info-row">
               <span>Estado</span>
-              <strong style={{ color: '#b45309' }}>Pendiente de aprobación</strong>
+              <strong style={{ color: editingCotizacionId ? '#2563eb' : '#b45309' }}>
+                {editingCotizacionId ? 'Editando' : 'Pendiente de aprobación'}
+              </strong>
             </div>
           </section>
         </div>
