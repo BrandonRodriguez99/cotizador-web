@@ -123,8 +123,16 @@ export const CATALOG_DEFINITIONS = {
     columns: [
       { header: 'ID', accessor: 'CoachId' },
       { header: 'Nombre', accessor: 'Nombre' },
+      {
+        header: 'Costo',
+        accessor: 'Costo',
+        render: (value) => (value != null ? `$ ${Number(value).toFixed(2)}` : '-'),
+      },
     ],
-    fields: [{ name: 'Nombre', label: 'Nombre del coach', required: true }],
+    fields: [
+      { name: 'Nombre', label: 'Nombre del coach', required: true },
+      { name: 'Costo', label: 'Costo ($)', type: 'number', step: '0.01' },
+    ],
   },
   modalidades: {
     title: 'Modalidades',
