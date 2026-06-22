@@ -105,6 +105,7 @@ export default function NuevaCotizacion({
   const [cotizacionId, setCotizacionId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [filterConceptos, setFilterConceptos] = useState('')
+  const [hoveredConceptId, setHoveredConceptId] = useState(null)
   const isInitialEditLoadRef = useRef(false)
   const latestInitialConceptsRef = useRef(initialConcepts)
 
@@ -492,35 +493,47 @@ export default function NuevaCotizacion({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {conceptosFiltrados.map(concept => {
                 const isAdded = selectedConcepts.some(c => c.ConceptoCostoId === concept.ConceptoCostoId)
-                const esDirecto = (concept.TipoCosto || '').toLowerCase().includes('directo')
+                const isHovered = hoveredConceptId === concept.ConceptoCostoId
+                const esIndirecto = (concept.TipoCosto || '').toLowerCase().includes('indirect')
+
+                let borderColor = '#e5e7eb'
+                let bgColor = '#fff'
+                let nameColor = '#111827'
+                let namePrefix = ''
+                if (isAdded && isHovered) {
+                  borderColor = '#fca5a5'; bgColor = '#fff1f2'; nameColor = '#dc2626'; namePrefix = '× '
+                } else if (isAdded) {
+                  borderColor = '#86efac'; bgColor = '#f0fdf4'; nameColor = '#15803d'; namePrefix = '✓ '
+                } else if (isHovered) {
+                  borderColor = '#3b82f6'; bgColor = '#eff6ff'
+                }
+
                 return (
                   <button
                     key={concept.ConceptoCostoId}
                     type="button"
-                    onClick={() => handleAddConceptCard(concept)}
-                    disabled={isAdded}
+                    onClick={() => isAdded ? handleRemoveConcept(concept.ConceptoCostoId) : handleAddConceptCard(concept)}
+                    onMouseEnter={() => setHoveredConceptId(concept.ConceptoCostoId)}
+                    onMouseLeave={() => setHoveredConceptId(null)}
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
                       padding: '8px 12px', borderRadius: '8px', textAlign: 'left',
-                      cursor: isAdded ? 'default' : 'pointer', minWidth: '150px',
-                      border: `1.5px solid ${isAdded ? '#86efac' : '#e5e7eb'}`,
-                      background: isAdded ? '#f0fdf4' : '#fff',
-                      boxShadow: isAdded ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+                      cursor: 'pointer', minWidth: '150px',
+                      border: `1.5px solid ${borderColor}`,
+                      background: bgColor,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                       transition: 'border-color 0.15s, background 0.15s',
-                      opacity: isAdded ? 0.8 : 1,
                     }}
-                    onMouseEnter={e => { if (!isAdded) { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff' }}}
-                    onMouseLeave={e => { if (!isAdded) { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#fff' }}}
                   >
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: isAdded ? '#15803d' : '#111827', marginBottom: '2px' }}>
-                      {isAdded ? '✓ ' : ''}{concept.Nombre}
+                    <span style={{ fontSize: '12px', fontWeight: '600', color: nameColor, marginBottom: '2px' }}>
+                      {namePrefix}{concept.Nombre}
                     </span>
                     <span style={{ fontSize: '11px', color: '#6b7280' }}>{concept.Formula || '—'}</span>
                     <span style={{
                       marginTop: '5px', fontSize: '10px', fontWeight: '600',
                       padding: '1px 6px', borderRadius: '10px',
-                      background: esDirecto ? '#dbeafe' : '#fef3c7',
-                      color: esDirecto ? '#1d4ed8' : '#92400e',
+                      background: esIndirecto ? '#fef08a' : '#dbeafe',
+                      color: esIndirecto ? '#854d0e' : '#1d4ed8',
                     }}>
                       {concept.TipoCosto || 'Sin tipo'}
                     </span>
