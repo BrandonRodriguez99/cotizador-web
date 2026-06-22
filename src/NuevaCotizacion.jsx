@@ -324,6 +324,18 @@ export default function NuevaCotizacion({
   }
 
   async function handleSave() {
+    if (!selectedCliente) {
+      window.alert('Selecciona una empresa / cliente antes de guardar.')
+      return
+    }
+    if (!selectedCurso) {
+      window.alert('Selecciona un curso antes de guardar.')
+      return
+    }
+    if (!selectedModalidad) {
+      window.alert('Selecciona una modalidad antes de guardar.')
+      return
+    }
     setSaving(true)
     try {
       const payload = buildPayload()
@@ -334,7 +346,6 @@ export default function NuevaCotizacion({
         if (!res?.cotizacionId) return
       }
       setCotizacionId(null)
-      setSelectedConceptId('')
       setSelectedConcepts([])
       if (typeof onSaved === 'function') onSaved()
       try { window.alert(editingCotizacionId ? 'Cotización actualizada correctamente.' : 'Cotización guardada correctamente.') } catch (e) {}
