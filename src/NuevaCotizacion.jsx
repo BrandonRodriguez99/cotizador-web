@@ -183,7 +183,7 @@ export default function NuevaCotizacion({
         tipoCosto: concepto.TipoCosto || concepto.Tipo || '',
         formula: concepto.Formula || '-',
         unitCost: formatMoney(unitCost),
-        quantity: concepto.quantityOverride != null
+        quantity: (concepto.quantityOverride != null && concepto.quantityOverride !== '')
           ? String(concepto.quantityOverride)
           : String(evaluation.quantityLabel === '-' ? 0 : evaluation.quantityLabel),
         participants: evaluation.participants === '-' ? '-' : String(evaluation.participants),
