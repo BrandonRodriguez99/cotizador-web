@@ -106,6 +106,7 @@ export default function NuevaCotizacion({
   const [cotizacionId, setCotizacionId] = useState(null)
   const [saving, setSaving] = useState(false)
   const isInitialEditLoadRef = useRef(false)
+  const latestInitialConceptsRef = useRef(initialConcepts)
 
   const formulaContext = useMemo(() => {
     const dias = Number(duracionDias) || 0
@@ -122,15 +123,20 @@ export default function NuevaCotizacion({
     }
   }, [duracionDias, sesionesPorDia, participantesCantidad])
 
+  // Mantiene el ref sincronizado con la prop en cada render (sin disparar efectos)
+  useEffect(() => { latestInitialConceptsRef.current = initialConcepts })
+
+  // Solo dispara cuando cambia el modo edición, no en cada re-render del padre
   useEffect(() => {
-    if (initialConcepts && initialConcepts.length > 0) {
-      setSelectedConcepts(initialConcepts)
+    const concepts = latestInitialConceptsRef.current
+    if (concepts && concepts.length > 0) {
+      setSelectedConcepts(concepts)
       isInitialEditLoadRef.current = true
-    } else if (!editingCotizacionId) {
+    } else {
       setSelectedConcepts([])
       isInitialEditLoadRef.current = false
     }
-  }, [editingCotizacionId, initialConcepts])
+  }, [editingCotizacionId])
 
   // Auto-agrega el costo del instructor cuando se seleccionan coach y curso
   useEffect(() => {
