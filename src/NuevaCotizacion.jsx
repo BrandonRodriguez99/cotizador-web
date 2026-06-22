@@ -101,10 +101,10 @@ export default function NuevaCotizacion({
   initialConcepts,
   onSaved,
 }) {
-  const [selectedConceptId, setSelectedConceptId] = useState('')
   const [selectedConcepts, setSelectedConcepts] = useState([])
   const [cotizacionId, setCotizacionId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [filterConceptos, setFilterConceptos] = useState('')
   const isInitialEditLoadRef = useRef(false)
   const latestInitialConceptsRef = useRef(initialConcepts)
 
@@ -241,16 +241,18 @@ export default function NuevaCotizacion({
     return { directos, indirectos, total, margenDirectos, margenIndirectos, margenTotal, conGanancia, porParticipante, sugerido: porParticipante }
   }, [esMandatorio, cursoSeleccionado, costRows, margenPctDirectos, margenPctIndirectos, participantesCantidad])
 
-  function handleAddConcept() {
-    if (!selectedConceptId) return
-    const conceptToAdd = conceptos.find((c) => String(c.ConceptoCostoId) === String(selectedConceptId))
-    if (!conceptToAdd) return
-    if (selectedConcepts.some((c) => c.ConceptoCostoId === conceptToAdd.ConceptoCostoId)) return
+  const conceptosFiltrados = useMemo(() => {
+    const q = filterConceptos.trim().toLowerCase()
+    if (!q) return conceptos
+    return conceptos.filter(c =>
+      (c.Nombre || '').toLowerCase().includes(q) ||
+      (c.Formula || '').toLowerCase().includes(q)
+    )
+  }, [conceptos, filterConceptos])
 
-    setSelectedConcepts((current) => [
-      ...current,
-      { ...conceptToAdd, quantityOverride: '' },
-    ])
+  function handleAddConceptCard(concept) {
+    if (selectedConcepts.some((c) => c.ConceptoCostoId === concept.ConceptoCostoId)) return
+    setSelectedConcepts((current) => [...current, { ...concept, quantityOverride: '' }])
   }
 
   function handleRemoveConcept(conceptId) {
@@ -478,26 +480,57 @@ export default function NuevaCotizacion({
           <div className="panel-header">
             <h2>2. Desglose de Costos</h2>
           </div>
-          <div className="form-row" style={{ gap: '12px', alignItems: 'flex-end', marginBottom: '18px' }}>
-            <FormField label="Concepto disponible" className="form-field-full">
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <select
-                  className="form-control"
-                  value={selectedConceptId}
-                  onChange={(e) => setSelectedConceptId(e.target.value)}
-                >
-                  <option value="">Seleccionar concepto...</option>
-                  {conceptos.map((concept) => (
-                    <option key={concept.ConceptoCostoId} value={concept.ConceptoCostoId}>
-                      {concept.Nombre} — {concept.Formula || 'Sin fórmula'}
-                    </option>
-                  ))}
-                </select>
-                <button type="button" className="secondary-button" onClick={handleAddConcept}>
-                  Agregar concepto
-                </button>
-              </div>
-            </FormField>
+          <div style={{ marginBottom: '14px' }}>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Buscar concepto..."
+              value={filterConceptos}
+              onChange={e => setFilterConceptos(e.target.value)}
+              style={{ maxWidth: '280px', marginBottom: '12px' }}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {conceptosFiltrados.map(concept => {
+                const isAdded = selectedConcepts.some(c => c.ConceptoCostoId === concept.ConceptoCostoId)
+                const esDirecto = (concept.TipoCosto || '').toLowerCase().includes('directo')
+                return (
+                  <button
+                    key={concept.ConceptoCostoId}
+                    type="button"
+                    onClick={() => handleAddConceptCard(concept)}
+                    disabled={isAdded}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                      padding: '8px 12px', borderRadius: '8px', textAlign: 'left',
+                      cursor: isAdded ? 'default' : 'pointer', minWidth: '150px',
+                      border: `1.5px solid ${isAdded ? '#86efac' : '#e5e7eb'}`,
+                      background: isAdded ? '#f0fdf4' : '#fff',
+                      boxShadow: isAdded ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+                      transition: 'border-color 0.15s, background 0.15s',
+                      opacity: isAdded ? 0.8 : 1,
+                    }}
+                    onMouseEnter={e => { if (!isAdded) { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff' }}}
+                    onMouseLeave={e => { if (!isAdded) { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#fff' }}}
+                  >
+                    <span style={{ fontSize: '12px', fontWeight: '600', color: isAdded ? '#15803d' : '#111827', marginBottom: '2px' }}>
+                      {isAdded ? '✓ ' : ''}{concept.Nombre}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#6b7280' }}>{concept.Formula || '—'}</span>
+                    <span style={{
+                      marginTop: '5px', fontSize: '10px', fontWeight: '600',
+                      padding: '1px 6px', borderRadius: '10px',
+                      background: esDirecto ? '#dbeafe' : '#fef3c7',
+                      color: esDirecto ? '#1d4ed8' : '#92400e',
+                    }}>
+                      {concept.TipoCosto || 'Sin tipo'}
+                    </span>
+                  </button>
+                )
+              })}
+              {conceptosFiltrados.length === 0 && (
+                <span style={{ fontSize: '13px', color: '#9ca3af', padding: '8px 0' }}>Sin coincidencias.</span>
+              )}
+            </div>
           </div>
           <div className="table-wrap">
             <table className="cost-table">
