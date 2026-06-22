@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createCotizacion, updateCotizacion, enviarCotizacionAprobacion } from './api'
 
 function formatMoney(value) {
@@ -105,6 +105,7 @@ export default function NuevaCotizacion({
   const [selectedConcepts, setSelectedConcepts] = useState([])
   const [cotizacionId, setCotizacionId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const isInitialEditLoadRef = useRef(false)
 
   const formulaContext = useMemo(() => {
     const dias = Number(duracionDias) || 0
@@ -124,10 +125,40 @@ export default function NuevaCotizacion({
   useEffect(() => {
     if (initialConcepts && initialConcepts.length > 0) {
       setSelectedConcepts(initialConcepts)
+      isInitialEditLoadRef.current = true
     } else if (!editingCotizacionId) {
       setSelectedConcepts([])
+      isInitialEditLoadRef.current = false
     }
   }, [editingCotizacionId, initialConcepts])
+
+  // Auto-agrega el costo del instructor cuando se seleccionan coach y curso
+  useEffect(() => {
+    if (isInitialEditLoadRef.current) {
+      isInitialEditLoadRef.current = false
+      return
+    }
+    const coach = coaches.find(c => String(c.CoachId) === String(selectedCoach))
+    const curso = cursos.find(c => String(c.CursoId) === String(selectedCurso))
+    const costoCoach = coach ? Number(coach.Costo) : 0
+    const horasCurso = curso ? Number(curso.Horas) : 0
+
+    setSelectedConcepts(prev => {
+      const sinInstructor = prev.filter(c => c.ConceptoCostoId !== '__instructor__')
+      if (costoCoach > 0 && horasCurso > 0) {
+        return [...sinInstructor, {
+          ConceptoCostoId: '__instructor__',
+          Nombre: coach.Nombre,
+          TipoCalculo: 'Por hora',
+          Formula: `${horasCurso} hrs`,
+          TipoCosto: 'Directos',
+          CostoUnitario: costoCoach,
+          quantityOverride: String(horasCurso),
+        }]
+      }
+      return sinInstructor
+    })
+  }, [selectedCoach, selectedCurso, coaches, cursos])
 
   function getQuantity(concepto) {
     const evaluation = evaluateFormula(concepto.Formula, formulaContext)
