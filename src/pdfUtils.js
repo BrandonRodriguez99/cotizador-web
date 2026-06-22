@@ -65,11 +65,11 @@ function generarHtmlCotizacion(cotizacion, costos = [], participantes = []) {
         <td style="background:#f0f0f0;font-weight:bold;padding:6px 8px;border:1px solid #ccc">MODALIDAD:</td>
         <td style="padding:6px 8px;border:1px solid #ccc">${cotizacion.Modalidad || '-'}</td>
         <td style="background:#f0f0f0;font-weight:bold;padding:6px 8px;border:1px solid #ccc">PARTICIPANTES</td>
-        <td style="padding:6px 8px;border:1px solid #ccc">${cotizacion.ParticipantesCantidad || '-'} / ${cotizacion.DuracionDias || '-'} días</td>
+        <td style="padding:6px 8px;border:1px solid #ccc">${cotizacion.ParticipantesCantidad || '-'} / ${cotizacion.DuracionDias || '-'} días${cotizacion.HorasCurso ? ` / ${cotizacion.HorasCurso} horas` : ''}</td>
       </tr>
       <tr>
         <td style="background:#f0f0f0;font-weight:bold;padding:6px 8px;border:1px solid #ccc">CREADO POR:</td>
-        <td colspan="3" style="padding:6px 8px;border:1px solid #ccc">${cotizacion.CreadoPor || '-'}</td>
+        <td colspan="3" style="padding:6px 8px;border:1px solid #ccc;word-break:break-word;white-space:normal">${cotizacion.CreadoPor || '-'}</td>
       </tr>
     </table>
 
@@ -145,7 +145,7 @@ function generarHtmlCotizacion(cotizacion, costos = [], participantes = []) {
       <tr>
         <td style="text-align:center;padding:0 20px;vertical-align:bottom">
           <div style="border-top:1px solid #333;padding-top:5px;margin-top:30px">
-            <div style="font-weight:bold;color:#1e3a8a;font-size:11px">${cotizacion.CreadoPor || ''}</div>
+            <div style="font-weight:bold;color:#1e3a8a;font-size:11px;word-break:break-word;white-space:normal">${cotizacion.CreadoPor || ''}</div>
             <div style="font-size:10px;color:#6b7280">Solicitante</div>
           </div>
         </td>
