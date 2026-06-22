@@ -218,12 +218,14 @@ export default function NuevaCotizacion({
     if (esMandatorio) {
       const cursoCosto = Number(cursoSeleccionado?.Costo) || 0
       const numParticipantes = Number(participantesCantidad) || 1
+      const extraTotal = costRows.reduce((sum, row) => sum + row.totalAmount, 0)
+      const total = cursoCosto + extraTotal
       return {
-        directos: cursoCosto, indirectos: 0, total: cursoCosto,
+        directos: total, indirectos: 0, total,
         margenDirectos: 0, margenIndirectos: 0, margenTotal: 0,
-        conGanancia: cursoCosto,
-        porParticipante: cursoCosto / numParticipantes,
-        sugerido: cursoCosto / numParticipantes,
+        conGanancia: total,
+        porParticipante: total / numParticipantes,
+        sugerido: total / numParticipantes,
       }
     }
 
@@ -472,7 +474,7 @@ export default function NuevaCotizacion({
       </section>
 
       <div className="cotizacion-middle">
-        {!esMandatorio && <section className="panel card cost-panel">
+        <section className="panel card cost-panel">
           <div className="panel-header">
             <h2>2. Desglose de Costos</h2>
           </div>
@@ -554,7 +556,7 @@ export default function NuevaCotizacion({
               </tbody>
             </table>
           </div>
-        </section>}
+        </section>
 
         <div className="summary-column">
           <section className="card summary-card">
