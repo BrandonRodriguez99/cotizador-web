@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { createCotizacion, enviarCotizacionAprobacion } from './api'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createCotizacion, updateCotizacion, enviarCotizacionAprobacion } from './api'
 
 function formatMoney(value) {
   return `$ ${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -97,33 +97,89 @@ export default function NuevaCotizacion({
   searchParticipantesInput,
   setSearchParticipantesInput,
   participantesDisponibles,
+  editingCotizacionId,
+  initialConcepts,
   onSaved,
 }) {
-  const [selectedConceptId, setSelectedConceptId] = useState('')
   const [selectedConcepts, setSelectedConcepts] = useState([])
   const [cotizacionId, setCotizacionId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [filterConceptos, setFilterConceptos] = useState('')
+  const [hoveredConceptId, setHoveredConceptId] = useState(null)
+  const isInitialEditLoadRef = useRef(false)
+  const latestInitialConceptsRef = useRef(initialConcepts)
+
+  const cursoSeleccionado = useMemo(
+    () => cursos.find(c => String(c.CursoId) === String(selectedCurso)),
+    [cursos, selectedCurso]
+  )
+  const esMandatorio = cursoSeleccionado?.TipoCurso === 'Mandatorio'
 
   const formulaContext = useMemo(() => {
     const dias = Number(duracionDias) || 0
-    const sesiones = Number(sesionesPorDia) || 0
     const participantesNum = Number(participantesCantidad) || 0
+    const cursoHoras = Number(cursoSeleccionado?.Horas) || 0
 
     return {
       Días: dias,
       Dias: dias,
-      Sesiones: sesiones,
+      Sesiones: 1,
       Participantes: participantesNum,
-      Horas: dias * sesiones,
+      Horas: cursoHoras || dias,
       Eventos: 1,
     }
-  }, [duracionDias, sesionesPorDia, participantesCantidad])
+  }, [duracionDias, participantesCantidad, cursoSeleccionado])
 
+  // Mantiene el ref sincronizado con la prop en cada render (sin disparar efectos)
+  useEffect(() => { latestInitialConceptsRef.current = initialConcepts })
+
+  // Solo dispara cuando cambia el modo edición, no en cada re-render del padre
   useEffect(() => {
-    if (!selectedConcepts.length && conceptos?.length) {
+    const concepts = latestInitialConceptsRef.current
+    if (concepts && concepts.length > 0) {
+      setSelectedConcepts(concepts)
+      isInitialEditLoadRef.current = true
+    } else {
       setSelectedConcepts([])
+      isInitialEditLoadRef.current = false
     }
-  }, [conceptos])
+  }, [editingCotizacionId])
+
+  // Auto-rellena duración desde el curso seleccionado
+  useEffect(() => {
+    if (cursoSeleccionado?.DuracionDefaultDias) {
+      setDuracionDias(String(cursoSeleccionado.DuracionDefaultDias))
+    }
+  }, [selectedCurso, cursos])
+
+  // Auto-agrega el costo del instructor (solo Extraordinario) cuando se seleccionan coach y curso
+  useEffect(() => {
+    if (isInitialEditLoadRef.current) {
+      isInitialEditLoadRef.current = false
+      return
+    }
+    const coach = coaches.find(c => String(c.CoachId) === String(selectedCoach))
+    const curso = cursos.find(c => String(c.CursoId) === String(selectedCurso))
+    const esCursoMandatorio = curso?.TipoCurso === 'Mandatorio'
+    const costoCoach = (!esCursoMandatorio && coach) ? Number(coach.Costo) : 0
+    const horasCurso = curso ? Number(curso.Horas) : 0
+
+    setSelectedConcepts(prev => {
+      const sinInstructor = prev.filter(c => c.ConceptoCostoId !== '__instructor__')
+      if (!esCursoMandatorio && costoCoach > 0 && horasCurso > 0) {
+        return [...sinInstructor, {
+          ConceptoCostoId: '__instructor__',
+          Nombre: coach.Nombre,
+          TipoCalculo: 'Por hora',
+          Formula: `${horasCurso} hrs`,
+          TipoCosto: 'Directos',
+          CostoUnitario: costoCoach,
+          quantityOverride: String(horasCurso),
+        }]
+      }
+      return sinInstructor
+    })
+  }, [selectedCoach, selectedCurso, coaches, cursos])
 
   function getQuantity(concepto) {
     const evaluation = evaluateFormula(concepto.Formula, formulaContext)
@@ -148,7 +204,7 @@ export default function NuevaCotizacion({
         tipoCosto: concepto.TipoCosto || concepto.Tipo || '',
         formula: concepto.Formula || '-',
         unitCost: formatMoney(unitCost),
-        quantity: concepto.quantityOverride != null
+        quantity: (concepto.quantityOverride != null && concepto.quantityOverride !== '')
           ? String(concepto.quantityOverride)
           : String(evaluation.quantityLabel === '-' ? 0 : evaluation.quantityLabel),
         participants: evaluation.participants === '-' ? '-' : String(evaluation.participants),
@@ -159,47 +215,45 @@ export default function NuevaCotizacion({
     [selectedConcepts, formulaContext]
   )
 
-  // Calcular totales separados por tipo de costo (Directos / Indirectos)
   const totals = useMemo(() => {
-    const isIndirect = (row) => {
-      const tipo = row.tipoCosto || ''
-      return String(tipo).toLowerCase().includes('indirect')
+    if (esMandatorio) {
+      const cursoCosto = Number(cursoSeleccionado?.Costo) || 0
+      const numParticipantes = Number(participantesCantidad) || 1
+      const extraTotal = costRows.reduce((sum, row) => sum + row.totalAmount, 0)
+      const total = cursoCosto + extraTotal
+      return {
+        directos: total, indirectos: 0, total,
+        margenDirectos: 0, margenIndirectos: 0, margenTotal: 0,
+        conGanancia: total,
+        porParticipante: total / numParticipantes,
+        sugerido: total / numParticipantes,
+      }
     }
 
+    const isIndirect = (row) => String(row.tipoCosto || '').toLowerCase().includes('indirect')
     const directos = costRows.reduce((sum, row) => sum + (isIndirect(row) ? 0 : row.totalAmount), 0)
     const indirectos = costRows.reduce((sum, row) => sum + (isIndirect(row) ? row.totalAmount : 0), 0)
     const total = directos + indirectos
     const margenDirectos = directos * ((Number(margenPctDirectos) || 0) / 100)
     const margenIndirectos = indirectos * ((Number(margenPctIndirectos) || 0) / 100)
-    const margenTotal = (margenDirectos || 0) + (margenIndirectos || 0)
+    const margenTotal = margenDirectos + margenIndirectos
     const conGanancia = total + margenTotal
-    const porParticipante = Number(participantesCantidad)
-      ? conGanancia / Number(participantesCantidad)
-      : 0
+    const porParticipante = Number(participantesCantidad) ? conGanancia / Number(participantesCantidad) : 0
+    return { directos, indirectos, total, margenDirectos, margenIndirectos, margenTotal, conGanancia, porParticipante, sugerido: porParticipante }
+  }, [esMandatorio, cursoSeleccionado, costRows, margenPctDirectos, margenPctIndirectos, participantesCantidad])
 
-    return {
-      directos,
-      indirectos,
-      total,
-      margenDirectos,
-      margenIndirectos,
-      margenTotal,
-      conGanancia,
-      porParticipante,
-      sugerido: porParticipante,
-    }
-  }, [costRows, margenPctDirectos, margenPctIndirectos, participantesCantidad])
+  const conceptosFiltrados = useMemo(() => {
+    const q = filterConceptos.trim().toLowerCase()
+    if (!q) return conceptos
+    return conceptos.filter(c =>
+      (c.Nombre || '').toLowerCase().includes(q) ||
+      (c.Formula || '').toLowerCase().includes(q)
+    )
+  }, [conceptos, filterConceptos])
 
-  function handleAddConcept() {
-    if (!selectedConceptId) return
-    const conceptToAdd = conceptos.find((c) => String(c.ConceptoCostoId) === String(selectedConceptId))
-    if (!conceptToAdd) return
-    if (selectedConcepts.some((c) => c.ConceptoCostoId === conceptToAdd.ConceptoCostoId)) return
-
-    setSelectedConcepts((current) => [
-      ...current,
-      { ...conceptToAdd, quantityOverride: '' },
-    ])
+  function handleAddConceptCard(concept) {
+    if (selectedConcepts.some((c) => c.ConceptoCostoId === concept.ConceptoCostoId)) return
+    setSelectedConcepts((current) => [...current, { ...concept, quantityOverride: '' }])
   }
 
   function handleRemoveConcept(conceptId) {
@@ -219,15 +273,26 @@ export default function NuevaCotizacion({
   const displayParticipants = participantesSeleccionados
 
   function buildPayload() {
+    const conceptosPayload = esMandatorio ? [] : selectedConcepts.map((c, i) => ({
+      concepto: c.Nombre,
+      tipoCalculo: c.TipoCalculo,
+      formula: c.Formula,
+      tipoCosto: c.TipoCosto || null,
+      costoUnitario: Number(c.CostoUnitario) || 0,
+      cantidad: c.quantityOverride != null && c.quantityOverride !== '' ? String(c.quantityOverride) : String(getQuantity(c)),
+      participantes: '-',
+      total: (Number(c.CostoUnitario) || 0) * (Number(c.quantityOverride) || getQuantity(c) || 0),
+      orden: i + 1,
+    }))
     return {
       folio,
       clienteId: Number(selectedCliente) || null,
       cursoId: Number(selectedCurso) || null,
-      coachId: Number(selectedCoach) || null,
+      coachId: esMandatorio ? null : (Number(selectedCoach) || null),
       modalidadId: Number(selectedModalidad) || null,
-      unidadNegocioId: Number(selectedUnidadNegocio) || null,
+      unidadNegocioId: null,
       duracionDias: Number(duracionDias) || null,
-      sesionesPorDia: Number(sesionesPorDia) || null,
+      sesionesPorDia: 1,
       participantesCantidad: Number(participantesCantidad) || null,
       fechaInicio: fechaInicio || null,
       fechaFin: fechaFin || null,
@@ -237,8 +302,8 @@ export default function NuevaCotizacion({
       totalCostos: totals.total,
       margenUtilidadPct: totals.total ? ((totals.margenTotal / totals.total) * 100) : 0,
       margenUtilidad: totals.margenTotal,
-      margenUtilidadPctDirectos: Number(margenPctDirectos) || 0,
-      margenUtilidadPctIndirectos: Number(margenPctIndirectos) || 0,
+      margenUtilidadPctDirectos: esMandatorio ? 0 : (Number(margenPctDirectos) || 0),
+      margenUtilidadPctIndirectos: esMandatorio ? 0 : (Number(margenPctIndirectos) || 0),
       margenUtilidadDirectos: totals.margenDirectos,
       margenUtilidadIndirectos: totals.margenIndirectos,
       totalConGanancia: totals.conGanancia,
@@ -246,17 +311,7 @@ export default function NuevaCotizacion({
       precioSugeridoPorParticipante: totals.sugerido,
       estado: "Pendiente",
       creadoPor,
-      costos: selectedConcepts.map((c, i) => ({
-        concepto: c.Nombre,
-        tipoCalculo: c.TipoCalculo,
-        formula: c.Formula,
-        tipoCosto: c.TipoCosto || null,
-        costoUnitario: Number(c.CostoUnitario) || 0,
-        cantidad: c.quantityOverride != null && c.quantityOverride !== '' ? String(c.quantityOverride) : String(getQuantity(c)),
-        participantes: '-',
-        total: (Number(c.CostoUnitario) || 0) * (Number(c.quantityOverride) || getQuantity(c) || 0),
-        orden: i + 1,
-      })),
+      costos: conceptosPayload,
       participantes: participantesSeleccionados.map((p) => ({
         empleadoId: p.EmpleadoId || null,
         nombreCompleto: participantName(p),
@@ -269,19 +324,31 @@ export default function NuevaCotizacion({
   }
 
   async function handleSave() {
+    if (!selectedCliente) {
+      window.alert('Selecciona una empresa / cliente antes de guardar.')
+      return
+    }
+    if (!selectedCurso) {
+      window.alert('Selecciona un curso antes de guardar.')
+      return
+    }
+    if (!selectedModalidad) {
+      window.alert('Selecciona una modalidad antes de guardar.')
+      return
+    }
     setSaving(true)
     try {
       const payload = buildPayload()
-      const res = await createCotizacion(payload)
-      if (res && res.cotizacionId) {
-        setCotizacionId(null)
-        setSelectedConceptId('')
-        setSelectedConcepts([])
-        if (typeof onSaved === 'function') {
-          onSaved()
-        }
-        try { window.alert('Cotización guardada correctamente.') } catch (e) {}
+      if (editingCotizacionId) {
+        await updateCotizacion(editingCotizacionId, payload)
+      } else {
+        const res = await createCotizacion(payload)
+        if (!res?.cotizacionId) return
       }
+      setCotizacionId(null)
+      setSelectedConcepts([])
+      if (typeof onSaved === 'function') onSaved()
+      try { window.alert(editingCotizacionId ? 'Cotización actualizada correctamente.' : 'Cotización guardada correctamente.') } catch (e) {}
     } catch (err) {
       console.error(err)
       try { window.alert('Error guardando cotización: ' + (err.message || err)) } catch (e) {}
@@ -347,119 +414,64 @@ export default function NuevaCotizacion({
         <div className="datos-generales-form">
           <div className="form-row form-row-5">
             <FormField label="Empresa / Cliente">
-              <select
-                className="form-control"
-                value={selectedCliente}
-                onChange={(e) => setSelectedCliente(e.target.value)}
-              >
+              <select className="form-control" value={selectedCliente} onChange={(e) => setSelectedCliente(e.target.value)}>
                 <option value="">Seleccionar...</option>
-                {clientes.map((c) => (
-                  <option key={c.ClienteId} value={c.ClienteId}>{c.Nombre}</option>
-                ))}
+                {clientes.map((c) => <option key={c.ClienteId} value={c.ClienteId}>{c.Nombre}</option>)}
               </select>
             </FormField>
             <FormField label="Curso / Programa">
-              <select
-                className="form-control"
-                value={selectedCurso}
-                onChange={(e) => setSelectedCurso(e.target.value)}
-              >
+              <select className="form-control" value={selectedCurso} onChange={(e) => setSelectedCurso(e.target.value)}>
                 <option value="">Seleccionar...</option>
-                {cursos.map((c) => (
-                  <option key={c.CursoId} value={c.CursoId}>{c.Nombre}</option>
-                ))}
+                {cursos.map((c) => <option key={c.CursoId} value={c.CursoId}>{c.Nombre}</option>)}
               </select>
             </FormField>
-            <FormField label="Coach / Instructor">
-              <select
+            <FormField label="Tipo de Curso">
+              <input
                 className="form-control"
-                value={selectedCoach}
-                onChange={(e) => setSelectedCoach(e.target.value)}
-              >
-                <option value="">Seleccionar...</option>
-                {coaches.map((c) => (
-                  <option key={c.CoachId} value={c.CoachId}>{c.Nombre}</option>
-                ))}
-              </select>
+                readOnly
+                value={cursoSeleccionado?.TipoCurso || '—'}
+                style={{ background: '#f3f4f6', cursor: 'default', fontWeight: cursoSeleccionado?.TipoCurso ? '600' : 'normal', color: cursoSeleccionado?.TipoCurso === 'Mandatorio' ? '#1d4ed8' : cursoSeleccionado?.TipoCurso === 'Extraordinario' ? '#7c3aed' : '#6b7280' }}
+              />
             </FormField>
             <FormField label="Modalidad">
-              <select
-                className="form-control"
-                value={selectedModalidad}
-                onChange={(e) => setSelectedModalidad(e.target.value)}
-              >
+              <select className="form-control" value={selectedModalidad} onChange={(e) => setSelectedModalidad(e.target.value)}>
                 <option value="">Seleccionar...</option>
-                {modalidades.map((m) => (
-                  <option key={m.ModalidadId} value={m.ModalidadId}>{m.Nombre}</option>
-                ))}
+                {modalidades.map((m) => <option key={m.ModalidadId} value={m.ModalidadId}>{m.Nombre}</option>)}
               </select>
             </FormField>
-            <FormField label="Unidad de Negocio">
-              <select
-                className="form-control"
-                value={selectedUnidadNegocio}
-                onChange={(e) => setSelectedUnidadNegocio(e.target.value)}
-              >
-                <option value="">Seleccionar...</option>
-                {(unidadesNegocio || []).map((u) => (
-                  <option key={u.UnidadNegocioId} value={u.UnidadNegocioId}>{u.Nombre}</option>
-                ))}
-              </select>
-            </FormField>
+            {!esMandatorio && (
+              <FormField label="Coach / Instructor">
+                <select className="form-control" value={selectedCoach} onChange={(e) => setSelectedCoach(e.target.value)}>
+                  <option value="">Seleccionar...</option>
+                  {coaches.map((c) => <option key={c.CoachId} value={c.CoachId}>{c.Nombre}</option>)}
+                </select>
+              </FormField>
+            )}
           </div>
 
           <div className="form-row form-row-5">
-            <FormField label="Duración del curso (días)">
+            <FormField label="Duración del curso">
               <div className="field-with-suffix">
                 <input
                   className="form-control"
-                  type="number"
-                  min="1"
-                  value={duracionDias}
-                  onChange={(e) => setDuracionDias(e.target.value)}
+                  readOnly
+                  value={duracionDias || '—'}
+                  style={{ background: '#f3f4f6', cursor: 'default' }}
                 />
                 <span className="field-suffix">días</span>
               </div>
             </FormField>
-            <FormField label="Número de sesiones por día">
-              <div className="field-with-suffix">
-                <input
-                  className="form-control"
-                  type="number"
-                  min="1"
-                  value={sesionesPorDia}
-                  onChange={(e) => setSesionesPorDia(e.target.value)}
-                />
-                <span className="field-suffix">sesiones</span>
-              </div>
-            </FormField>
             <FormField label="Participantes">
               <div className="field-with-suffix">
-                <input
-                  className="form-control"
-                  type="number"
-                  min="1"
-                  value={participantesCantidad}
-                  onChange={(e) => setParticipantesCantidad(e.target.value)}
-                />
+                <input className="form-control" type="number" min="1" value={participantesCantidad} onChange={(e) => setParticipantesCantidad(e.target.value)} />
                 <span className="field-suffix">alumnos</span>
               </div>
             </FormField>
             <FormField label="Fecha de inicio">
-              <input
-                className="form-control"
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-              />
+              <input className="form-control" type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
             </FormField>
             <FormField label="Fecha de fin">
-              <input
-                className="form-control"
-                type="date"
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-              />
+              <input className="form-control" type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
             </FormField>
           </div>
 
@@ -480,26 +492,69 @@ export default function NuevaCotizacion({
           <div className="panel-header">
             <h2>2. Desglose de Costos</h2>
           </div>
-          <div className="form-row" style={{ gap: '12px', alignItems: 'flex-end', marginBottom: '18px' }}>
-            <FormField label="Concepto disponible" className="form-field-full">
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <select
-                  className="form-control"
-                  value={selectedConceptId}
-                  onChange={(e) => setSelectedConceptId(e.target.value)}
-                >
-                  <option value="">Seleccionar concepto...</option>
-                  {conceptos.map((concept) => (
-                    <option key={concept.ConceptoCostoId} value={concept.ConceptoCostoId}>
-                      {concept.Nombre} — {concept.Formula || 'Sin fórmula'}
-                    </option>
-                  ))}
-                </select>
-                <button type="button" className="secondary-button" onClick={handleAddConcept}>
-                  Agregar concepto
-                </button>
-              </div>
-            </FormField>
+          <div style={{ marginBottom: '14px' }}>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Buscar concepto..."
+              value={filterConceptos}
+              onChange={e => setFilterConceptos(e.target.value)}
+              style={{ maxWidth: '280px', marginBottom: '12px' }}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {conceptosFiltrados.map(concept => {
+                const isAdded = selectedConcepts.some(c => c.ConceptoCostoId === concept.ConceptoCostoId)
+                const isHovered = hoveredConceptId === concept.ConceptoCostoId
+                const esIndirecto = (concept.TipoCosto || '').toLowerCase().includes('indirect')
+
+                let borderColor = '#e5e7eb'
+                let bgColor = '#fff'
+                let nameColor = '#111827'
+                let namePrefix = ''
+                if (isAdded && isHovered) {
+                  borderColor = '#fca5a5'; bgColor = '#fff1f2'; nameColor = '#dc2626'; namePrefix = '× '
+                } else if (isAdded) {
+                  borderColor = '#86efac'; bgColor = '#f0fdf4'; nameColor = '#15803d'; namePrefix = '✓ '
+                } else if (isHovered) {
+                  borderColor = '#3b82f6'; bgColor = '#eff6ff'
+                }
+
+                return (
+                  <button
+                    key={concept.ConceptoCostoId}
+                    type="button"
+                    onClick={() => isAdded ? handleRemoveConcept(concept.ConceptoCostoId) : handleAddConceptCard(concept)}
+                    onMouseEnter={() => setHoveredConceptId(concept.ConceptoCostoId)}
+                    onMouseLeave={() => setHoveredConceptId(null)}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                      padding: '8px 12px', borderRadius: '8px', textAlign: 'left',
+                      cursor: 'pointer', minWidth: '150px',
+                      border: `1.5px solid ${borderColor}`,
+                      background: bgColor,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      transition: 'border-color 0.15s, background 0.15s',
+                    }}
+                  >
+                    <span style={{ fontSize: '12px', fontWeight: '600', color: nameColor, marginBottom: '2px' }}>
+                      {namePrefix}{concept.Nombre}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#6b7280' }}>{concept.Formula || '—'}</span>
+                    <span style={{
+                      marginTop: '5px', fontSize: '10px', fontWeight: '600',
+                      padding: '1px 6px', borderRadius: '10px',
+                      background: esIndirecto ? '#fef08a' : '#dbeafe',
+                      color: esIndirecto ? '#854d0e' : '#1d4ed8',
+                    }}>
+                      {concept.TipoCosto || 'Sin tipo'}
+                    </span>
+                  </button>
+                )
+              })}
+              {conceptosFiltrados.length === 0 && (
+                <span style={{ fontSize: '13px', color: '#9ca3af', padding: '8px 0' }}>Sin coincidencias.</span>
+              )}
+            </div>
           </div>
           <div className="table-wrap">
             <table className="cost-table">
@@ -519,7 +574,9 @@ export default function NuevaCotizacion({
                 {costRows.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={{ padding: '24px', color: '#6b7280' }}>
-                      No hay conceptos agregados a la cotización.
+                      {editingCotizacionId
+                        ? 'Esta cotización no tiene costos guardados en la base de datos. Agrega los conceptos de costo nuevamente.'
+                        : 'No hay conceptos agregados a la cotización.'}
                     </td>
                   </tr>
                 ) : (
@@ -561,78 +618,86 @@ export default function NuevaCotizacion({
         <div className="summary-column">
           <section className="card summary-card">
             <h2>3. Resumen de la Cotización</h2>
-            <div className="summary-row">
-              <span>Total Costos Directos</span>
-              <strong>{formatMoney(totals.directos)}</strong>
-            </div>
-            <div className="summary-row">
-              <span>Total Costos Indirectos</span>
-              <strong>{formatMoney(totals.indirectos)}</strong>
-            </div>
-            <div className="summary-row total-costos">
-              <span>Total Costos</span>
-              <strong>{formatMoney(totals.total)}</strong>
-            </div>
-            <div className="summary-row">
-              <span>Margen de utilidad Directos (%)</span>
-              <div className="inline-input">
-                <input
-                  className="form-control"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={margenPctDirectos}
-                  onChange={(e) => setMargenPctDirectos(e.target.value)}
-                />
-                <span>%</span>
-              </div>
-            </div>
-            <div className="summary-row">
-              <span>Margen de utilidad Indirectos (%)</span>
-              <div className="inline-input">
-                <input
-                  className="form-control"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={margenPctIndirectos}
-                  onChange={(e) => setMargenPctIndirectos(e.target.value)}
-                />
-                <span>%</span>
-              </div>
-            </div>
-            <div className="summary-row">
-              <span>Margen de utilidad Directos</span>
-              <strong>{formatMoney(totals.margenDirectos)}</strong>
-            </div>
-            <div className="summary-row">
-              <span>Margen de utilidad Indirectos</span>
-              <strong>{formatMoney(totals.margenIndirectos)}</strong>
-            </div>
-            <div className="summary-row">
-              <span>Margen total</span>
-              <strong>{formatMoney(totals.margenTotal)}</strong>
-            </div>
-            <div className="summary-row highlight-profit">
-              <span>Total con ganancia</span>
-              <strong>{formatMoney(totals.conGanancia)}</strong>
-            </div>
-            <div className="summary-row">
-              <span>Total por participante</span>
-              <strong>{formatMoney(totals.porParticipante)}</strong>
-            </div>
-            <div className="summary-row">
-              <span>Precio sugerido por participante</span>
-              <strong>{formatMoney(totals.sugerido)}</strong>
-            </div>
+            {esMandatorio ? (
+              <>
+                <div className="summary-row" style={{ background: '#eff6ff', borderRadius: '6px', padding: '8px 4px', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: '600', color: '#1d4ed8' }}>Curso Mandatorio</span>
+                  <strong style={{ color: '#1d4ed8' }}>{cursoSeleccionado?.Nombre || ''}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Duración</span>
+                  <strong>{duracionDias || '—'} días</strong>
+                </div>
+                <div className="summary-row highlight-profit">
+                  <span>Costo del curso</span>
+                  <strong>{formatMoney(totals.conGanancia)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Precio por participante</span>
+                  <strong>{formatMoney(totals.porParticipante)}</strong>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="summary-row">
+                  <span>Total Costos Directos</span>
+                  <strong>{formatMoney(totals.directos)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Total Costos Indirectos</span>
+                  <strong>{formatMoney(totals.indirectos)}</strong>
+                </div>
+                <div className="summary-row total-costos">
+                  <span>Total Costos</span>
+                  <strong>{formatMoney(totals.total)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Margen de utilidad Directos (%)</span>
+                  <div className="inline-input">
+                    <input className="form-control" type="number" step="0.1" min="0" value={margenPctDirectos} onChange={(e) => setMargenPctDirectos(e.target.value)} />
+                    <span>%</span>
+                  </div>
+                </div>
+                <div className="summary-row">
+                  <span>Margen de utilidad Indirectos (%)</span>
+                  <div className="inline-input">
+                    <input className="form-control" type="number" step="0.1" min="0" value={margenPctIndirectos} onChange={(e) => setMargenPctIndirectos(e.target.value)} />
+                    <span>%</span>
+                  </div>
+                </div>
+                <div className="summary-row">
+                  <span>Margen Directos</span>
+                  <strong>{formatMoney(totals.margenDirectos)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Margen Indirectos</span>
+                  <strong>{formatMoney(totals.margenIndirectos)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Margen total</span>
+                  <strong>{formatMoney(totals.margenTotal)}</strong>
+                </div>
+                <div className="summary-row highlight-profit">
+                  <span>Total con ganancia</span>
+                  <strong>{formatMoney(totals.conGanancia)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Total por participante</span>
+                  <strong>{formatMoney(totals.porParticipante)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Precio sugerido por participante</span>
+                  <strong>{formatMoney(totals.sugerido)}</strong>
+                </div>
+              </>
+            )}
             <div className="button-group">
               <button type="button" className="primary-button btn-with-icon" onClick={handleGeneratePdf}>
             
                 Generar Cotización (PDF)
               </button>
               <button type="button" className="secondary-button btn-with-icon" onClick={handleSave} disabled={saving}>
-           
-                {saving ? 'Guardando...' : 'Guardar Cotización'}
+                {saving ? 'Guardando...' : editingCotizacionId ? 'Actualizar Cotización' : 'Guardar Cotización'}
               </button>
             </div>
           </section>
@@ -653,7 +718,9 @@ export default function NuevaCotizacion({
             </div>
             <div className="info-row">
               <span>Estado</span>
-              <strong style={{ color: '#b45309' }}>Pendiente de aprobación</strong>
+              <strong style={{ color: editingCotizacionId ? '#2563eb' : '#b45309' }}>
+                {editingCotizacionId ? 'Editando' : 'Pendiente de aprobación'}
+              </strong>
             </div>
           </section>
         </div>
