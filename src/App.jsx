@@ -34,6 +34,7 @@ import ChangePasswordModal from './ChangePasswordModal'
 import Usuarios from './Usuarios'
 import Dashboard from './Dashboard'
 import Inicio from './Inicio'
+import OrdenesMantenimiento from './OrdenesMantenimiento'
 
 function App() {
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -612,7 +613,9 @@ function App() {
               ? 'Historial de Cotizaciones'
               : activeView === 'aprobaciones'
                 ? 'Aprobaciones'
-                : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                : activeView === 'mantenimiento'
+                  ? 'Órdenes de Mantenimiento'
+                  : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -627,7 +630,9 @@ function App() {
               ? 'Cotizaciones > Historial de Cotizaciones'
               : activeView === 'aprobaciones'
                 ? 'Cotizaciones > Aprobaciones'
-                : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                : activeView === 'mantenimiento'
+                  ? 'Herramientas > Órdenes de Mantenimiento'
+                  : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   if (!usuario) {
     return <Login onLogin={handleLogin} />
@@ -682,6 +687,13 @@ function App() {
               onClick={() => handleNavClick('ordenesCompra')}
             >
               Ordenes de Compra
+            </button>
+            <button
+              type="button"
+              className={`nav-link${activeView === 'mantenimiento' ? ' active' : ''}`}
+              onClick={() => handleNavClick('mantenimiento')}
+            >
+              Órdenes de Mantenimiento
             </button>
             <button
               type="button"
@@ -915,7 +927,12 @@ function App() {
             currentUser={creadoPor}
             currentUserRol={usuario?.rol}
           />
-          ) : activeView === 'aprobaciones' ? (
+          ) : activeView === 'mantenimiento' ? (
+          <OrdenesMantenimiento
+            currentUser={creadoPor}
+            currentUserRol={usuario?.rol}
+          />
+        ) : activeView === 'aprobaciones' ? (
             <section className="panel card">
               <div className="panel-header space-between">
                 <div>
