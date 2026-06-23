@@ -1431,7 +1431,7 @@ export default function OrdenesCompra({
                 <table className="participants-table">
                   <thead>
                     <tr>
-                      <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Unidad de negocio</th>
+                      <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Destino</th><th>Unidad de negocio</th>
                       <th>Total</th><th>Fecha</th><th>Estado</th><th>Aprobaciones</th><th>Acciones</th>
                     </tr>
                   </thead>
@@ -1454,6 +1454,7 @@ export default function OrdenesCompra({
                             </span>
                           </td>
                           <td>{order.Proveedor}</td>
+                          <td>{order.Destino || '-'}</td>
                           <td>{order.UnidadNegocio}</td>
                           <td><strong>{formatMoney(order.Total)}</strong></td>
                           <td>{String(order.Fecha || '').slice(0, 10)}</td>
