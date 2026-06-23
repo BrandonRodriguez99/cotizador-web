@@ -1021,7 +1021,7 @@ function emptyOrderForm(folioValue) {
   return {
     Folio: folioValue || '', UnidadNegocioId: '', ProveedorId: '',
     Fecha: new Date().toISOString().slice(0, 10),
-    Tipo: 'compras', Observaciones: '',
+    Tipo: 'compras', Destino: '', Observaciones: '',
     LineItems: [createEmptyLine()],
   }
 }
@@ -1269,8 +1269,8 @@ export default function OrdenesCompra({
           </div>
         )}
 
-        {/* ── BUSCADOR / FILTROS ── */}
-        <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'12px', padding:'12px 14px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'flex-end', marginBottom:'4px' }}>
+        {/* ── BUSCADOR / FILTROS ── solo en vistas de listado, no en crear */}
+        {activeSection !== 'crear' && <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'12px', padding:'12px 14px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'flex-end', marginBottom:'4px' }}>
           <div style={{ flex:'2 1 180px' }}>
             <span style={{ display:'block', fontSize:'11px', fontWeight:600, color:'#6b7280', marginBottom:'4px' }}>Buscar</span>
             <input className="form-control" type="text" value={filtros.texto} onChange={setF('texto')}
@@ -1312,7 +1312,7 @@ export default function OrdenesCompra({
               Limpiar filtros
             </button>
           )}
-        </div>
+        </div>}
 
         {/* ── CREAR ── */}
         {activeSection === 'crear' && (
@@ -1327,6 +1327,14 @@ export default function OrdenesCompra({
                 <select className="form-control" value={form.Tipo} onChange={(e) => updateField('Tipo', e.target.value)}>
                   <option value="compras">Compras / Suministros</option>
                   <option value="servicios">Servicios</option>
+                </select>
+              </div>
+              <div className="form-field">
+                <span className="form-field-label">Destino</span>
+                <select className="form-control" value={form.Destino} onChange={(e) => updateField('Destino', e.target.value)}>
+                  <option value="">Seleccionar destino</option>
+                  <option value="UDAT">UDAT</option>
+                  <option value="Casas de renta">Casas de renta</option>
                 </select>
               </div>
               <div className="form-field">
