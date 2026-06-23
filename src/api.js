@@ -525,7 +525,7 @@ export async function resetearPasswordUsuario(token, id, password) {
 }
 
 // ── Órdenes de Mantenimiento ──────────────────────────────────────────────────
-export function getOrdenesMantenimiento() { return fetchJson('/ordenes-mantenimiento') }
-export function getOrdenMantenimientoById(id) { return fetchJson(`/ordenes-mantenimiento/${id}`) }
-export function createOrdenMantenimiento(data) { return postJson('/ordenes-mantenimiento', data) }
-export function updateOrdenMantenimiento(id, data) { return putJson(`/ordenes-mantenimiento/${id}`, data) }
+export function getOrdenesMantenimiento() { return fetchJson('ordenes-mantenimiento') }
+export function getOrdenMantenimientoById(id) { return fetchJson(`ordenes-mantenimiento/${id}`) }
+export function createOrdenMantenimiento(data) { return postJson('ordenes-mantenimiento', data) }
+export function updateOrdenMantenimiento(id, data) { return putJson(`ordenes-mantenimiento/${id}`, data) }
