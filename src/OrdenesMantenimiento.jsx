@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import jsPDF from 'jspdf'
 import {
   getOrdenesMantenimiento,
   getOrdenMantenimientoById,
@@ -425,122 +426,208 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   })
 
   // ── Generación de PDF ─────────────────────────────────────────────────────
-  function abrirPDF(orden, materiales) {
-    function chk(val, match) { return val === match ? '&#10003;' : '' }
+  function descargarPDF(orden, materiales) {
+    const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' })
+    const ML = 12, CW = 192
+
+    // Colores
+    const AZUL   = [26, 58, 105]
+    const AZUL2  = [41, 98, 173]
+    const GR     = [200, 200, 200]
+    const BLK    = [0, 0, 0]
+    const WHT    = [255, 255, 255]
+    const LGRAY  = [248, 248, 248]
+
+    let y = ML
+
+    function t(str, x, yy, { sz = 9, bold = false, col = BLK, align = 'left', maxW = null } = {}) {
+      doc.setFontSize(sz)
+      doc.setTextColor(...col)
+      doc.setFont('helvetica', bold ? 'bold' : 'normal')
+      const opts = { align }
+      if (maxW) opts.maxWidth = maxW
+      doc.text(String(str ?? ''), x, yy, opts)
+    }
+
+    function box(x, yy, w, h, fill, stroke) {
+      doc.setLineWidth(0.3)
+      if (fill) doc.setFillColor(...fill)
+      if (stroke) doc.setDrawColor(...stroke)
+      doc.rect(x, yy, w, h, fill && stroke ? 'FD' : fill ? 'F' : 'D')
+    }
+
+    function ln(x1, y1, x2, y2, col = GR) {
+      doc.setDrawColor(...col); doc.setLineWidth(0.3); doc.line(x1, y1, x2, y2)
+    }
+
     function fd(v) {
       if (!v) return ''
       const d = new Date(v)
-      return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
     }
-    // Normalizar campos independientemente del casing que devuelva mssql
-    const mats = (materiales && materiales.length ? materiales : []).map(m => ({
-      mat: m.Material ?? m.material ?? '',
-      qty: m.Cantidad ?? m.cantidad ?? '',
+
+    function chkbox(x, yy, checked) {
+      box(x, yy, 3.5, 3.5, null, BLK)
+      if (checked) {
+        doc.setDrawColor(...AZUL2); doc.setLineWidth(0.6)
+        doc.line(x + 0.4, yy + 2.2, x + 1.4, yy + 3.3)
+        doc.line(x + 1.4, yy + 3.3, x + 3.2, yy + 0.7)
+      }
+    }
+
+    function secHeader(title) {
+      box(ML, y, CW, 6.5, AZUL, AZUL)
+      t(title, ML + CW / 2, y + 4.5, { sz: 9, bold: true, col: WHT, align: 'center' })
+      y += 6.5
+    }
+
+    // ── CABECERA ──────────────────────────────────────────────────────────────
+    const HDR_H = 22, LOGO_W = 30, META_W = 52, TITLE_W = CW - LOGO_W - META_W
+    box(ML, y, CW, HDR_H, WHT, GR)
+    ln(ML + LOGO_W, y, ML + LOGO_W, y + HDR_H)
+    ln(ML + LOGO_W + TITLE_W, y, ML + LOGO_W + TITLE_W, y + HDR_H)
+    // Logo UDAT
+    doc.setDrawColor(...AZUL2); doc.setLineWidth(0.8); doc.rect(ML + 4, y + 3, 22, 16)
+    t('UDAT', ML + 15, y + 12, { sz: 12, bold: true, col: AZUL2, align: 'center' })
+    // Título
+    t('Orden de Mantenimiento', ML + LOGO_W + TITLE_W / 2, y + 13, { sz: 15, bold: true, align: 'center' })
+    // Meta (No./Rev./Fecha)
+    const metaX = ML + LOGO_W + TITLE_W
+    ;[['No.', 'FGA03-02'], ['Rev.', '2'], ['Fecha', '20-Ago-2025']].forEach(([lbl, val], i) => {
+      const ry = y + i * (HDR_H / 3)
+      if (i > 0) ln(metaX, ry, metaX + META_W, ry)
+      ln(metaX + 17, ry, metaX + 17, ry + HDR_H / 3)
+      t(lbl, metaX + 2, ry + (HDR_H / 3) * 0.7, { sz: 8, bold: true })
+      t(val, metaX + 19, ry + (HDR_H / 3) * 0.7, { sz: 8, bold: true })
+    })
+    y += HDR_H + 4
+
+    // ── CAMPOS INFO ───────────────────────────────────────────────────────────
+    function infoRow(lLabel, lVal, rLabel, rVal) {
+      const mid = ML + CW / 2
+      t(lLabel + ':', ML, y + 5, { sz: 8, bold: true })
+      t(lVal || '', ML + doc.getTextWidth(lLabel + ':') + 2, y + 5, { sz: 8, col: [50,50,50] })
+      ln(ML, y + 7, mid - 3, y + 7)
+      if (rLabel) {
+        t(rLabel + ':', mid, y + 5, { sz: 8, bold: true })
+        t(rVal || '', mid + doc.getTextWidth(rLabel + ':') + 2, y + 5, { sz: 8, col: [50,50,50] })
+        ln(mid, y + 7, ML + CW, y + 7)
+      }
+      y += 8
+    }
+    infoRow('Departamento', orden.Departamento, 'Fecha de Reporte', fd(orden.FechaReporte))
+    infoRow('Nombre de quien Solicita', orden.NombreSolicita, 'Puesto', orden.Puesto)
+    infoRow('Equipo', orden.Equipo, 'Código', orden.Codigo)
+    y += 2
+
+    // ── RAZÓN DE LA ORDEN ─────────────────────────────────────────────────────
+    const RAZONES_PDF = [
+      { key: 'correctivo', label: 'Mantenimiento Correctivo' },
+      { key: 'preventivo', label: 'Mantenimiento Preventivo' },
+      { key: 'predictivo', label: 'Mantenimiento Predictivo' },
+      { key: 'programado', label: 'Mantenimiento Programado' },
+    ]
+    t('Razón de la Orden:', ML, y + 5, { sz: 8, bold: true })
+    const rzLW = 38, rzCW = (CW - rzLW) / 2
+    RAZONES_PDF.forEach((rz, i) => {
+      const cx = ML + rzLW + (i % 2) * rzCW
+      const cy = y + Math.floor(i / 2) * 6.5
+      chkbox(cx, cy + 0.5, orden.RazonOrden === rz.key)
+      t(rz.label, cx + 5.5, cy + 4, { sz: 8 })
+    })
+    y += 16
+
+    // ── DESCRIPCIÓN DE LA FALLA ───────────────────────────────────────────────
+    secHeader('Descripción de la falla: (Dato a llenar por el usuario)')
+    const descLines = doc.splitTextToSize(String(orden.DescripcionFalla || ''), CW - 4)
+    const descH = Math.max(22, descLines.length * 5 + 6)
+    box(ML, y, CW, descH, WHT, GR)
+    if (descLines.length) { doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.text(descLines, ML + 2, y + 5) }
+    y += descH + 2
+
+    // ── PARA LLENADO EXCLUSIVO ────────────────────────────────────────────────
+    secHeader('Para llenado exclusivo de Mantenimiento')
+
+    // Tipo de falla
+    box(ML, y, CW, 8, WHT, GR)
+    t('Tipo de falla:', ML + 2, y + 5.5, { sz: 8, bold: true })
+    let tx = ML + 33
+    ;['Plomería', 'Eléctrica', 'Albañilería', 'Otro'].forEach(tipo => {
+      chkbox(tx, y + 2, orden.TipoFalla === tipo)
+      const label = tipo + (tipo === 'Otro' ? ':' : '')
+      t(label, tx + 5.5, y + 5.5, { sz: 8 })
+      tx += doc.getTextWidth(label) + 12
+    })
+    y += 8
+
+    // ── TABLA MATERIALES ──────────────────────────────────────────────────────
+    const mats = (materiales || []).map(m => ({
+      mat: String(m.Material ?? m.material ?? ''),
+      qty: String(m.Cantidad ?? m.cantidad ?? ''),
     }))
+    const MAT_W = CW * 0.78, QTY_W = CW - MAT_W
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>Orden de Mantenimiento - ${orden.Folio || ''}</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;font-size:11px;color:#000;padding:15px;background:#fff}
-.page{width:100%;max-width:750px;margin:0 auto;border:1.5px solid #333}
-.header{display:grid;grid-template-columns:90px 1fr 155px;border-bottom:1.5px solid #333}
-.logo-cell{display:flex;align-items:center;justify-content:center;border-right:1px solid #333;padding:8px}
-.logo-circle{width:58px;height:58px;border-radius:50%;border:2px solid #333;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;text-align:center;line-height:1.2}
-.title-cell{display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:bold;padding:8px}
-.meta-cell{border-left:1px solid #333;display:flex;flex-direction:column}
-.meta-row{display:flex;border-bottom:1px solid #333}
-.meta-row:last-child{border-bottom:none;flex:1;align-items:center}
-.meta-label{font-weight:bold;padding:3px 6px;border-right:1px solid #333;min-width:52px;font-size:10px}
-.meta-value{padding:3px 6px;font-size:10px}
-.fields{padding:6px 10px;border-bottom:1px solid #333}
-.fr{display:flex;gap:16px;margin-bottom:5px;align-items:baseline}
-.fr:last-child{margin-bottom:0}
-.fl{font-weight:bold;white-space:nowrap}
-.fv{border-bottom:1px solid #333;flex:1;min-width:50px;padding:0 3px}
-.razon-row{display:flex;align-items:flex-start;padding:6px 10px;border-bottom:1px solid #333;gap:10px}
-.razon-title{font-weight:bold;white-space:nowrap;padding-top:2px}
-.razon-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;flex:1}
-.cr{display:flex;align-items:center;gap:5px}
-.cb{width:13px;height:13px;border:1.5px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
-.sh{background:#4a4a4a;color:#fff;padding:4px 10px;text-align:center;font-weight:bold}
-.ca{padding:8px 10px;border-bottom:1px solid #333;min-height:72px;white-space:pre-wrap;line-height:1.5}
-.tif{display:flex;align-items:center;gap:14px;padding:5px 10px;border-bottom:1px solid #333;flex-wrap:wrap}
-.tl{font-weight:bold}
-table.mt{width:100%;border-collapse:collapse;border-bottom:1px solid #333}
-table.mt th{padding:4px 8px;text-align:left;font-weight:bold;border-right:1px solid #333}
-table.mt th:last-child{border-right:none}
-table.mt td{padding:6px 8px;border-top:1px solid #ccc;border-right:1px solid #333;min-height:22px}
-table.mt td:last-child{border-right:none}
-.cm{width:78%}.cc{width:22%}
-.ft{padding:5px 10px;border-bottom:1px solid #333;min-height:28px}
-.dm{padding:6px 10px;min-height:70px;border-bottom:1px solid #333;white-space:pre-wrap;line-height:1.5}
-.ba{min-height:55px;border-bottom:1px solid #333}
-.fs{display:flex}
-.fc{flex:1;padding:38px 16px 8px;text-align:center;border-right:1px solid #333}
-.fc:last-child{border-right:none}
-.fn{border-top:1px solid #000;margin-bottom:3px;padding-bottom:2px}
-.fs2{font-size:10px;font-weight:bold}
-@media print{body{padding:0}@page{size:letter;margin:10mm 8mm}}
-</style></head><body>
-<div class="page">
-<div class="header">
-  <div class="logo-cell"><div class="logo-circle">UDAT</div></div>
-  <div class="title-cell">Orden de Mantenimiento</div>
-  <div class="meta-cell">
-    <div class="meta-row"><span class="meta-label">No.</span><span class="meta-value">FGA03-02</span></div>
-    <div class="meta-row"><span class="meta-label">Rev.</span><span class="meta-value">2</span></div>
-    <div class="meta-row"><span class="meta-label">Fecha:</span><span class="meta-value">20-Ago-2025</span></div>
-  </div>
-</div>
-<div class="fields">
-  <div class="fr"><span class="fl">Departamento:</span><span class="fv">${orden.Departamento || ''}</span><span class="fl">Fecha de Reporte:</span><span class="fv">${fd(orden.FechaReporte)}</span></div>
-  <div class="fr"><span class="fl">Nombre de quien Solicita:</span><span class="fv">${orden.NombreSolicita || ''}</span><span class="fl">Puesto:</span><span class="fv">${orden.Puesto || ''}</span></div>
-  <div class="fr"><span class="fl">Equipo:</span><span class="fv">${orden.Equipo || ''}</span><span class="fl">Código:</span><span class="fv">${orden.Codigo || ''}</span></div>
-</div>
-<div class="razon-row">
-  <span class="razon-title">Razón de la Orden:</span>
-  <div class="razon-grid">
-    <div class="cr"><span class="cb">${chk(orden.RazonOrden,'correctivo')}</span> Mantenimiento Correctivo</div>
-    <div class="cr"><span class="cb">${chk(orden.RazonOrden,'preventivo')}</span> Mantenimiento Preventivo</div>
-    <div class="cr"><span class="cb">${chk(orden.RazonOrden,'predictivo')}</span> Mantenimiento predictivo</div>
-    <div class="cr"><span class="cb">${chk(orden.RazonOrden,'programado')}</span> Mantenimiento programado</div>
-  </div>
-</div>
-<div class="sh">Descripción de la falla: (Dato a llenar por el usuario)</div>
-<div class="ca">${(orden.DescripcionFalla || '').replace(/</g,'&lt;')}</div>
-<div class="sh">Para llenado exclusivo de Mantenimiento</div>
-<div class="tif">
-  <span class="tl">Tipo de falla:</span>
-  <span class="cr"><span class="cb">${chk(orden.TipoFalla,'Plomería')}</span> Plomería</span>
-  <span class="cr"><span class="cb">${chk(orden.TipoFalla,'Eléctrica')}</span> Eléctrica</span>
-  <span class="cr"><span class="cb">${chk(orden.TipoFalla,'Albañilería')}</span> Albañilería</span>
-  <span class="cr"><span class="cb">${chk(orden.TipoFalla,'Otro')}</span> Otro:</span>
-</div>
-<div class="sh">Refacciones y/o Materiales utilizados en el mantenimiento:</div>
-<table class="mt"><thead><tr><th class="cm">Refacción o Material</th><th class="cc">Cantidad</th></tr></thead>
-<tbody>${mats.map(m=>`<tr><td class="cm">${m.mat.replace(/</g,'&lt;')}</td><td class="cc">${m.qty}</td></tr>`).join('')}${mats.length===0?`<tr><td class="cm"></td><td class="cc"></td></tr>`:''}</tbody></table>
-<div class="sh">Fecha de terminación</div>
-<div class="ft">${fd(orden.FechaTerminacion)}</div>
-<div class="dm"><strong>Descripción de mantenimiento realizado:</strong>\n${(orden.DescripcionMantenimiento||'').replace(/</g,'&lt;')}</div>
-<div class="ba"></div>
-<div class="fs">
-  <div class="fc"><div class="fn">${(orden.TecnicoResponsable||'').replace(/</g,'&lt;')}</div><div class="fs2">Nombre y Firma<br>Técnico Responsable</div></div>
-  <div class="fc"><div class="fn">${(orden.UsuarioEquipo||'').replace(/</g,'&lt;')}</div><div class="fs2">Nombre y Firma<br>Usuario del Equipo</div></div>
-</div>
-</div>
-<script>window.onload=function(){window.print()}<\/script>
-</body></html>`
+    secHeader('Refacciones y/o Materiales utilizados en el mantenimiento:')
+    // Encabezados de columna
+    box(ML, y, MAT_W, 6.5, AZUL2, AZUL2)
+    box(ML + MAT_W, y, QTY_W, 6.5, AZUL2, AZUL2)
+    t('Refacción o Material', ML + 2, y + 4.5, { sz: 8, bold: true, col: WHT })
+    t('Cantidad', ML + MAT_W + QTY_W / 2, y + 4.5, { sz: 8, bold: true, col: WHT, align: 'center' })
+    y += 6.5
 
-    const win = window.open('', '_blank', 'width=860,height=1100')
-    if (win) { win.document.write(html); win.document.close() }
+    if (mats.length === 0) {
+      box(ML, y, CW, 7, LGRAY, GR); y += 7
+    } else {
+      mats.forEach((m, i) => {
+        const bg = i % 2 === 0 ? WHT : LGRAY
+        box(ML, y, MAT_W, 7, bg, GR)
+        box(ML + MAT_W, y, QTY_W, 7, bg, GR)
+        t(m.mat, ML + 2, y + 4.8, { sz: 8, maxW: MAT_W - 4 })
+        t(m.qty, ML + MAT_W + QTY_W / 2, y + 4.8, { sz: 8, align: 'center' })
+        y += 7
+      })
+    }
+    y += 3
+
+    // ── FECHA DE TERMINACIÓN ──────────────────────────────────────────────────
+    secHeader('Fecha de terminación')
+    box(ML, y, CW, 8, WHT, GR)
+    t(fd(orden.FechaTerminacion), ML + 2, y + 5.5, { sz: 9 })
+    y += 8 + 2
+
+    // ── DESCRIPCIÓN DE MANTENIMIENTO ──────────────────────────────────────────
+    secHeader('Descripción de mantenimiento realizado')
+    const mantLines = doc.splitTextToSize(String(orden.DescripcionMantenimiento || ''), CW - 4)
+    const mantH = Math.max(22, mantLines.length * 5 + 6)
+    box(ML, y, CW, mantH, WHT, GR)
+    if (mantLines.length) { doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.text(mantLines, ML + 2, y + 5) }
+    y += mantH + 3
+
+    // Espacio en blanco
+    box(ML, y, CW, 14, WHT, GR); y += 14 + 5
+
+    // ── FIRMAS ────────────────────────────────────────────────────────────────
+    const half = CW / 2
+    box(ML, y, half, 22, WHT, GR)
+    box(ML + half, y, half, 22, WHT, GR)
+    const sigY = y + 13
+    ln(ML + 6, sigY, ML + half - 6, sigY, BLK)
+    ln(ML + half + 6, sigY, ML + CW - 6, sigY, BLK)
+    if (orden.TecnicoResponsable) t(orden.TecnicoResponsable, ML + half / 2, sigY - 2, { sz: 7.5, align: 'center', col: [50,50,50] })
+    if (orden.UsuarioEquipo)      t(orden.UsuarioEquipo, ML + half + half / 2, sigY - 2, { sz: 7.5, align: 'center', col: [50,50,50] })
+    t('Nombre y Firma',      ML + half / 2,        sigY + 4, { sz: 7, bold: true, align: 'center' })
+    t('Técnico Responsable', ML + half / 2,        sigY + 8, { sz: 7, bold: true, align: 'center' })
+    t('Nombre y Firma',      ML + half + half / 2, sigY + 4, { sz: 7, bold: true, align: 'center' })
+    t('Usuario del Equipo',  ML + half + half / 2, sigY + 8, { sz: 7, bold: true, align: 'center' })
+
+    doc.save(`OM-${orden.Folio || 'orden'}.pdf`)
   }
 
   async function generarPDFOrden(id) {
     setPdfLoading(id)
     try {
       const data = await getOrdenMantenimientoById(id)
-      abrirPDF(data.orden, data.materiales)
+      descargarPDF(data.orden, data.materiales)
     } catch { alert('Error al generar el PDF') }
     finally { setPdfLoading(null) }
   }
