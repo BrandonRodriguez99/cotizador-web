@@ -35,6 +35,7 @@ import Usuarios from './Usuarios'
 import Dashboard from './Dashboard'
 import Inicio from './Inicio'
 import OrdenesMantenimiento from './OrdenesMantenimiento'
+import Inventario from './Inventario'
 
 function App() {
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -617,7 +618,9 @@ function App() {
                 ? 'Aprobaciones'
                 : activeView === 'mantenimiento'
                   ? 'Órdenes de Mantenimiento'
-                  : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                  : activeView === 'inventario'
+                    ? 'Inventario'
+                    : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -634,7 +637,9 @@ function App() {
                 ? 'Cotizaciones > Aprobaciones'
                 : activeView === 'mantenimiento'
                   ? 'Herramientas > Órdenes de Mantenimiento'
-                  : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                  : activeView === 'inventario'
+                    ? 'Herramientas > Inventario'
+                    : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   if (!usuario) {
     return <Login onLogin={handleLogin} />
@@ -692,6 +697,13 @@ function App() {
               Órdenes de Mantenimiento
             </button>
             {usuario?.rol !== 'mantenimiento' && (<>
+              <button
+                type="button"
+                className={`nav-link${activeView === 'inventario' ? ' active' : ''}`}
+                onClick={() => handleNavClick('inventario')}
+              >
+                Inventario
+              </button>
               <button
                 type="button"
                 className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`}
@@ -937,6 +949,18 @@ function App() {
             currentUser={creadoPor}
             currentUserRol={usuario?.rol}
           />
+        ) : activeView === 'inventario' ? (
+          <section className="panel card">
+            <div className="panel-header">
+              <div>
+                <h2>Inventario de Materiales</h2>
+                <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
+                  Gestiona el stock de materiales y refacciones
+                </p>
+              </div>
+            </div>
+            <Inventario isAdmin={usuario?.rol === 'admin'} />
+          </section>
         ) : activeView === 'aprobaciones' ? (
             <section className="panel card">
               <div className="panel-header space-between">

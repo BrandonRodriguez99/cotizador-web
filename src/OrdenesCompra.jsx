@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import Inventario from './Inventario'
 import {
   downloadOrdenCompraPdf, downloadSolicitudFondosPdf,
   getFacturaOrden, saveFacturaOrden,
@@ -1241,7 +1240,6 @@ export default function OrdenesCompra({
     { key: 'misOrdenes', label: `Mis órdenes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
     { key: 'historial', label: 'Órdenes de Compra' },
     { key: 'autorizar', label: 'Autorizar' },
-    { key: 'inventario', label: 'Inventario' },
   ]
 
   return (
@@ -1780,11 +1778,6 @@ export default function OrdenesCompra({
           </div>
         )}
 
-        {activeSection === 'inventario' && (
-          <div style={{ marginTop: '8px' }}>
-            <Inventario isAdmin={currentUserRol === 'admin'} />
-          </div>
-        )}
       </div>
 
       {/* ── Modales ── */}
