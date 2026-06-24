@@ -140,6 +140,7 @@ export default function Usuarios({ token }) {
                     autorizador1: 'Autorizador 1 — Administración',
                     autorizador2: 'Autorizador 2 — Sec. Académica',
                     empleado: 'Empleado',
+                    mantenimiento: 'Personal de Mantenimiento',
                   }[u.Rol] || u.Rol}</td>
                   <td>
                     <span style={{
@@ -209,6 +210,7 @@ export default function Usuarios({ token }) {
                     onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}
                   >
                     <option value="empleado">Empleado (Solicitante)</option>
+                    <option value="mantenimiento">Personal de Mantenimiento</option>
                     <option value="autorizador1">Autorizador 1 — Administración</option>
                     <option value="autorizador2">Autorizador 2 — Secretaría Académica</option>
                     <option value="admin">Administrador del sistema</option>

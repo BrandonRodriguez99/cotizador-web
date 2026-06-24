@@ -84,9 +84,11 @@ function App() {
   const [error, setError] = useState(null)
   const rolInicial = usuario?.rol
   const [activeView, setActiveView] = useState(
-    (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
-      ? 'dashboard'
-      : 'inicio'
+    rolInicial === 'mantenimiento'
+      ? 'mantenimiento'
+      : (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
+        ? 'dashboard'
+        : 'inicio'
   )
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [catalogItems, setCatalogItems] = useState([])
@@ -655,39 +657,33 @@ function App() {
         </div>
 
         <nav className="sidebar-nav">
-          {(usuario?.rol === 'admin' || usuario?.rol === 'autorizador1' || usuario?.rol === 'autorizador2') && (
-            <div className="nav-section">
-              <p className="nav-title">Inicio</p>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'dashboard' ? ' active' : ''}`}
-                onClick={() => handleNavClick('dashboard')}
-              >
-                Dashboard
-              </button>
-            </div>
-          )}
-          {!(usuario?.rol === 'admin' || usuario?.rol === 'autorizador1' || usuario?.rol === 'autorizador2') && (
-            <div className="nav-section">
-              <p className="nav-title">Inicio</p>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'inicio' ? ' active' : ''}`}
-                onClick={() => handleNavClick('inicio')}
-              >
-                Inicio
-              </button>
-            </div>
+          {usuario?.rol !== 'mantenimiento' && (
+            (usuario?.rol === 'admin' || usuario?.rol === 'autorizador1' || usuario?.rol === 'autorizador2') ? (
+              <div className="nav-section">
+                <p className="nav-title">Inicio</p>
+                <button
+                  type="button"
+                  className={`nav-link${activeView === 'dashboard' ? ' active' : ''}`}
+                  onClick={() => handleNavClick('dashboard')}
+                >
+                  Dashboard
+                </button>
+              </div>
+            ) : (
+              <div className="nav-section">
+                <p className="nav-title">Inicio</p>
+                <button
+                  type="button"
+                  className={`nav-link${activeView === 'inicio' ? ' active' : ''}`}
+                  onClick={() => handleNavClick('inicio')}
+                >
+                  Inicio
+                </button>
+              </div>
+            )
           )}
           <div className="nav-section">
             <p className="nav-title">Herramientas</p>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`}
-              onClick={() => handleNavClick('ordenesCompra')}
-            >
-              Ordenes de Compra
-            </button>
             <button
               type="button"
               className={`nav-link${activeView === 'mantenimiento' ? ' active' : ''}`}
@@ -695,21 +691,30 @@ function App() {
             >
               Órdenes de Mantenimiento
             </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'cotizacion' ? ' active' : ''}`}
-              onClick={() => handleNavClick('cotizacion')}
-            >
-              Nueva Cotización
-            </button>
-            <button type="button" className={`nav-link${activeView === 'historial' ? ' active' : ''}`} onClick={() => handleNavClick('historial')}>
-              Historial de Cotizaciones
-            </button>
-            <button type="button" className={`nav-link${activeView === 'aprobaciones' ? ' active' : ''}`} onClick={() => handleNavClick('aprobaciones')}>
-              Aprobaciones
-            </button>
+            {usuario?.rol !== 'mantenimiento' && (<>
+              <button
+                type="button"
+                className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`}
+                onClick={() => handleNavClick('ordenesCompra')}
+              >
+                Ordenes de Compra
+              </button>
+              <button
+                type="button"
+                className={`nav-link${activeView === 'cotizacion' ? ' active' : ''}`}
+                onClick={() => handleNavClick('cotizacion')}
+              >
+                Nueva Cotización
+              </button>
+              <button type="button" className={`nav-link${activeView === 'historial' ? ' active' : ''}`} onClick={() => handleNavClick('historial')}>
+                Historial de Cotizaciones
+              </button>
+              <button type="button" className={`nav-link${activeView === 'aprobaciones' ? ' active' : ''}`} onClick={() => handleNavClick('aprobaciones')}>
+                Aprobaciones
+              </button>
+            </>)}
           </div>
-          <div className="nav-section">
+          {usuario?.rol !== 'mantenimiento' && <div className="nav-section">
             <p className="nav-title">Catálogos</p>
             <button
               type="button"
@@ -760,7 +765,7 @@ function App() {
             >
               Unidad de Negocio
             </button>
-          </div>
+          </div>}
           {usuario?.rol === 'admin' && (
             <div className="nav-section">
               <p className="nav-title">Administración</p>
