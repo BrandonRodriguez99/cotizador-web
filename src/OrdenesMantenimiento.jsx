@@ -375,6 +375,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   // Para completar una orden (técnico)
   const [selectedOrden, setSelectedOrden] = useState(null)   // { orden, materiales }
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [pdfLoading, setPdfLoading]       = useState(null)
 
   async function loadOrdenes() {
     setLoading(true)
@@ -423,6 +424,124 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     transition: 'all 0.15s',
   })
 
+  // ── Generación de PDF ─────────────────────────────────────────────────────
+  function abrirPDF(orden, materiales) {
+    function chk(val, match) { return val === match ? '&#10003;' : '' }
+    function fd(v) {
+      if (!v) return ''
+      const d = new Date(v)
+      return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    }
+    const mats = (materiales && materiales.length ? [...materiales] : [])
+    while (mats.length < 5) mats.push({ Material: '', Cantidad: '' })
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Orden de Mantenimiento - ${orden.Folio || ''}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:11px;color:#000;padding:15px;background:#fff}
+.page{width:100%;max-width:750px;margin:0 auto;border:1.5px solid #333}
+.header{display:grid;grid-template-columns:90px 1fr 155px;border-bottom:1.5px solid #333}
+.logo-cell{display:flex;align-items:center;justify-content:center;border-right:1px solid #333;padding:8px}
+.logo-circle{width:58px;height:58px;border-radius:50%;border:2px solid #333;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;text-align:center;line-height:1.2}
+.title-cell{display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:bold;padding:8px}
+.meta-cell{border-left:1px solid #333;display:flex;flex-direction:column}
+.meta-row{display:flex;border-bottom:1px solid #333}
+.meta-row:last-child{border-bottom:none;flex:1;align-items:center}
+.meta-label{font-weight:bold;padding:3px 6px;border-right:1px solid #333;min-width:52px;font-size:10px}
+.meta-value{padding:3px 6px;font-size:10px}
+.fields{padding:6px 10px;border-bottom:1px solid #333}
+.fr{display:flex;gap:16px;margin-bottom:5px;align-items:baseline}
+.fr:last-child{margin-bottom:0}
+.fl{font-weight:bold;white-space:nowrap}
+.fv{border-bottom:1px solid #333;flex:1;min-width:50px;padding:0 3px}
+.razon-row{display:flex;align-items:flex-start;padding:6px 10px;border-bottom:1px solid #333;gap:10px}
+.razon-title{font-weight:bold;white-space:nowrap;padding-top:2px}
+.razon-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;flex:1}
+.cr{display:flex;align-items:center;gap:5px}
+.cb{width:13px;height:13px;border:1.5px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.sh{background:#4a4a4a;color:#fff;padding:4px 10px;text-align:center;font-weight:bold}
+.ca{padding:8px 10px;border-bottom:1px solid #333;min-height:72px;white-space:pre-wrap;line-height:1.5}
+.tif{display:flex;align-items:center;gap:14px;padding:5px 10px;border-bottom:1px solid #333;flex-wrap:wrap}
+.tl{font-weight:bold}
+table.mt{width:100%;border-collapse:collapse;border-bottom:1px solid #333}
+table.mt th{padding:4px 8px;text-align:left;font-weight:bold;border-right:1px solid #333}
+table.mt th:last-child{border-right:none}
+table.mt td{padding:3px 8px;border-top:1px solid #ccc;border-right:1px solid #333;height:22px}
+table.mt td:last-child{border-right:none}
+.cm{width:78%}.cc{width:22%}
+.ft{padding:5px 10px;border-bottom:1px solid #333;min-height:28px}
+.dm{padding:6px 10px;min-height:70px;border-bottom:1px solid #333;white-space:pre-wrap;line-height:1.5}
+.ba{min-height:55px;border-bottom:1px solid #333}
+.fs{display:flex}
+.fc{flex:1;padding:38px 16px 8px;text-align:center;border-right:1px solid #333}
+.fc:last-child{border-right:none}
+.fn{border-top:1px solid #000;margin-bottom:3px;padding-bottom:2px}
+.fs2{font-size:10px;font-weight:bold}
+@media print{body{padding:0}@page{size:letter;margin:10mm 8mm}}
+</style></head><body>
+<div class="page">
+<div class="header">
+  <div class="logo-cell"><div class="logo-circle">UDAT</div></div>
+  <div class="title-cell">Orden de Mantenimiento</div>
+  <div class="meta-cell">
+    <div class="meta-row"><span class="meta-label">No.</span><span class="meta-value">FGA03-02</span></div>
+    <div class="meta-row"><span class="meta-label">Rev.</span><span class="meta-value">2</span></div>
+    <div class="meta-row"><span class="meta-label">Fecha:</span><span class="meta-value">20-Ago-2025</span></div>
+  </div>
+</div>
+<div class="fields">
+  <div class="fr"><span class="fl">Departamento:</span><span class="fv">${orden.Departamento || ''}</span><span class="fl">Fecha de Reporte:</span><span class="fv">${fd(orden.FechaReporte)}</span></div>
+  <div class="fr"><span class="fl">Nombre de quien Solicita:</span><span class="fv">${orden.NombreSolicita || ''}</span><span class="fl">Puesto:</span><span class="fv">${orden.Puesto || ''}</span></div>
+  <div class="fr"><span class="fl">Equipo:</span><span class="fv">${orden.Equipo || ''}</span><span class="fl">Código:</span><span class="fv">${orden.Codigo || ''}</span></div>
+</div>
+<div class="razon-row">
+  <span class="razon-title">Razón de la Orden:</span>
+  <div class="razon-grid">
+    <div class="cr"><span class="cb">${chk(orden.RazonOrden,'correctivo')}</span> Mantenimiento Correctivo</div>
+    <div class="cr"><span class="cb">${chk(orden.RazonOrden,'preventivo')}</span> Mantenimiento Preventivo</div>
+    <div class="cr"><span class="cb">${chk(orden.RazonOrden,'predictivo')}</span> Mantenimiento predictivo</div>
+    <div class="cr"><span class="cb">${chk(orden.RazonOrden,'programado')}</span> Mantenimiento programado</div>
+  </div>
+</div>
+<div class="sh">Descripción de la falla: (Dato a llenar por el usuario)</div>
+<div class="ca">${(orden.DescripcionFalla || '').replace(/</g,'&lt;')}</div>
+<div class="sh">Para llenado exclusivo de Mantenimiento</div>
+<div class="tif">
+  <span class="tl">Tipo de falla:</span>
+  <span class="cr"><span class="cb">${chk(orden.TipoFalla,'Plomería')}</span> Plomería</span>
+  <span class="cr"><span class="cb">${chk(orden.TipoFalla,'Eléctrica')}</span> Eléctrica</span>
+  <span class="cr"><span class="cb">${chk(orden.TipoFalla,'Albañilería')}</span> Albañilería</span>
+  <span class="cr"><span class="cb">${chk(orden.TipoFalla,'Otro')}</span> Otro:</span>
+</div>
+<div class="sh">Refacciones y/o Materiales utilizados en el mantenimiento:</div>
+<table class="mt"><thead><tr><th class="cm">Refacción o Material</th><th class="cc">Cantidad</th></tr></thead>
+<tbody>${mats.map(m=>`<tr><td class="cm">${(m.Material||'').replace(/</g,'&lt;')}</td><td class="cc">${m.Cantidad||''}</td></tr>`).join('')}</tbody></table>
+<div class="sh">Fecha de terminación</div>
+<div class="ft">${fd(orden.FechaTerminacion)}</div>
+<div class="dm"><strong>Descripción de mantenimiento realizado:</strong>\n${(orden.DescripcionMantenimiento||'').replace(/</g,'&lt;')}</div>
+<div class="ba"></div>
+<div class="fs">
+  <div class="fc"><div class="fn">${(orden.TecnicoResponsable||'').replace(/</g,'&lt;')}</div><div class="fs2">Nombre y Firma<br>Técnico Responsable</div></div>
+  <div class="fc"><div class="fn">${(orden.UsuarioEquipo||'').replace(/</g,'&lt;')}</div><div class="fs2">Nombre y Firma<br>Usuario del Equipo</div></div>
+</div>
+</div>
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`
+
+    const win = window.open('', '_blank', 'width=860,height=1100')
+    if (win) { win.document.write(html); win.document.close() }
+  }
+
+  async function generarPDFOrden(id) {
+    setPdfLoading(id)
+    try {
+      const data = await getOrdenMantenimientoById(id)
+      abrirPDF(data.orden, data.materiales)
+    } catch { alert('Error al generar el PDF') }
+    finally { setPdfLoading(null) }
+  }
+
   // ── Tabla de órdenes ──────────────────────────────────────────────────────
   function OrdenTable({ lista }) {
     if (lista.length === 0) return (
@@ -434,7 +553,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
           <thead>
             <tr>
               <th>Folio</th><th>Equipo</th><th>Razón</th>
-              <th>Solicitante</th><th>Fecha</th><th>Estado</th><th>Técnico</th>
+              <th>Solicitante</th><th>Fecha</th><th>Estado</th><th>Técnico</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -447,6 +566,17 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
                 <td>{fmtFecha(o.FechaReporte)}</td>
                 <td><EstadoBadge estado={o.Estado} /></td>
                 <td>{o.TecnicoResponsable || '-'}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    style={{ fontSize: '12px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                    onClick={() => generarPDFOrden(o.OrdenMantenimientoId)}
+                    disabled={pdfLoading === o.OrdenMantenimientoId}
+                  >
+                    {pdfLoading === o.OrdenMantenimientoId ? '...' : '📄 PDF'}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
