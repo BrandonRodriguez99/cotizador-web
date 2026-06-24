@@ -432,8 +432,11 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
       const d = new Date(v)
       return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
     }
-    const mats = (materiales && materiales.length ? [...materiales] : [])
-    while (mats.length < 5) mats.push({ Material: '', Cantidad: '' })
+    // Normalizar campos independientemente del casing que devuelva mssql
+    const mats = (materiales && materiales.length ? materiales : []).map(m => ({
+      mat: m.Material ?? m.material ?? '',
+      qty: m.Cantidad ?? m.cantidad ?? '',
+    }))
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>Orden de Mantenimiento - ${orden.Folio || ''}</title>
@@ -467,7 +470,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#000;padding:15px;backgro
 table.mt{width:100%;border-collapse:collapse;border-bottom:1px solid #333}
 table.mt th{padding:4px 8px;text-align:left;font-weight:bold;border-right:1px solid #333}
 table.mt th:last-child{border-right:none}
-table.mt td{padding:3px 8px;border-top:1px solid #ccc;border-right:1px solid #333;height:22px}
+table.mt td{padding:6px 8px;border-top:1px solid #ccc;border-right:1px solid #333;min-height:22px}
 table.mt td:last-child{border-right:none}
 .cm{width:78%}.cc{width:22%}
 .ft{padding:5px 10px;border-bottom:1px solid #333;min-height:28px}
@@ -516,7 +519,7 @@ table.mt td:last-child{border-right:none}
 </div>
 <div class="sh">Refacciones y/o Materiales utilizados en el mantenimiento:</div>
 <table class="mt"><thead><tr><th class="cm">Refacción o Material</th><th class="cc">Cantidad</th></tr></thead>
-<tbody>${mats.map(m=>`<tr><td class="cm">${(m.Material||'').replace(/</g,'&lt;')}</td><td class="cc">${m.Cantidad||''}</td></tr>`).join('')}</tbody></table>
+<tbody>${mats.map(m=>`<tr><td class="cm">${m.mat.replace(/</g,'&lt;')}</td><td class="cc">${m.qty}</td></tr>`).join('')}${mats.length===0?`<tr><td class="cm"></td><td class="cc"></td></tr>`:''}</tbody></table>
 <div class="sh">Fecha de terminación</div>
 <div class="ft">${fd(orden.FechaTerminacion)}</div>
 <div class="dm"><strong>Descripción de mantenimiento realizado:</strong>\n${(orden.DescripcionMantenimiento||'').replace(/</g,'&lt;')}</div>
