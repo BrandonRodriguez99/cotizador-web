@@ -529,3 +529,10 @@ export function getOrdenesMantenimiento() { return fetchJson('ordenes-mantenimie
 export function getOrdenMantenimientoById(id) { return fetchJson(`ordenes-mantenimiento/${id}`, { headers: authHeaders() }) }
 export function createOrdenMantenimiento(data) { return fetchJson('ordenes-mantenimiento', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function updateOrdenMantenimiento(id, data) { return fetchJson(`ordenes-mantenimiento/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+
+// ── Inventario ────────────────────────────────────────────────────────────────
+export function getInventario() { return fetchJson('inventario', { headers: authHeaders() }) }
+export function getInventarioDashboard() { return fetchJson('inventario/dashboard', { headers: authHeaders() }) }
+export function createProducto(data) { return fetchJson('inventario', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateProducto(id, data) { return fetchJson(`inventario/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function ajustarStock(id, data) { return fetchJson(`inventario/${id}/ajuste`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }

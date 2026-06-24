@@ -4,6 +4,7 @@ import {
   getOrdenMantenimientoById,
   createOrdenMantenimiento,
   updateOrdenMantenimiento,
+  getInventario,
 } from './api'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -157,7 +158,96 @@ function FormParte1({ onSaved, creadoPor }) {
 }
 
 // ── Formulario Parte 2 (Técnico — vista móvil) ────────────────────────────────
-function FormTecnico({ orden, materiales: initMat, onSaved, tecnico }) {
+function FilaMaterial({ mat, idx, inventario, onUpdate, onRemove, showRemove }) {
+  const [query, setQuery] = useState(mat.productoId ? '' : mat.material || '')
+  const [open, setOpen]   = useState(false)
+
+  const productoSeleccionado = mat.productoId
+    ? inventario.find(p => p.ProductoId === Number(mat.productoId))
+    : null
+
+  const sugerencias = query.length >= 1
+    ? inventario.filter(p => p.Activo && p.NombreProducto.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    : inventario.filter(p => p.Activo).slice(0, 8)
+
+  function seleccionar(prod) {
+    onUpdate('productoId', prod.ProductoId)
+    onUpdate('material', prod.NombreProducto)
+    setQuery('')
+    setOpen(false)
+  }
+
+  function limpiar() {
+    onUpdate('productoId', null)
+    onUpdate('material', '')
+    setQuery('')
+  }
+
+  const inputStyle = { width: '100%', padding: '12px 14px', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '15px', boxSizing: 'border-box', background: '#fff' }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '12px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb', position: 'relative' }}>
+      {showRemove && (
+        <button type="button" onClick={onRemove}
+          style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '18px', lineHeight: 1 }}>×</button>
+      )}
+      <div style={{ position: 'relative' }}>
+        {productoSeleccionado ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#eff6ff', border: '1.5px solid #2563eb', borderRadius: '10px' }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{productoSeleccionado.NombreProducto}</p>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#6b7280' }}>
+                Disponible: <strong style={{ color: productoSeleccionado.EstadoStock === 'ok' ? '#15803d' : '#b45309' }}>
+                  {Number(productoSeleccionado.CantidadReal).toFixed(2)} {productoSeleccionado.UnidadMedida}
+                </strong>
+              </p>
+            </div>
+            <button type="button" onClick={limpiar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '18px' }}>×</button>
+          </div>
+        ) : (
+          <>
+            <input
+              style={inputStyle}
+              placeholder="Buscar en inventario o escribir..."
+              value={query}
+              onChange={e => { setQuery(e.target.value); onUpdate('material', e.target.value); setOpen(true) }}
+              onFocus={() => setOpen(true)}
+              onBlur={() => setTimeout(() => setOpen(false), 200)}
+            />
+            {open && sugerencias.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #d1d5db', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: '4px', maxHeight: '220px', overflowY: 'auto' }}>
+                {sugerencias.map(p => (
+                  <button key={p.ProductoId} type="button" onMouseDown={() => seleccionar(p)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f3f4f6' }}>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: '14px' }}>{p.NombreProducto}</p>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>{p.UnidadMedida}</p>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: p.EstadoStock === 'ok' ? '#15803d' : p.EstadoStock === 'bajo' ? '#b45309' : '#b91c1c', whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                      {Number(p.CantidadReal).toFixed(2)} disp.
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input style={{ ...inputStyle, flex: 1 }} type="number" min="0.01" step="0.01"
+          placeholder="Cantidad" value={mat.cantidad}
+          onChange={e => onUpdate('cantidad', e.target.value)} />
+        {productoSeleccionado && (
+          <div style={{ padding: '12px 14px', background: '#f3f4f6', borderRadius: '10px', fontSize: '14px', color: '#374151', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+            {productoSeleccionado.UnidadMedida}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function FormTecnico({ orden, materiales: initMat, onSaved, tecnico, inventario }) {
   const [form, setForm] = useState({
     tipoFalla: orden.TipoFalla || '',
     fechaTerminacion: orden.FechaTerminacion ? String(orden.FechaTerminacion).slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -167,13 +257,13 @@ function FormTecnico({ orden, materiales: initMat, onSaved, tecnico }) {
     estado: 'Completada',
   })
   const [materiales, setMateriales] = useState(
-    initMat?.length ? initMat : [{ material: '', cantidad: '' }]
+    initMat?.length ? initMat.map(m => ({ material: m.Material || '', cantidad: m.Cantidad || '', productoId: m.ProductoId || null })) : [{ material: '', cantidad: '', productoId: null }]
   )
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState(null)
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
 
-  function addMat() { setMateriales(m => [...m, { material: '', cantidad: '' }]) }
+  function addMat() { setMateriales(m => [...m, { material: '', cantidad: '', productoId: null }]) }
   function removeMat(i) { setMateriales(m => m.filter((_, idx) => idx !== i)) }
   function updateMat(i, k, v) { setMateriales(m => m.map((r, idx) => idx === i ? { ...r, [k]: v } : r)) }
 
@@ -218,23 +308,15 @@ function FormTecnico({ orden, materiales: initMat, onSaved, tecnico }) {
         </div>
       </div>
 
-      {/* Materiales */}
+      {/* Materiales con selector de inventario */}
       <div>
         <label style={labelStyle}>Refacciones y/o Materiales utilizados</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {materiales.map((m, i) => (
-            <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input style={{ ...inputStyle, flex: 2 }} placeholder="Refacción o material"
-                value={m.material} onChange={e => updateMat(i, 'material', e.target.value)} />
-              <input style={{ ...inputStyle, flex: 1 }} placeholder="Cantidad"
-                value={m.cantidad} onChange={e => updateMat(i, 'cantidad', e.target.value)} />
-              {materiales.length > 1 && (
-                <button type="button" onClick={() => removeMat(i)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '20px', padding: '4px', flexShrink: 0 }}>
-                  ×
-                </button>
-              )}
-            </div>
+            <FilaMaterial key={i} mat={m} idx={i} inventario={inventario}
+              onUpdate={(k, v) => updateMat(i, k, v)}
+              onRemove={() => removeMat(i)}
+              showRemove={materiales.length > 1} />
           ))}
           <button type="button" onClick={addMat}
             style={{ padding: '10px', border: '1.5px dashed #d1d5db', borderRadius: '10px', background: '#fafafa', color: '#6b7280', fontSize: '14px', cursor: 'pointer', fontWeight: 600 }}>
@@ -288,6 +370,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   const [ordenes, setOrdenes]       = useState([])
   const [loading, setLoading]       = useState(false)
   const [successMsg, setSuccessMsg] = useState(null)
+  const [inventario, setInventario] = useState([])
 
   // Para completar una orden (técnico)
   const [selectedOrden, setSelectedOrden] = useState(null)   // { orden, materiales }
@@ -298,6 +381,11 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     try { setOrdenes(await getOrdenesMantenimiento()) }
     catch {} finally { setLoading(false) }
   }
+
+  useEffect(() => {
+    // Cargar inventario activo para el selector de materiales
+    getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (activeTab !== 'nueva') loadOrdenes()
@@ -380,6 +468,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
             orden={selectedOrden.orden}
             materiales={selectedOrden.materiales}
             tecnico={currentUser}
+            inventario={inventario}
             onSaved={() => {
               setSelectedOrden(null)
               showSuccess('Orden completada correctamente.')
