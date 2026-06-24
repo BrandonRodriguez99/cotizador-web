@@ -6,6 +6,7 @@ import {
   getSolicitudFondos, createSolicitudFondos, approveSolicitudFondos, getSolicitudesFondosPendientes,
   getEvaluacionProveedor, saveEvaluacionProveedor,
   deleteOrdenCompra,
+  getInventario,
 } from './api'
 
 function formatMoney(value) {
@@ -1009,11 +1010,93 @@ function EvaluacionModal({ orden, tipoForzado, isAdmin, isAutorizador = false, o
   )
 }
 
+// ── Selector de producto para partidas ────────────────────────────────────────
+function DescripcionCell({ line, inventario, onSelect, onClear, onTextChange }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen]   = useState(false)
+
+  const productoSeleccionado = line.ProductoId
+    ? inventario.find(p => p.ProductoId === Number(line.ProductoId))
+    : null
+
+  const sugerencias = inventario.filter(p =>
+    p.Activo && (
+      !query || p.NombreProducto.toLowerCase().includes(query.toLowerCase())
+    )
+  ).slice(0, 10)
+
+  function seleccionar(prod) {
+    onSelect(prod)
+    setQuery('')
+    setOpen(false)
+  }
+
+  if (productoSeleccionado) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '220px' }}>
+        <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: '#1d4ed8' }}>
+          {productoSeleccionado.NombreProducto}
+        </span>
+        <button type="button" onClick={onClear}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '16px', lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}
+          title="Cambiar producto">×</button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ position: 'relative', minWidth: '220px' }}>
+      <input
+        className="form-control"
+        type="text"
+        value={query || line.Descripcion}
+        placeholder="Buscar inventario o escribir..."
+        onChange={e => {
+          setQuery(e.target.value)
+          onTextChange(e.target.value)
+          setOpen(true)
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+      />
+      {open && sugerencias.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+          background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: '2px',
+          maxHeight: '200px', overflowY: 'auto',
+        }}>
+          {sugerencias.map(p => (
+            <button key={p.ProductoId} type="button" onMouseDown={() => seleccionar(p)}
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                width: '100%', padding: '8px 12px', background: 'none', border: 'none',
+                cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f3f4f6',
+                fontSize: '13px',
+              }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 600 }}>{p.NombreProducto}</p>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '11px' }}>{p.UnidadMedida}</p>
+              </div>
+              <span style={{
+                fontSize: '11px', fontWeight: 700, marginLeft: '8px', whiteSpace: 'nowrap',
+                color: p.EstadoStock === 'ok' ? '#15803d' : p.EstadoStock === 'bajo' ? '#b45309' : '#b91c1c',
+              }}>
+                {Number(p.CantidadReal).toFixed(2)} disp.
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Helpers form ───────────────────────────────────────────────────────────────
 function createEmptyLine() {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    Cantidad: '1', Descripcion: '', UnidadMedida: '', PrecioUnitario: '0.00',
+    Cantidad: '1', Descripcion: '', UnidadMedida: '', PrecioUnitario: '0.00', ProductoId: null,
   }
 }
 
@@ -1043,6 +1126,11 @@ export default function OrdenesCompra({
   const [successMsg, setSuccessMsg] = useState(null)
   const [sfPendientes, setSfPendientes] = useState([])
   const [sfActionError, setSfActionError] = useState(null)
+  const [inventario, setInventario] = useState([])
+
+  useEffect(() => {
+    getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
+  }, [])
 
   useEffect(() => {
     setForm((current) => ({ ...current, Folio: folio || current.Folio }))
@@ -1380,8 +1468,23 @@ export default function OrdenesCompra({
                   {form.LineItems.map((line) => (
                     <tr key={line.id}>
                       <td><input className="form-control" type="number" min="0" value={line.Cantidad} onChange={(e) => updateLine(line.id, 'Cantidad', e.target.value)} /></td>
-                      <td><input className="form-control" type="text" value={line.Descripcion} onChange={(e) => updateLine(line.id, 'Descripcion', e.target.value)} placeholder="Descripción de la partida" /></td>
-                      <td><input className="form-control" type="text" value={line.UnidadMedida} onChange={(e) => updateLine(line.id, 'UnidadMedida', e.target.value)} placeholder="Ej. hrs, pza" /></td>
+                      <td>
+                        <DescripcionCell
+                          line={line}
+                          inventario={inventario}
+                          onSelect={(prod) => {
+                            updateLine(line.id, 'ProductoId', prod.ProductoId)
+                            updateLine(line.id, 'Descripcion', prod.NombreProducto)
+                            updateLine(line.id, 'UnidadMedida', prod.UnidadMedida || '')
+                          }}
+                          onClear={() => {
+                            updateLine(line.id, 'ProductoId', null)
+                            updateLine(line.id, 'Descripcion', '')
+                          }}
+                          onTextChange={(v) => updateLine(line.id, 'Descripcion', v)}
+                        />
+                      </td>
+                      <td><input className="form-control" type="text" value={line.UnidadMedida} onChange={(e) => updateLine(line.id, 'UnidadMedida', e.target.value)} placeholder="Ej. hrs, pza" readOnly={!!line.ProductoId} style={line.ProductoId ? { background: '#f0f0f0', cursor: 'not-allowed' } : {}} /></td>
                       <td><input className="form-control" type="number" min="0" step="0.01" value={line.PrecioUnitario} onChange={(e) => updateLine(line.id, 'PrecioUnitario', e.target.value)} /></td>
                       <td>{formatMoney((Number(line.Cantidad) || 0) * (Number(line.PrecioUnitario) || 0))}</td>
                       <td><button className="ghost-button" type="button" onClick={() => removeLine(line.id)}>Eliminar</button></td>
