@@ -367,7 +367,7 @@ function FormTecnico({ orden, materiales: initMat, onSaved, tecnico, inventario 
 
 // ── Componente principal ───────────────────────────────────────────────────────
 export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
-  const [activeTab, setActiveTab]   = useState('nueva')
+  const [activeTab, setActiveTab]   = useState(currentUserRol === 'jefe_mantenimiento' ? 'completar' : 'nueva')
   const [ordenes, setOrdenes]       = useState([])
   const [loading, setLoading]       = useState(false)
   const [successMsg, setSuccessMsg] = useState(null)
@@ -406,15 +406,16 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     } catch {} finally { setLoadingDetail(false) }
   }
 
-  const isAdmin = currentUserRol === 'admin'
+  const isAdmin  = currentUserRol === 'admin'
+  const isJefe   = currentUserRol === 'jefe_mantenimiento'
   const misOrdenes = ordenes.filter(o => o.CreadoPor === currentUser)
   const pendientes = ordenes.filter(o => o.Estado !== 'Completada')
 
   const TABS = [
-    { key: 'nueva',      label: 'Nueva Solicitud' },
-    { key: 'mis',        label: `Mis Solicitudes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
-    { key: 'completar',  label: `Por Atender${pendientes.length ? ` (${pendientes.length})` : ''}` },
-    ...(isAdmin ? [{ key: 'todas', label: 'Todas las Órdenes' }] : []),
+    ...(!isJefe ? [{ key: 'nueva', label: 'Nueva Solicitud' }] : []),
+    { key: 'mis',       label: `Mis Solicitudes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
+    { key: 'completar', label: `Por Atender${pendientes.length ? ` (${pendientes.length})` : ''}` },
+    ...(isAdmin || isJefe ? [{ key: 'todas', label: 'Todas las Órdenes' }] : []),
   ]
 
   const tabBtnStyle = (key) => ({
