@@ -461,6 +461,17 @@ export default function NuevaCotizacion({
                 <span className="field-suffix">días</span>
               </div>
             </FormField>
+            <FormField label="Horas del curso">
+              <div className="field-with-suffix">
+                <input
+                  className="form-control"
+                  readOnly
+                  value={cursoSeleccionado?.Horas || '—'}
+                  style={{ background: '#f3f4f6', cursor: 'default' }}
+                />
+                <span className="field-suffix">hrs</span>
+              </div>
+            </FormField>
             <FormField label="Participantes">
               <div className="field-with-suffix">
                 <input className="form-control" type="number" min="1" value={participantesCantidad} onChange={(e) => setParticipantesCantidad(e.target.value)} />

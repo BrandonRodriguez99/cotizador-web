@@ -1,6 +1,6 @@
 # Cotizador Servicios UDAT — Documentación del Proyecto
 
-**Versión:** 1.0  
+**Versión:** 2.0  
 **Fecha:** Junio 2026  
 **Autor:** Brandon Rodriguez
 
@@ -16,32 +16,40 @@
 6. [Frontend — Interfaz de Usuario](#6-frontend--interfaz-de-usuario)
 7. [Autenticación y Roles](#7-autenticación-y-roles)
 8. [Flujos Principales](#8-flujos-principales)
-9. [Lógica de Cálculos](#9-lógica-de-cálculos)
-10. [Configuración y Variables de Entorno](#10-configuración-y-variables-de-entorno)
-11. [Instalación y Ejecución](#11-instalación-y-ejecución)
-12. [Dependencias](#12-dependencias)
+9. [Notificaciones por Correo Electrónico](#9-notificaciones-por-correo-electrónico)
+10. [Lógica de Cálculos](#10-lógica-de-cálculos)
+11. [Configuración y Variables de Entorno](#11-configuración-y-variables-de-entorno)
+12. [Instalación y Ejecución](#12-instalación-y-ejecución)
+13. [Dependencias](#13-dependencias)
 
 ---
 
 ## 1. Descripción General
 
-**Cotizador Servicios UDAT** es una aplicación web empresarial para la gestión de cotizaciones de servicios de capacitación y administración de órdenes de compra. Está diseñada para el equipo interno de UDAT y permite:
+**Cotizador Servicios UDAT** es una aplicación web empresarial para la gestión integral de operaciones internas de UDAT. Permite:
 
 - Crear y gestionar cotizaciones de cursos/capacitaciones con cálculo automático de costos y márgenes
 - Administrar un flujo de aprobación de dos niveles para órdenes de compra
+- Gestionar **órdenes de mantenimiento** con flujo de solicitud y atención técnica
+- Controlar un **inventario de materiales y refacciones** con movimientos de entrada/salida
 - Gestionar catálogos de clientes, cursos, coaches, proveedores y más
 - Visualizar KPIs y estadísticas en un dashboard
 - Administrar usuarios con distintos roles y permisos
+- Enviar **notificaciones por correo electrónico** en eventos clave
 
 ### Stack Tecnológico
 
 | Capa | Tecnología |
 |------|-----------|
 | Frontend | React 19 + Vite |
-| Backend | Node.js + Express.js |
+| Backend | Node.js + Express.js (monolito `server.js`) |
 | Base de Datos | SQL Server (Azure) |
 | Autenticación | JWT (JSON Web Tokens) |
-| Estilos | Tailwind CSS 4 + CSS personalizado |
+| Correo electrónico | Nodemailer + Office 365 SMTP |
+| Generación de PDF | jsPDF |
+| Estilos | CSS personalizado + Bootstrap 5 |
+| Deploy Frontend | Vercel (auto-deploy desde GitHub) |
+| Deploy Backend | Render (auto-deploy desde GitHub) |
 
 ---
 
@@ -50,17 +58,20 @@
 ```
 ┌──────────────────────────────────────────────────────┐
 │                   Cliente (Navegador)                 │
-│              React 19 + Vite (puerto 5173)            │
+│              React 19 + Vite (Vercel)                 │
 └────────────────────────┬─────────────────────────────┘
-                         │ HTTP / REST
+                         │ HTTP / REST + JWT
                          ▼
 ┌──────────────────────────────────────────────────────┐
-│              Backend API (puerto 4000)                │
+│              Backend API (Render)                     │
 │              Node.js + Express.js                     │
 │                                                      │
-│  /api/auth          /api/cotizaciones                │
-│  /api/catalogos     /api/ordenescompra               │
-│  /api/usuarios                                       │
+│  /api/auth                /api/cotizaciones          │
+│  /api/catalogos           /api/ordenescompra         │
+│  /api/usuarios            /api/ordenes-mantenimiento │
+│  /api/inventario                                     │
+│                                                      │
+│  Nodemailer → Office 365 SMTP (notificaciones)       │
 └────────────────────────┬─────────────────────────────┘
                          │ mssql
                          ▼
@@ -72,6 +83,8 @@
 
 La comunicación frontend→backend se realiza mediante peticiones HTTP/REST. El frontend usa `api.js` como cliente centralizado que adjunta automáticamente el token JWT en cada petición.
 
+**Auto-migración de base de datos:** Al arrancar el servidor, se ejecutan sentencias `IF NOT EXISTS` / `IF OBJECT_ID IS NULL` que crean tablas y columnas faltantes. No se requiere ejecutar scripts manuales de migración.
+
 ---
 
 ## 3. Estructura de Carpetas
@@ -79,7 +92,7 @@ La comunicación frontend→backend se realiza mediante peticiones HTTP/REST. El
 ```
 CotizadorServiciosUDAT/
 │
-├── cotizador-web/                  # Frontend React
+├── cotizador-web/                  # Frontend React (repo: cotizador-web)
 │   ├── src/
 │   │   ├── App.jsx                 # Componente raíz: estado global, navegación, layout
 │   │   ├── main.jsx                # Punto de entrada de React
@@ -91,43 +104,26 @@ CotizadorServiciosUDAT/
 │   │   ├── Login.jsx               # Pantalla de login y recuperación de contraseña
 │   │   ├── Dashboard.jsx           # KPIs, gráficos y estadísticas
 │   │   ├── NuevaCotizacion.jsx     # Formulario de cotizaciones
-│   │   ├── OrdenesCompra.jsx       # Gestión de órdenes de compra
+│   │   ├── OrdenesCompra.jsx       # Gestión de órdenes de compra + selector inventario
+│   │   ├── OrdenesMantenimiento.jsx # Gestión de órdenes de mantenimiento + PDF
+│   │   ├── Inventario.jsx          # Módulo de inventario de materiales
 │   │   ├── Usuarios.jsx            # Administración de usuarios (solo admin)
 │   │   │
 │   │   ├── CatalogFormModal.jsx        # Modal genérico para catálogos
 │   │   ├── ChangePasswordModal.jsx     # Modal de cambio de contraseña
 │   │   └── CotizacionDetallesModal.jsx # Modal de detalles de cotización
 │   │
-│   ├── public/                     # Archivos estáticos
+│   ├── public/
 │   ├── index.html
 │   ├── vite.config.js
-│   ├── package.json
-│   └── .env.example
+│   └── package.json
 │
-├── server/                         # Backend Node.js
-│   ├── index.js                    # Punto de entrada principal
-│   ├── server.js                   # Configuración Express y registro de rutas
-│   ├── db.js                       # Pool de conexión a SQL Server
-│   │
-│   ├── middleware/
-│   │   └── autenticar.js           # Middleware JWT (autenticar, soloAdmin)
-│   │
-│   ├── routes/
-│   │   ├── auth.js                 # Login, cambio y recuperación de contraseña
-│   │   ├── catalogos.js            # CRUD de catálogos
-│   │   ├── cotizaciones.js         # Cotizaciones y aprobaciones
-│   │   ├── ordenescompra.js        # Órdenes de compra, facturas, evaluaciones
-│   │   └── usuarios.js             # Gestión de usuarios (admin)
-│   │
-│   ├── scripts/
-│   │   ├── seed-catalogos.js       # Poblar BD con datos iniciales
-│   │   └── migrate-tipocosto.js    # Migración de columna TipoCosto
-│   │
-│   ├── package.json
-│   └── .env                        # Credenciales (no commitear)
+├── cotizador-api/                  # Backend Node.js (repo: cotizador-api)
+│   └── cotizador-api/
+│       └── server.js               # Monolito: Express + todas las rutas + migraciones BD
 │
 ├── database/
-│   └── CotizadorSchema.sql         # Schema completo de la base de datos
+│   └── CotizadorSchema.sql         # Schema base (las migraciones se aplican automáticamente)
 │
 └── DOCUMENTACION.md
 ```
@@ -139,6 +135,10 @@ CotizadorServiciosUDAT/
 **Servidor:** `udatserver.southcentralus.cloudapp.azure.com:1433`  
 **Base de datos:** `biUDAT`
 
+> Las tablas se crean y actualizan automáticamente al iniciar el servidor mediante bloques `IF OBJECT_ID IS NULL / IF NOT EXISTS`. No se requieren scripts manuales.
+
+---
+
 ### 4.1 Tablas de Autenticación
 
 #### `Usuarios`
@@ -148,7 +148,7 @@ CotizadorServiciosUDAT/
 | Correo | NVARCHAR | Email del usuario (único) |
 | PasswordHash | NVARCHAR | Hash bcrypt de la contraseña |
 | Nombre | NVARCHAR | Nombre completo |
-| Rol | NVARCHAR | `admin`, `autorizador1`, `autorizador2`, `empleado` |
+| Rol | NVARCHAR | Ver sección 7.2 |
 | DebeReiniciarPass | BIT | 1 = debe cambiar contraseña en próximo login |
 | Activo | BIT | 0 = usuario desactivado |
 | FechaCreacion | DATETIME | Fecha de alta |
@@ -170,13 +170,12 @@ CotizadorServiciosUDAT/
 | Tabla | Campos principales |
 |-------|-------------------|
 | `Clientes` / `Empresas` | Id, Nombre, RFC, Contacto, Activo |
-| `Cursos` | Id, Nombre, Descripcion, Activo |
-| `Coaches` | Id, Nombre, Especialidad, Activo |
+| `Cursos` | Id, Nombre, Descripcion, Costo, Horas, TipoCurso, Activo |
+| `Coaches` | Id, Nombre, Especialidad, Costo, Activo |
 | `Modalidades` | Id, Nombre (Presencial, Virtual, Híbrido) |
 | `ConceptosCosto` | Id, Nombre, TipoCosto, Formula, Activo |
 | `Proveedores` | Id, Nombre, RFC, Contacto, Activo |
 | `UnidadesNegocio` | Id, Nombre, Activo |
-| `EstadosCotizacion` | Id, Nombre (Borrador, Aprobada, Rechazada) |
 
 > Los catálogos soportan **soft delete** (campo `Activo`). El hard delete se activa con `?hard=1`.
 
@@ -184,50 +183,28 @@ CotizadorServiciosUDAT/
 
 ### 4.3 Tablas de Cotizaciones
 
-#### `AppCotizaciones`
+#### `Cotizaciones`
 | Columna | Descripción |
 |---------|-------------|
 | CotizacionId | PK |
-| Folio | `COT-YYYY-XXXXXX` generado automáticamente |
-| ClienteId | FK a Clientes |
-| CursoId | FK a Cursos |
-| CoachId | FK a Coaches |
-| ModalidadId | FK a Modalidades |
-| UnidadNegocioId | FK a UnidadesNegocio |
-| DuracionDias | Número de días |
-| SesionesPorDia | Sesiones diarias |
-| ParticipantesCantidad | Número de participantes |
-| FechaInicio / FechaFin | Rango de fechas |
-| Observaciones | Texto libre |
-| TotalCostos | Calculado |
-| Ganancia | Monto de margen |
-| TotalConGanancia | TotalCostos + Ganancia |
-| PrecioPorParticipante | TotalConGanancia / Participantes |
-| EstadoId | FK a EstadosCotizacion |
-| Creador | Nombre del usuario creador |
-| FechaCreacion | Timestamp |
+| Folio | `COT-XXXXXX` generado automáticamente |
+| ClienteId, CursoId, CoachId, ModalidadId, UnidadNegocioId | FKs a catálogos |
+| DuracionDias, SesionesPorDia, ParticipantesCantidad | Configuración |
+| FechaInicio, FechaFin | Rango de fechas |
+| TotalCostos, Ganancia, TotalConGanancia, PrecioPorParticipante | Resumen financiero |
+| MargenUtilidadPctDirectos, MargenUtilidadPctIndirectos | Porcentajes de margen |
+| Estado | Borrador / Pendiente / Aprobada / Rechazada |
+| AprobadoPor, FechaAprobacion, ComentariosAprobacion | Datos de aprobación |
+| Creador, FechaCreacion | Auditoría |
 
-#### `AppCotizacionCostos`
+#### `CotizacionCostos`
+
 | Columna | Descripción |
 |---------|-------------|
 | CotizacionCostoId | PK |
-| CotizacionId | FK a AppCotizaciones |
-| Concepto | Nombre del concepto |
-| TipoCosto | `Directo` o `Indirecto` |
-| CostoUnitario | Precio por unidad |
-| Cantidad | Resultado de evaluar la fórmula |
-| Total | CostoUnitario × Cantidad |
-
-#### `AppCotizacionParticipantes`
-| Columna | Descripción |
-|---------|-------------|
-| CotizacionParticipanteId | PK |
 | CotizacionId | FK |
-| EmpleadoId | ID del empleado |
-| NombreCompleto | Nombre |
-| Empresa | Empresa a la que pertenece |
-
-> Los participantes se buscan en tiempo real en la tabla externa `[biUDAT].[STG].[tPlantillaColaboradoresTrayecto]`.
+| Concepto, TipoCosto, Formula | Definición del costo |
+| CostoUnitario, Cantidad, Total | Valores calculados |
 
 ---
 
@@ -237,42 +214,123 @@ CotizadorServiciosUDAT/
 | Columna | Descripción |
 |---------|-------------|
 | OrdenCompraId | PK |
-| Folio | `OC-YYYY-XXXXXX` generado automáticamente |
+| Folio | `OC-YYYY-XXXXXX` generado automáticamente (nullable para el patrón insert→update) |
 | UnidadNegocioId | FK a UnidadesNegocio |
 | ProveedorId | FK a Proveedores |
-| Fecha | Fecha de emisión |
-| Observaciones | Texto libre |
-| Subtotal | Suma de líneas |
-| IVA | Subtotal × 16% |
-| Total | Subtotal + IVA |
-| Creador | Nombre del usuario |
-| Aprobaciones | JSON con historial de aprobaciones |
-| Rechazo | JSON con info de rechazo |
+| Tipo | `compras` (default) |
+| Fecha, Observaciones | Información general |
+| Subtotal, IVA, Total | Totales calculados |
+| Creador, Destino | Metadatos |
+| Rechazado, RechazadoPor, MotivoRechazo, FechaRechazo | Datos de rechazo |
+| Activo | Soft delete |
 
 #### `OrdenesCompraLineas`
 | Columna | Descripción |
 |---------|-------------|
 | OrdenCompraLineaId | PK |
 | OrdenCompraId | FK |
-| Descripcion | Descripción del concepto |
-| Cantidad | Cantidad |
-| PrecioUnitario | Precio unitario |
-| Total | Cantidad × PrecioUnitario |
+| Descripcion | Descripción del concepto / nombre del producto |
+| Cantidad, UnidadMedida, PrecioUnitario | Detalle |
+| ProductoId | FK a `Inventario` (nullable) — se establece al seleccionar producto del inventario |
+
+> Cuando `ProductoId` tiene valor y se crea la OC, el stock del producto se incrementa automáticamente y se registra un movimiento de tipo `ingreso`.
+
+#### `OrdenesCompraAprobaciones`
+| Columna | Descripción |
+|---------|-------------|
+| OrdenCompraAprobacionId | PK |
+| OrdenCompraId | FK |
+| Paso | 1 (Administración) o 2 (Secretaría Académica) |
+| Aprobado | BIT |
+| AprobadoPor, FechaAprobacion | Datos del aprobador |
+
+---
+
+### 4.5 Tablas de Órdenes de Mantenimiento
+
+#### `OrdenesMantenimiento`
+| Columna | Descripción |
+|---------|-------------|
+| OrdenMantenimientoId | PK |
+| Folio | `OM-YYYY-XXXXXX` generado automáticamente |
+| Departamento | Departamento solicitante |
+| FechaReporte | Fecha de la solicitud |
+| NombreSolicita | Nombre del solicitante |
+| Puesto | Puesto del solicitante |
+| Equipo | Equipo o área afectada |
+| Codigo | Código interno del equipo |
+| RazonOrden | `correctivo` / `preventivo` / `predictivo` / `programado` |
+| DescripcionFalla | Descripción detallada del problema |
+| TipoFalla | `Plomería` / `Eléctrica` / `Albañilería` / `Otro` |
+| FechaTerminacion | Fecha en que se completó el trabajo |
+| DescripcionMantenimiento | Descripción del trabajo realizado |
+| TecnicoResponsable | Nombre del técnico |
+| UsuarioEquipo | Nombre del usuario del equipo |
+| Estado | `Pendiente` / `En proceso` / `Completada` |
+| CreadoPor | Usuario que creó la solicitud |
+| Activo | Soft delete |
+
+#### `OrdenesMantenimientoMateriales`
+| Columna | Descripción |
+|---------|-------------|
+| MaterialId | PK |
+| OrdenMantenimientoId | FK |
+| Material | Nombre del material / refacción |
+| Cantidad | Cantidad utilizada |
+| ProductoId | FK a `Inventario` (nullable) — para descontar stock automáticamente |
+
+> Al completar una orden (`Estado = 'Completada'`), si el material tiene `ProductoId`, el stock del producto se decrementa y se registra un movimiento de tipo `consumo`.
+
+---
+
+### 4.6 Tablas de Inventario
+
+#### `Inventario`
+| Columna | Descripción |
+|---------|-------------|
+| ProductoId | PK |
+| NombreProducto | Nombre del material o refacción |
+| UnidadMedida | Unidad (pza, litros, kg, etc.) |
+| CantidadMinima | Stock mínimo antes de alerta |
+| CantidadReal | Stock actual |
+| PrecioUnitario | Precio de referencia |
+| Activo | Soft delete |
+
+**Estados de stock** (calculado en queries, no almacenado):
+| Estado | Condición |
+|--------|-----------|
+| `ok` | `CantidadReal >= CantidadMinima` |
+| `bajo` | `CantidadReal > 0 AND CantidadReal < CantidadMinima` (estrictamente menor) |
+| `agotado` | `CantidadReal <= 0` |
+
+#### `InventarioMovimientos`
+| Columna | Descripción |
+|---------|-------------|
+| MovimientoId | PK |
+| ProductoId | FK a Inventario |
+| TipoMovimiento | `ingreso` / `consumo` / `ajuste` |
+| Cantidad | Cantidad del movimiento |
+| CantidadAnterior | Stock antes del movimiento |
+| OrdenCompraId | FK (solo en ingresos por OC) |
+| OrdenMantenimientoId | FK (solo en consumos por mantenimiento) |
+| Referencia | Folio de la OC u otro texto de referencia |
+| Usuario | Quien realizó el ajuste manual |
+| FechaMovimiento | Timestamp automático |
 
 ---
 
 ## 5. Backend — API REST
 
-El servidor Express corre en el **puerto 4000** y expone los siguientes grupos de endpoints. Todos requieren autenticación JWT excepto los de `/api/auth`.
+El servidor Express corre en **Render** y expone los siguientes grupos de endpoints. Todos requieren autenticación JWT excepto los de `/api/auth`.
 
 ### 5.1 Autenticación — `/api/auth`
 
-| Método | Ruta | Descripción | Body |
-|--------|------|-------------|------|
-| POST | `/login` | Inicia sesión, retorna token JWT | `{ correo, password }` |
-| POST | `/cambiar-password` | Cambia contraseña (requiere token) | `{ passwordActual, passwordNuevo }` |
-| POST | `/recuperar` | Genera código de recuperación de 6 chars | `{ correo }` |
-| POST | `/restablecer` | Restablece contraseña con código | `{ correo, codigo, passwordNuevo }` |
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/login` | Inicia sesión, retorna token JWT |
+| POST | `/cambiar-password` | Cambia contraseña (requiere token) |
+| POST | `/recuperar` | Genera código de recuperación por correo |
+| POST | `/restablecer` | Restablece contraseña con código |
 
 **Respuesta de `/login`:**
 ```json
@@ -292,61 +350,27 @@ El servidor Express corre en el **puerto 4000** y expone los siguientes grupos d
 
 ### 5.2 Catálogos — `/api/catalogos`
 
-Todos los catálogos siguen el mismo patrón CRUD:
-
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/:catalogo` | Lista todos los registros activos |
 | POST | `/:catalogo` | Crea un nuevo registro |
 | PUT | `/:catalogo/:id` | Actualiza un registro existente |
 | DELETE | `/:catalogo/:id` | Soft delete (o hard con `?hard=1`) |
+| GET | `/participantes?search=X` | Busca participantes en tabla STG |
 
-**Catálogos disponibles:** `clientes`, `cursos`, `coaches`, `modalidades`, `conceptos`, `estados`, `proveedores`, `unidadesnegocio`
-
-**Endpoint especial:**
-
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/participantes?search=X` | Busca participantes por nombre en tabla STG |
+**Catálogos disponibles:** `clientes`, `cursos`, `coaches`, `modalidades`, `conceptos`, `proveedores`, `unidadesnegocio`
 
 ---
 
 ### 5.3 Cotizaciones — `/api/cotizaciones`
 
-| Método | Ruta | Descripción | Auth |
-|--------|------|-------------|------|
-| GET | `/` | Historial completo de cotizaciones | Autenticado |
-| GET | `/:id` | Detalle de una cotización | Autenticado |
-| GET | `/pendientes/list` | Cotizaciones pendientes de aprobación | Autorizadores |
-| GET | `/generate/folio` | Genera el siguiente folio disponible | Autenticado |
-| POST | `/` | Crea nueva cotización con costos y participantes | Autenticado |
-| POST | `/:id/aprobar` | Aprueba o rechaza una cotización | Autorizadores |
-
-**Body de creación:**
-```json
-{
-  "folio": "COT-2026-000001",
-  "clienteId": 1,
-  "cursoId": 2,
-  "coachId": 3,
-  "modalidadId": 1,
-  "unidadNegocioId": 1,
-  "duracionDias": 5,
-  "sesionesPorDia": 3,
-  "participantesCantidad": 20,
-  "fechaInicio": "2026-07-01",
-  "fechaFin": "2026-07-05",
-  "observaciones": "Capacitación presencial",
-  "costos": [
-    { "concepto": "Instructor", "tipoCosto": "Directo", "costoUnitario": 1000, "cantidad": 15, "total": 15000 }
-  ],
-  "participantes": [
-    { "empleadoId": "EMP001", "nombreCompleto": "Juan Pérez", "empresa": "UDAT" }
-  ],
-  "margenDirecto": 23.5,
-  "margenIndirecto": 0
-}
-```
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Historial de cotizaciones |
+| GET | `/:id` | Detalle de una cotización |
+| GET | `/generate/folio` | Genera el siguiente folio |
+| POST | `/` | Crea nueva cotización |
+| POST | `/:id/aprobar` | Aprueba o rechaza |
 
 ---
 
@@ -355,25 +379,52 @@ Todos los catálogos siguen el mismo patrón CRUD:
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/` | Lista todas las órdenes |
-| POST | `/` | Crea nueva orden de compra |
-| PUT | `/:id` | Actualiza orden (aprobaciones, rechazo) |
-| POST | `/:id/aprobar` | Registra aprobación de paso 1 o 2 |
-| POST | `/:id/rechazar` | Rechaza la orden con motivo |
-| GET | `/:id/pdf` | Descarga PDF de la orden |
+| POST | `/` | Crea nueva orden (incrementa stock si hay `ProductoId`) |
+| PUT | `/:id` | Actualiza orden |
+| POST | `/:id/aprobar` | Aprobación paso 1 o 2 |
+| POST | `/:id/rechazar` | Rechaza con motivo |
+| GET | `/:id/pdf` | Descarga PDF |
 | POST | `/:id/factura` | Guarda archivo de factura |
-| GET | `/:id/factura/archivo` | Descarga la factura guardada |
+| GET | `/:id/factura/archivo` | Descarga factura |
 | POST | `/:id/evaluacion` | Registra evaluación del proveedor |
+
+**Lógica de stock en OC:** Al crear una OC, si una línea tiene `ProductoId`, se incrementa `Inventario.CantidadReal` por la cantidad de la línea y se registra un movimiento `ingreso` en `InventarioMovimientos`. Todo ocurre dentro de la misma transacción que crea la OC.
 
 ---
 
-### 5.5 Usuarios — `/api/usuarios` (Solo Admin)
+### 5.5 Órdenes de Mantenimiento — `/api/ordenes-mantenimiento`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Lista todas las órdenes |
+| POST | `/` | Crea nueva solicitud (notifica por email) |
+| GET | `/:id` | Detalle con materiales |
+| PUT | `/:id` | Completa la orden técnica (decrementa stock si aplica, notifica por email) |
+
+**Lógica de stock en mantenimiento:** Al marcar una orden como `Completada`, por cada material con `ProductoId` se decrementa `Inventario.CantidadReal` y se registra un movimiento `consumo`.
+
+---
+
+### 5.6 Inventario — `/api/inventario`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Lista productos activos con estado de stock |
+| GET | `/dashboard` | Estadísticas: totales, alertas, movimientos recientes |
+| POST | `/` | Crea nuevo producto (solo admin) |
+| PUT | `/:id` | Edita producto (solo admin) |
+| POST | `/:id/ajuste` | Ajuste manual de stock |
+
+---
+
+### 5.7 Usuarios — `/api/usuarios` (Solo Admin)
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/` | Lista todos los usuarios |
 | POST | `/` | Crea nuevo usuario |
-| PUT | `/:id` | Actualiza nombre, rol, estado activo |
-| POST | `/:id/resetear` | Resetea contraseña y activa flag de reinicio |
+| PUT | `/:id` | Actualiza nombre, rol, estado |
+| POST | `/:id/resetear` | Resetea contraseña |
 
 ---
 
@@ -386,60 +437,102 @@ Centraliza todo el estado de la aplicación:
 - **Autenticación:** `token`, `usuario` (persistidos en `localStorage`)
 - **Navegación:** `activeView` controla qué vista se muestra
 - **Catálogos:** se cargan al iniciar sesión y se pasan como props
-- **Lógica de roles:** determina qué secciones son accesibles
+- **Lógica de roles:** determina qué secciones son accesibles en el sidebar
 
 **Vistas disponibles:**
 | Vista | Componente | Acceso |
 |-------|-----------|--------|
 | `dashboard` | Dashboard.jsx | admin, autorizador1, autorizador2 |
-| `cotizacion` | NuevaCotizacion.jsx | Todos |
-| `historial` | (en App.jsx) | Todos |
-| `aprobaciones` | (en App.jsx) | autorizador1, autorizador2 |
-| `ordenesCompra` | OrdenesCompra.jsx | Todos |
+| `inicio` | (inline en App.jsx) | empleado, jefe_mantenimiento |
+| `cotizacion` | NuevaCotizacion.jsx | Todos excepto `mantenimiento` |
+| `historial` | (inline en App.jsx) | Todos excepto `mantenimiento` |
+| `aprobaciones` | (inline en App.jsx) | autorizador1, autorizador2 |
+| `ordenesCompra` | OrdenesCompra.jsx | Todos excepto `mantenimiento` |
+| `mantenimiento` | OrdenesMantenimiento.jsx | Todos |
+| `inventario` | Inventario.jsx | Todos excepto `mantenimiento` |
 | `usuarios` | Usuarios.jsx | Solo admin |
-| `catalogo_*` | CatalogFormModal.jsx | Solo admin |
+| `catalogo_*` | (CatalogFormModal genérico) | Solo admin |
+
+**Vista inicial según rol:**
+| Rol | Vista inicial |
+|-----|--------------|
+| `admin`, `autorizador1`, `autorizador2` | `dashboard` |
+| `mantenimiento` | `mantenimiento` |
+| `empleado`, `jefe_mantenimiento`, otros | `inicio` |
 
 ---
 
 #### `Login.jsx`
 - Formulario de correo + contraseña
-- Sección de **recuperación de contraseña** (solicitar código → ingresar código → nueva contraseña)
-- Al iniciar sesión exitosamente, guarda `token` y `usuario` en `localStorage`
+- Recuperación de contraseña: solicitar código → ingresar código → nueva contraseña
+- Al iniciar sesión guarda `token` y `usuario` en `localStorage`
 
 ---
 
 #### `Dashboard.jsx`
-Requiere `rol` de admin o autorizador. Muestra:
-- **KPI Cards:** número de cotizaciones, órdenes, pendientes
-- **Gráfico de barras horizontal:** Cursos más cotizados
-- **Gráfico de barras horizontal:** Coaches más activos
-- **Gráfico de dona:** Distribución de participantes
-- **Gráfico de dona:** Montos por unidad de negocio
+Requiere rol admin o autorizador. Muestra KPI Cards, gráfico de cursos más cotizados, coaches más activos, distribución de participantes y montos por unidad de negocio.
 
 ---
 
 #### `NuevaCotizacion.jsx`
-Formulario multi-sección para crear cotizaciones:
-
-1. **Datos generales:** Cliente, Curso, Coach, Modalidad, Unidad de Negocio
-2. **Fechas y duración:** Fecha inicio/fin, días, sesiones/día, participantes
-3. **Búsqueda de participantes:** Búsqueda en tiempo real + tabla de seleccionados
-4. **Tabla de costos:**
-   - Concepto, tipo (Directo/Indirecto), fórmula, costo unitario, cantidad calculada, total
-   - Fórmulas disponibles: `Sesiones x Días`, `Participantes`, `Horas`, `Eventos`
-5. **Resumen financiero:** Total costos, márgenes, precio por participante
+Formulario multi-sección: datos generales, fechas, participantes (búsqueda en tabla STG), tabla de costos con fórmulas dinámicas y resumen financiero.
 
 ---
 
 #### `OrdenesCompra.jsx`
 Gestión completa de órdenes de compra:
-- Crear orden con folio autogenerado
-- Seleccionar unidad de negocio y proveedor
-- Agregar líneas (descripción, cantidad, precio unitario)
-- Ver estado de aprobaciones
-- Aprobar/rechazar según rol
-- Descargar PDF
-- Gestionar factura y evaluación de proveedor
+- Crear orden con folio autogenerado `OC-YYYY-XXXXXX`
+- **Selector de inventario en campo Descripción:** al escribir en el campo Descripción de cada partida, aparece un dropdown con productos del inventario activos. Al seleccionar un producto se auto-rellena la Unidad de Medida y se registra el `ProductoId` para incrementar el stock al guardar
+- Ver estado de aprobaciones, aprobar/rechazar según rol
+- Descarga de PDF, gestión de factura y evaluación de proveedor
+
+---
+
+#### `OrdenesMantenimiento.jsx`
+Módulo de gestión de órdenes de mantenimiento con dos flujos:
+
+**Parte 1 — Solicitud (cualquier usuario):**
+- Formulario: Departamento, Fecha, Nombre del solicitante, Puesto, Equipo, Código, Razón (correctivo/preventivo/predictivo/programado), Descripción de la falla
+- Al enviar, notifica por email al personal de mantenimiento
+
+**Parte 2 — Atención técnica (rol mantenimiento):**
+- Selecciona una orden pendiente de la lista "Por Atender"
+- Completa: Tipo de falla, materiales utilizados (con selector de inventario), Fecha de terminación, Descripción del trabajo, Técnico responsable, Usuario del equipo
+- Al completar, decrementa stock de los materiales con `ProductoId` y notifica al jefe de mantenimiento
+
+**Exportación a PDF:**
+- Botón "📄 PDF" en la columna Acciones de la tabla
+- Descarga automática como `OM-<folio>.pdf` sin ventana emergente (jsPDF)
+- Formato oficial FGA03-02: encabezado UDAT, colorimetría azul, checkboxes, tabla de materiales adaptable
+
+**Pestañas:**
+| Pestaña | Acceso | Descripción |
+|---------|--------|-------------|
+| Nueva Solicitud | Todos excepto `mantenimiento` | Crear nueva solicitud |
+| Mis Solicitudes | Todos | Órdenes creadas por el usuario actual |
+| Por Atender | Todos | Órdenes pendientes / en proceso |
+| Todas las Órdenes | Solo admin | Vista completa |
+
+---
+
+#### `Inventario.jsx`
+Módulo independiente de gestión de inventario:
+
+**Vista Tabla:**
+- Listado de todos los productos activos
+- Columnas: ID, Nombre, Unidad, Stock Mínimo, Stock Actual, Precio, Estado (badge colorido)
+- Búsqueda por nombre
+- Acciones de edición y ajuste de stock (solo admin)
+- `StockBadge`: verde (OK), naranja (Stock bajo), rojo (Agotado)
+
+**Vista Dashboard:**
+- 5 tarjetas de resumen: total productos, OK, stock bajo, agotados, valor total
+- Alertas de stock bajo con detalle
+- Tabla de movimientos recientes (ingresos, consumos, ajustes)
+
+**Ajuste de stock (admin):**
+- `ingreso`: suma cantidad al stock actual
+- `ajuste`: establece la cantidad exacta
 
 ---
 
@@ -447,12 +540,13 @@ Gestión completa de órdenes de compra:
 - Tabla con todos los usuarios del sistema
 - Crear usuario: correo, nombre, rol, contraseña inicial
 - Editar: nombre, rol, activo/inactivo
-- Resetear contraseña (marca `DebeReiniciarPass = 1`)
+- Resetear contraseña (`DebeReiniciarPass = 1`)
+- Roles disponibles en el dropdown: empleado, mantenimiento, jefe_mantenimiento, autorizador1, autorizador2, admin
 
 ---
 
 #### `CatalogFormModal.jsx`
-Modal genérico que renderiza formularios dinámicamente según la configuración en `catalogConfig.js`. Soporta campos de tipo texto, número, select y área de texto.
+Modal genérico que renderiza formularios según `catalogConfig.js`. Soporta campos de tipo texto, número, select y área de texto.
 
 ---
 
@@ -460,8 +554,26 @@ Modal genérico que renderiza formularios dinámicamente según la configuració
 
 Wrapper sobre `fetch` que:
 - Usa `VITE_API_BASE_URL` como base URL
-- Adjunta automáticamente el header `Authorization: Bearer <token>`
-- Expone métodos: `api.get()`, `api.post()`, `api.put()`, `api.delete()`
+- Adjunta automáticamente `Authorization: Bearer <token>` mediante `authHeaders()`
+- Limpia `localStorage` y recarga la página si el servidor responde 401
+
+> **Importante:** Las funciones `postJson` y `putJson` NO incluyen headers de autorización. Para endpoints con middleware `autenticar`, usar `fetchJson` directamente con `authHeaders()`.
+
+**Funciones de API para módulos nuevos:**
+```javascript
+// Inventario
+getInventario()              // GET /inventario
+getInventarioDashboard()     // GET /inventario/dashboard
+createProducto(data)         // POST /inventario
+updateProducto(id, data)     // PUT /inventario/:id
+ajustarStock(id, data)       // POST /inventario/:id/ajuste
+
+// Órdenes de Mantenimiento
+getOrdenesMantenimiento()          // GET /ordenes-mantenimiento
+getOrdenMantenimientoById(id)      // GET /ordenes-mantenimiento/:id
+createOrdenMantenimiento(data)     // POST /ordenes-mantenimiento
+updateOrdenMantenimiento(id, data) // PUT /ordenes-mantenimiento/:id
+```
 
 ---
 
@@ -479,9 +591,9 @@ Wrapper sobre `fetch` que:
 **Sidebar:**
 - Fondo: `#0f172a` (azul muy oscuro)
 - Ancho fijo: 280px
-- En móvil se oculta y se muestra con botón toggle (overlay)
+- En móvil se oculta con botón toggle (overlay)
 
-**Clases de botón:**
+**Botones:**
 - `.primary-button` — Acción principal (azul)
 - `.secondary-button` — Acción secundaria
 - `.ghost-button` — Sin relleno, solo borde
@@ -492,19 +604,24 @@ Wrapper sobre `fetch` que:
 
 ### 7.1 JWT
 
-- **Secret:** `udat-cotizador-secret-2024`
 - **Expiración:** 8 horas
 - **Payload:** `{ id, correo, nombre, rol }`
 - **Almacenamiento:** `localStorage` con claves `cotizador-token` y `cotizador-usuario`
 
 ### 7.2 Roles y Permisos
 
-| Rol | Dashboard | Cotizaciones | Aprobaciones | Órdenes | Usuarios | Catálogos |
-|-----|-----------|-------------|-------------|---------|---------|----------|
-| `admin` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `autorizador1` | ✅ | ✅ | ✅ (Paso 1) | ✅ | ❌ | ❌ |
-| `autorizador2` | ✅ | ✅ | ✅ (Paso 2) | ✅ | ❌ | ❌ |
-| `empleado` | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Rol | Dashboard | Cotiz. | OC | Mant. | Inventario | Catálogos | Usuarios |
+|-----|-----------|--------|----|-------|-----------|----------|---------|
+| `admin` | ✅ | ✅ | ✅ | ✅ | ✅ (editar) | ✅ | ✅ |
+| `autorizador1` | ✅ | ✅ | ✅ | ✅ | ✅ (ver) | ❌ | ❌ |
+| `autorizador2` | ✅ | ✅ | ✅ | ✅ | ✅ (ver) | ❌ | ❌ |
+| `empleado` | ❌ | ✅ | ✅ | ✅ | ✅ (ver) | ❌ | ❌ |
+| `jefe_mantenimiento` | ❌ | ✅ | ✅ | ✅ | ✅ (ver) | ❌ | ❌ |
+| `mantenimiento` | ❌ | ❌ | ❌ | ✅ (solo) | ❌ | ❌ | ❌ |
+
+> `jefe_mantenimiento` tiene acceso idéntico a `empleado`. La distinción existe únicamente para enrutar notificaciones de correo electrónico de mantenimiento.
+
+> El rol `mantenimiento` solo ve el módulo de Órdenes de Mantenimiento en el sidebar.
 
 ### 7.3 Credenciales Iniciales
 
@@ -519,11 +636,9 @@ Wrapper sobre `fetch` que:
 ### 7.4 Recuperación de Contraseña
 
 1. Usuario solicita código en `/api/auth/recuperar` con su correo
-2. Se genera un código alfanumérico de 6 caracteres (expira en 24h)
+2. Se genera un código alfanumérico de 6 caracteres y se envía por correo (expira en 24h)
 3. Usuario ingresa código + nueva contraseña en `/api/auth/restablecer`
 4. El token queda marcado como `Usado = 1`
-
-> En el entorno actual, el código se devuelve directamente en la respuesta de la API (no se envía por correo). Pendiente integración de envío de email.
 
 ---
 
@@ -550,20 +665,14 @@ Usuario abre la app
 ### 8.2 Flujo de Cotización
 
 ```
-1. Empleado crea cotización en NuevaCotizacion.jsx
-   ├── Selecciona: Cliente, Curso, Coach, Modalidad, Unidad Negocio
-   ├── Configura: Días, Sesiones, Participantes, Fechas
-   ├── Agrega participantes (búsqueda en tabla STG)
-   └── Define costos con fórmulas dinámicas
+1. Empleado crea cotización
+   └── Selecciona catalogos, configura costos con fórmulas dinámicas
 
-2. POST /api/cotizaciones
-   └── Cotización guardada con Estado = "Borrador"
+2. POST /api/cotizaciones → Estado = "Pendiente"
+   └── Email a autorizador1 y al creador
 
-3. Autorizador ve la cotización en sección "Aprobaciones"
-   ├── Aprobar → Estado = "Aprobada"
-   └── Rechazar → Estado = "Rechazada" + comentarios
-
-4. Cotización aprobada visible en Historial
+3. Autorizador aprueba o rechaza
+   └── Email de resultado al creador
 ```
 
 ---
@@ -571,35 +680,128 @@ Usuario abre la app
 ### 8.3 Flujo de Orden de Compra
 
 ```
-1. Usuario crea orden en OrdenesCompra.jsx
-   ├── Folio autogenerado: OC-YYYY-XXXXXX
-   ├── Selecciona Unidad de Negocio y Proveedor
-   └── Agrega líneas (descripción, cantidad, precio)
+1. Usuario crea orden con líneas de partidas
+   ├── Opcionalmente selecciona productos del inventario en campo Descripción
+   └── POST /api/ordenescompra
+       ├── Folio generado: OC-YYYY-XXXXXX
+       ├── Si línea tiene ProductoId: stock del producto + cantidad
+       └── Email a autorizador1, al creador y a todos los empleados
 
-2. POST /api/ordenescompra
-   └── Orden en estado "Pendiente"
+2. Autorizador1 (Administración) — Paso 1
+   ├── Aprobar → notifica a autorizador2
+   └── Rechazar → "Rechazada" + notifica al creador y empleados
 
-3. Autorizador1 (Administración) — Paso 1
-   ├── Aprobar → pasa a Paso 2
-   └── Rechazar → "Rechazada" + motivo
+3. Autorizador2 (Secretaría Académica) — Paso 2
+   ├── Aprobar → "Aprobada" + notifica al creador y empleados
+   └── Rechazar → "Rechazada" + notifica al creador y empleados
 
-4. Autorizador2 (Secretaría Académica) — Paso 2
-   ├── Aprobar → "Aprobada" ✓
-   └── Rechazar → "Rechazada" + motivo
-
-5. Orden aprobada:
-   ├── Descarga de PDF disponible
-   ├── Carga de factura
+4. Orden aprobada:
+   ├── PDF disponible para descarga
+   ├── Carga de factura (archivo)
    └── Evaluación de proveedor
 ```
 
 ---
 
-## 9. Lógica de Cálculos
+### 8.4 Flujo de Orden de Mantenimiento
 
-### 9.1 Fórmulas de Cantidad en Costos
+```
+1. Solicitante crea orden (Parte 1)
+   ├── Completa formulario: equipo, razón, descripción de falla
+   └── POST /api/ordenes-mantenimiento → Estado = "Pendiente"
+       └── Email a todos los usuarios con rol mantenimiento y jefe_mantenimiento
 
-Las fórmulas se evalúan dinámicamente con los valores de la cotización:
+2. Técnico atiende la orden (Parte 2)
+   ├── Selecciona materiales (del inventario o texto libre)
+   ├── Completa: tipo de falla, descripción del trabajo, fechas
+   └── PUT /api/ordenes-mantenimiento/:id → Estado = "Completada"
+       ├── Por cada material con ProductoId: stock del producto - cantidad
+       ├── Registra movimientos "consumo" en InventarioMovimientos
+       └── Email al jefe_mantenimiento con resumen del trabajo
+
+3. PDF exportable desde la tabla de órdenes
+   └── Descarga directa como OM-YYYY-XXXXXX.pdf (jsPDF, sin popup)
+```
+
+---
+
+### 8.5 Flujo de Inventario
+
+```
+Entradas de stock (ingresos):
+  → Vía OC: al crear OC con ProductoId en línea de partida
+  → Vía ajuste manual (admin): POST /api/inventario/:id/ajuste (tipo "ingreso")
+
+Salidas de stock (consumos):
+  → Vía mantenimiento: al completar orden con materiales con ProductoId
+
+Ajuste directo (admin):
+  → POST /api/inventario/:id/ajuste (tipo "ajuste") → establece cantidad exacta
+
+Alertas:
+  → Badge naranja: CantidadReal > 0 Y CantidadReal < CantidadMinima
+  → Badge rojo: CantidadReal <= 0
+  → Dashboard: sección de alertas con productos en stock bajo o agotado
+```
+
+---
+
+## 9. Notificaciones por Correo Electrónico
+
+El sistema usa **Nodemailer con Office 365 SMTP** (`smtp.office365.com:587`). Los correos son **fire-and-forget** (no bloquean la respuesta de la API).
+
+### 9.1 Infraestructura
+
+```javascript
+// Variables de entorno requeridas
+SMTP_USER=correo@udat.com
+SMTP_PASS=contraseña
+APP_URL=https://cotizador-web.vercel.app
+```
+
+Si `SMTP_USER` / `SMTP_PASS` no están configurados, el sistema funciona normalmente pero registra en consola que los correos no se enviaron.
+
+### 9.2 Funciones de Consulta de Destinatarios
+
+| Función | Consulta | Descripción |
+|---------|---------|-------------|
+| `getEmailsDeRol(rol)` | `WHERE Rol=@rol OR Rol='admin'` | Rol específico + admins |
+| `getEmailDeUsuario(nombre)` | `WHERE Nombre=@nombre` | Usuario por nombre |
+| `getEmailsPorRoles(roles[])` | `WHERE Rol IN (...)` | Roles exactos, sin incluir admins |
+
+### 9.3 Eventos y Destinatarios
+
+| Módulo | Evento | Destinatarios |
+|--------|--------|---------------|
+| **OC** | OC creada | autorizador1 + creador + todos los `empleado` |
+| **OC** | Aprobada paso 1 | autorizador2 |
+| **OC** | Aprobada paso 2 (final) | creador + todos los `empleado` |
+| **OC** | Rechazada | creador + todos los `empleado` |
+| **Cotización** | Cotización creada | autorizador1 + creador |
+| **Cotización** | Aprobada/Rechazada | creador |
+| **Mantenimiento** | Orden creada | todos los `mantenimiento` + todos los `jefe_mantenimiento` |
+| **Mantenimiento** | Orden completada | todos los `jefe_mantenimiento` |
+| **Auth** | Recuperación de contraseña | el usuario solicitante |
+
+### 9.4 Plantillas de Correo
+
+| Función | Asunto | Contenido |
+|---------|--------|-----------|
+| `emailOrdenCreada` | `Nueva orden X requiere autorización` | Folio, proveedor, total |
+| `emailPasoAprobado` | `Orden X aprobada por Y` | Folio, siguiente paso |
+| `emailOCConfirmacion` | `Tu orden X fue registrada` | Confirmación al creador |
+| `emailOCResultado` | `Tu orden X fue aprobada/rechazada` | Resultado con motivo |
+| `emailOMCreada` | `Nueva Orden de Mantenimiento — X` | Folio, equipo, tipo, solicitante |
+| `emailOMCompletada` | `Orden X completada` | Técnico, tipo falla, descripción, materiales |
+| `emailCotizacionPendiente` | `Nueva cotización requiere aprobación` | Folio, curso, total |
+| `emailCotizacionConfirmacion` | `Tu cotización fue registrada` | Confirmación al creador |
+| `emailCotizacionResuelta` | `Cotización aprobada/rechazada` | Resultado con comentarios |
+
+---
+
+## 10. Lógica de Cálculos
+
+### 10.1 Fórmulas de Cantidad en Costos de Cotización
 
 | Fórmula | Cálculo | Ejemplo (3 sesiones, 5 días, 20 participantes) |
 |---------|---------|-----------------------------------------------|
@@ -608,32 +810,26 @@ Las fórmulas se evalúan dinámicamente con los valores de la cotización:
 | `Horas` | días × sesiones | 5 × 3 = **15** |
 | `Eventos` | 1 | **1** |
 
-```
-Total Costo = Cantidad × Costo Unitario
-```
-
 ---
 
-### 9.2 Márgenes y Precios
+### 10.2 Márgenes y Precios en Cotizaciones
 
 ```
 Total Costos Directos   = Σ costos donde TipoCosto = "Directo"
 Total Costos Indirectos = Σ costos donde TipoCosto = "Indirecto"
 Total Costos            = Directos + Indirectos
 
-Margen Utilidad   = Total Costos × (margenDirecto% / 100)
+Margen Utilidad    = Total Costos × (margenDirecto% / 100)
 Total con Ganancia = Total Costos + Margen Utilidad
 
 Precio por Participante = Total con Ganancia / ParticipantesCantidad
 ```
 
-**Valores por defecto de márgenes:**
-- Costos Directos: **23.5%**
-- Costos Indirectos: **0%**
+**Valores por defecto de márgenes:** Directos: 23.5% / Indirectos: 0%
 
 ---
 
-### 9.3 Cálculo de Órdenes de Compra
+### 10.3 Cálculo de Órdenes de Compra
 
 ```
 Subtotal = Σ (Cantidad × PrecioUnitario) por cada línea
@@ -643,23 +839,35 @@ Total    = Subtotal + IVA
 
 ---
 
-## 10. Configuración y Variables de Entorno
+### 10.4 Estado de Stock en Inventario
+
+```sql
+CASE
+  WHEN CantidadReal <= 0               THEN 'agotado'
+  WHEN CantidadReal < CantidadMinima   THEN 'bajo'      -- estrictamente menor
+  ELSE                                      'ok'
+END AS EstadoStock
+```
+
+> Nota: `CantidadReal = CantidadMinima` es estado `ok`, no `bajo`.
+
+---
+
+## 11. Configuración y Variables de Entorno
 
 ### Frontend — `cotizador-web/.env`
 ```env
-VITE_API_BASE_URL=http://localhost:4000/api
+VITE_API_BASE_URL=https://cotizador-api.onrender.com/api
 ```
 
-Para producción, cambiar a la URL del servidor desplegado.
-
-### Backend — `server/.env`
+### Backend — `cotizador-api/.env`
 ```env
 # Conexión SQL Server
 DB_SERVER=udatserver.southcentralus.cloudapp.azure.com
 DB_PORT=1433
 DB_NAME=biUDAT
-DB_USER=BiBandonRodriguez
-DB_PASSWORD=BiRodriguez2024#$.#
+DB_USER=<usuario>
+DB_PASSWORD=<contraseña>
 DB_ENCRYPT=false
 DB_TRUST_SERVER_CERTIFICATE=true
 
@@ -667,65 +875,58 @@ DB_TRUST_SERVER_CERTIFICATE=true
 PORT=4000
 
 # JWT
-JWT_SECRET=udat-cotizador-secret-2024
+JWT_SECRET=<secreto>
 JWT_EXPIRES_IN=8h
+
+# SMTP (Office 365)
+SMTP_USER=<correo@udat.com>
+SMTP_PASS=<contraseña>
+APP_URL=https://cotizador-web.vercel.app
 ```
 
 > **Importante:** El archivo `.env` nunca debe subirse al repositorio.
 
 ---
 
-## 11. Instalación y Ejecución
+## 12. Instalación y Ejecución
 
 ### Requisitos previos
 - Node.js 18+
 - Acceso a la base de datos SQL Server de Azure
 
-### 1. Instalar dependencias
+### 1. Clonar repositorios
 
 ```bash
-# Backend
-cd server
-npm install
+git clone https://github.com/BrandonRodriguez99/cotizador-web.git
+git clone https://github.com/BrandonRodriguez99/cotizador-api.git
+```
 
+### 2. Instalar dependencias
+
+```bash
 # Frontend
 cd cotizador-web
 npm install
-```
 
-### 2. Configurar variables de entorno
-
-```bash
 # Backend
-cp server/.env.example server/.env
-# Editar server/.env con las credenciales correctas
-
-# Frontend
-cp cotizador-web/.env.example cotizador-web/.env
-# Editar cotizador-web/.env con la URL de la API
+cd cotizador-api/cotizador-api
+npm install
 ```
 
-### 3. Inicializar base de datos (primera vez)
+### 3. Configurar variables de entorno
 
-```bash
-# Ejecutar el schema en SQL Server
-# Usar SSMS o sqlcmd con el archivo database/CotizadorSchema.sql
-
-# Poblar catálogos iniciales
-cd server
-node scripts/seed-catalogos.js
-```
+Crear `.env` en cada proyecto con los valores de la sección 11.
 
 ### 4. Ejecutar en desarrollo
 
 ```bash
 # Terminal 1 — Backend
-cd server
-npm run dev    # Inicia con nodemon en puerto 4000
+cd cotizador-api/cotizador-api
+node server.js    # Las migraciones de BD se ejecutan automáticamente al iniciar
 
 # Terminal 2 — Frontend
 cd cotizador-web
-npm run dev    # Inicia Vite en puerto 5173
+npm run dev       # Vite en http://localhost:5173
 ```
 
 ### 5. Build de producción
@@ -733,43 +934,40 @@ npm run dev    # Inicia Vite en puerto 5173
 ```bash
 cd cotizador-web
 npm run build
-# Los archivos compilados quedan en cotizador-web/dist/
+# Archivos en cotizador-web/dist/ — se despliegan automáticamente en Vercel
 ```
+
+### 6. Deploy
+
+- **Frontend:** Push a `main` en `cotizador-web` → Vercel detecta y despliega automáticamente
+- **Backend:** Push a `main` en `cotizador-api` → Render detecta y despliega automáticamente
+- **Base de datos:** Las migraciones se aplican automáticamente al reiniciar el servidor en Render
 
 ---
 
-## 12. Dependencias
+## 13. Dependencias
 
-### Backend (`server/package.json`)
+### Backend (`cotizador-api/package.json`)
 
-| Paquete | Versión | Uso |
-|---------|---------|-----|
-| `express` | ^4.18.2 | Framework HTTP |
-| `mssql` | ^12.5.4 | Cliente SQL Server |
-| `bcryptjs` | ^3.0.3 | Hash de contraseñas |
-| `jsonwebtoken` | ^9.0.3 | Generación/validación JWT |
-| `cors` | ^2.8.5 | Cabeceras CORS |
-| `dotenv` | ^16.3.1 | Variables de entorno |
-| `nodemon` | ^3.0.1 | Hot reload en desarrollo |
+| Paquete | Uso |
+|---------|-----|
+| `express` | Framework HTTP |
+| `mssql` | Cliente SQL Server |
+| `bcryptjs` | Hash de contraseñas |
+| `jsonwebtoken` | Generación/validación JWT |
+| `nodemailer` | Envío de correos electrónicos (Office 365 SMTP) |
+| `cors` | Cabeceras CORS |
+| `dotenv` | Variables de entorno |
 
 ### Frontend (`cotizador-web/package.json`)
 
-| Paquete | Versión | Uso |
-|---------|---------|-----|
-| `react` | ^19.2.6 | UI Library |
-| `react-dom` | ^19.2.6 | Render en el DOM |
-| `vite` | ^8.0.12 | Build tool y dev server |
-| `@vitejs/plugin-react` | ^6.0.1 | Plugin React para Vite |
-
-### Estilos (raíz `package.json`)
-
-| Paquete | Versión | Uso |
-|---------|---------|-----|
-| `tailwindcss` | ^4.3.0 | Utility-first CSS |
-| `autoprefixer` | ^10.5.0 | Prefijos CSS automáticos |
-| `postcss` | ^8.5.15 | Procesador CSS |
-| `bootstrap` | ^5.3.8 | Componentes CSS adicionales |
+| Paquete | Uso |
+|---------|-----|
+| `react` + `react-dom` | UI Library |
+| `vite` + `@vitejs/plugin-react` | Build tool y dev server |
+| `jspdf` | Generación de PDFs en el cliente (descarga automática) |
+| `bootstrap` | Componentes CSS adicionales |
 
 ---
 
-*Documentación generada el 12 de junio de 2026.*
+*Documentación actualizada el 24 de junio de 2026. Versión 2.0.*

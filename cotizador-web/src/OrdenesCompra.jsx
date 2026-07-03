@@ -5,6 +5,8 @@ import {
   uploadFacturaArchivo, downloadFacturaArchivo,
   getSolicitudFondos, createSolicitudFondos, approveSolicitudFondos, getSolicitudesFondosPendientes,
   getEvaluacionProveedor, saveEvaluacionProveedor,
+  deleteOrdenCompra,
+  getInventario,
 } from './api'
 
 function formatMoney(value) {
@@ -1008,11 +1010,93 @@ function EvaluacionModal({ orden, tipoForzado, isAdmin, isAutorizador = false, o
   )
 }
 
+// ── Selector de producto para partidas ────────────────────────────────────────
+function DescripcionCell({ line, inventario, onSelect, onClear, onTextChange }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen]   = useState(false)
+
+  const productoSeleccionado = line.ProductoId
+    ? inventario.find(p => p.ProductoId === Number(line.ProductoId))
+    : null
+
+  const sugerencias = inventario.filter(p =>
+    p.Activo && (
+      !query || p.NombreProducto.toLowerCase().includes(query.toLowerCase())
+    )
+  ).slice(0, 10)
+
+  function seleccionar(prod) {
+    onSelect(prod)
+    setQuery('')
+    setOpen(false)
+  }
+
+  if (productoSeleccionado) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '220px' }}>
+        <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: '#1d4ed8' }}>
+          {productoSeleccionado.NombreProducto}
+        </span>
+        <button type="button" onClick={onClear}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '16px', lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}
+          title="Cambiar producto">×</button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ position: 'relative', minWidth: '220px' }}>
+      <input
+        className="form-control"
+        type="text"
+        value={query || line.Descripcion}
+        placeholder="Buscar inventario o escribir..."
+        onChange={e => {
+          setQuery(e.target.value)
+          onTextChange(e.target.value)
+          setOpen(true)
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+      />
+      {open && sugerencias.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+          background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: '2px',
+          maxHeight: '200px', overflowY: 'auto',
+        }}>
+          {sugerencias.map(p => (
+            <button key={p.ProductoId} type="button" onMouseDown={() => seleccionar(p)}
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                width: '100%', padding: '8px 12px', background: 'none', border: 'none',
+                cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f3f4f6',
+                fontSize: '13px',
+              }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 600 }}>{p.NombreProducto}</p>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '11px' }}>{p.UnidadMedida}</p>
+              </div>
+              <span style={{
+                fontSize: '11px', fontWeight: 700, marginLeft: '8px', whiteSpace: 'nowrap',
+                color: p.EstadoStock === 'ok' ? '#15803d' : p.EstadoStock === 'bajo' ? '#b45309' : '#b91c1c',
+              }}>
+                {Number(p.CantidadReal).toFixed(2)} disp.
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Helpers form ───────────────────────────────────────────────────────────────
 function createEmptyLine() {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    Cantidad: '1', Descripcion: '', UnidadMedida: '', PrecioUnitario: '0.00',
+    Cantidad: '1', Descripcion: '', UnidadMedida: '', PrecioUnitario: '0.00', ProductoId: null,
   }
 }
 
@@ -1020,7 +1104,7 @@ function emptyOrderForm(folioValue) {
   return {
     Folio: folioValue || '', UnidadNegocioId: '', ProveedorId: '',
     Fecha: new Date().toISOString().slice(0, 10),
-    Tipo: 'compras', Observaciones: '',
+    Tipo: 'compras', Destino: '', Observaciones: '',
     LineItems: [createEmptyLine()],
   }
 }
@@ -1028,7 +1112,7 @@ function emptyOrderForm(folioValue) {
 // ── Componente principal ───────────────────────────────────────────────────────
 export default function OrdenesCompra({
   proveedores = [], unidadesNegocio = [], folio, ordenes = [],
-  currentUser, currentUserRol, onCreateOrden, onApproveOrden, onRejectOrden,
+  currentUser, currentUserRol, onCreateOrden, onApproveOrden, onRejectOrden, onDeleteOrden,
 }) {
   const rolApprover = ROLE_TO_APPROVER[currentUserRol] || null
   const [activeSection, setActiveSection] = useState('crear')
@@ -1042,6 +1126,11 @@ export default function OrdenesCompra({
   const [successMsg, setSuccessMsg] = useState(null)
   const [sfPendientes, setSfPendientes] = useState([])
   const [sfActionError, setSfActionError] = useState(null)
+  const [inventario, setInventario] = useState([])
+
+  useEffect(() => {
+    getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
+  }, [])
 
   useEffect(() => {
     setForm((current) => ({ ...current, Folio: folio || current.Folio }))
@@ -1204,6 +1293,17 @@ export default function OrdenesCompra({
     setTimeout(() => setSuccessMsg(null), 6000)
   }
 
+  async function handleDeleteOrden(order) {
+    if (!window.confirm(`¿Eliminar la orden ${order.Folio}? Esta acción no se puede deshacer.`)) return
+    try {
+      await onDeleteOrden(order.OrdenCompraId)
+      setSuccessMsg(`Orden ${order.Folio} eliminada correctamente.`)
+      setTimeout(() => setSuccessMsg(null), 6000)
+    } catch (err) {
+      alert('Error al eliminar: ' + err.message)
+    }
+  }
+
   const misOrdenes = useMemo(
     () => filtrarOrdenes(ordenes.filter((o) => !currentUser || o.Creador === currentUser)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1226,6 +1326,7 @@ export default function OrdenesCompra({
   const TABS = [
     { key: 'crear', label: 'Nueva orden' },
     { key: 'misOrdenes', label: `Mis órdenes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
+    { key: 'historial', label: 'Órdenes de Compra' },
     { key: 'autorizar', label: 'Autorizar' },
   ]
 
@@ -1256,8 +1357,8 @@ export default function OrdenesCompra({
           </div>
         )}
 
-        {/* ── BUSCADOR / FILTROS ── */}
-        <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'12px', padding:'12px 14px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'flex-end', marginBottom:'4px' }}>
+        {/* ── BUSCADOR / FILTROS ── solo en vistas de listado, no en crear */}
+        {activeSection !== 'crear' && <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'12px', padding:'12px 14px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'flex-end', marginBottom:'4px' }}>
           <div style={{ flex:'2 1 180px' }}>
             <span style={{ display:'block', fontSize:'11px', fontWeight:600, color:'#6b7280', marginBottom:'4px' }}>Buscar</span>
             <input className="form-control" type="text" value={filtros.texto} onChange={setF('texto')}
@@ -1299,7 +1400,7 @@ export default function OrdenesCompra({
               Limpiar filtros
             </button>
           )}
-        </div>
+        </div>}
 
         {/* ── CREAR ── */}
         {activeSection === 'crear' && (
@@ -1314,6 +1415,14 @@ export default function OrdenesCompra({
                 <select className="form-control" value={form.Tipo} onChange={(e) => updateField('Tipo', e.target.value)}>
                   <option value="compras">Compras / Suministros</option>
                   <option value="servicios">Servicios</option>
+                </select>
+              </div>
+              <div className="form-field">
+                <span className="form-field-label">Destino</span>
+                <select className="form-control" value={form.Destino} onChange={(e) => updateField('Destino', e.target.value)}>
+                  <option value="">Seleccionar destino</option>
+                  <option value="UDAT">UDAT</option>
+                  <option value="Casas de renta">Casas de renta</option>
                 </select>
               </div>
               <div className="form-field">
@@ -1359,8 +1468,23 @@ export default function OrdenesCompra({
                   {form.LineItems.map((line) => (
                     <tr key={line.id}>
                       <td><input className="form-control" type="number" min="0" value={line.Cantidad} onChange={(e) => updateLine(line.id, 'Cantidad', e.target.value)} /></td>
-                      <td><input className="form-control" type="text" value={line.Descripcion} onChange={(e) => updateLine(line.id, 'Descripcion', e.target.value)} placeholder="Descripción de la partida" /></td>
-                      <td><input className="form-control" type="text" value={line.UnidadMedida} onChange={(e) => updateLine(line.id, 'UnidadMedida', e.target.value)} placeholder="Ej. hrs, pza" /></td>
+                      <td>
+                        <DescripcionCell
+                          line={line}
+                          inventario={inventario}
+                          onSelect={(prod) => {
+                            updateLine(line.id, 'ProductoId', prod.ProductoId)
+                            updateLine(line.id, 'Descripcion', prod.NombreProducto)
+                            updateLine(line.id, 'UnidadMedida', prod.UnidadMedida || '')
+                          }}
+                          onClear={() => {
+                            updateLine(line.id, 'ProductoId', null)
+                            updateLine(line.id, 'Descripcion', '')
+                          }}
+                          onTextChange={(v) => updateLine(line.id, 'Descripcion', v)}
+                        />
+                      </td>
+                      <td><input className="form-control" type="text" value={line.UnidadMedida} onChange={(e) => updateLine(line.id, 'UnidadMedida', e.target.value)} placeholder="Ej. hrs, pza" readOnly={!!line.ProductoId} style={line.ProductoId ? { background: '#f0f0f0', cursor: 'not-allowed' } : {}} /></td>
                       <td><input className="form-control" type="number" min="0" step="0.01" value={line.PrecioUnitario} onChange={(e) => updateLine(line.id, 'PrecioUnitario', e.target.value)} /></td>
                       <td>{formatMoney((Number(line.Cantidad) || 0) * (Number(line.PrecioUnitario) || 0))}</td>
                       <td><button className="ghost-button" type="button" onClick={() => removeLine(line.id)}>Eliminar</button></td>
@@ -1410,7 +1534,7 @@ export default function OrdenesCompra({
                 <table className="participants-table">
                   <thead>
                     <tr>
-                      <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Unidad de negocio</th>
+                      <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Destino</th><th>Unidad de negocio</th>
                       <th>Total</th><th>Fecha</th><th>Estado</th><th>Aprobaciones</th><th>Acciones</th>
                     </tr>
                   </thead>
@@ -1433,6 +1557,7 @@ export default function OrdenesCompra({
                             </span>
                           </td>
                           <td>{order.Proveedor}</td>
+                          <td>{order.Destino || '-'}</td>
                           <td>{order.UnidadNegocio}</td>
                           <td><strong>{formatMoney(order.Total)}</strong></td>
                           <td>{String(order.Fecha || '').slice(0, 10)}</td>
@@ -1666,74 +1791,96 @@ export default function OrdenesCompra({
               })()}
             </div>
 
-            <details style={{ marginTop: '24px' }}>
-              <summary style={{ cursor: 'pointer', color: '#6b7280', fontSize: '13px', userSelect: 'none', padding: '8px 0' }}>
-                Ver historial completo ({filtrarOrdenes(ordenes).length}{hasFiltros ? ` de ${ordenes.length}` : ''})
-              </summary>
-              <div className="table-wrap" style={{ marginTop: '12px' }}>
-                <table className="participants-table">
-                  <thead>
-                    <tr>
-                      <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Creado por</th>
-                      <th>Total</th><th>Estado</th><th>Documentos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtrarOrdenes(ordenes).map((order) => {
-                      const status = getOrderStatus(order)
-                      const tipoLabel = (order.Tipo||'compras').toLowerCase()
-                      const isAprobada = status === 'Aprobada'
-                      return (
-                        <tr key={order.OrdenCompraId}>
-                          <td><strong>{order.Folio}</strong></td>
-                          <td>
-                            <span style={{ fontSize:'11px', fontWeight:600, padding:'2px 8px', borderRadius:'999px',
-                              background: tipoLabel === 'servicios' ? '#f5f3ff' : '#eff6ff',
-                              color: tipoLabel === 'servicios' ? '#7c3aed' : '#1d4ed8' }}>
-                              {tipoLabel === 'servicios' ? 'Servicios' : 'Compras'}
-                            </span>
-                          </td>
-                          <td>{order.Proveedor}</td>
-                          <td>{order.Creador}</td>
-                          <td>{formatMoney(order.Total)}</td>
-                          <td><StatusBadge status={status} /></td>
-                          <td>
-                            <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
-                              <button type="button" className="ghost-button"
-                                style={{ fontSize:'11px', padding:'3px 8px' }}
-                                onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
-                                PDF
-                              </button>
-                              {isAprobada && (
-                                <>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize:'11px', padding:'3px 8px', color:'#15803d', borderColor:'#bbf7d0' }}
-                                    onClick={() => openModal('solicitud', order, !isAdmin)}>
-                                    Sol. Fondos
-                                  </button>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize:'11px', padding:'3px 8px', color:'#1d4ed8', borderColor:'#bfdbfe' }}
-                                    onClick={() => openModal('evaluacion-compras', order)}>
-                                    Eval. Compras
-                                  </button>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize:'11px', padding:'3px 8px', color:'#7c3aed', borderColor:'#ddd6fe' }}
-                                    onClick={() => openModal('evaluacion-servicios', order)}>
-                                    Eval. Servicios
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </details>
           </div>
         )}
+
+        {/* ── HISTORIAL DE ÓRDENES ── */}
+        {activeSection === 'historial' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0 }}>Órdenes de Compra</h2>
+              <span style={{ fontSize: '12px', color: '#6b7280', background: '#f3f4f6', borderRadius: '999px', padding: '2px 10px' }}>
+                {filtrarOrdenes(ordenes).length}{hasFiltros ? ` de ${ordenes.length}` : ''} orden{filtrarOrdenes(ordenes).length !== 1 ? 'es' : ''}
+              </span>
+            </div>
+            <div className="table-wrap">
+              <table className="participants-table">
+                <thead>
+                  <tr>
+                    <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Creado por</th>
+                    <th>Total</th><th>Estado</th><th>Documentos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtrarOrdenes(ordenes).length === 0 ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af', padding: '32px' }}>No hay órdenes registradas.</td></tr>
+                  ) : filtrarOrdenes(ordenes).map((order) => {
+                    const status = getOrderStatus(order)
+                    const tipoLabel = (order.Tipo||'compras').toLowerCase()
+                    const isAprobada = status === 'Aprobada'
+                    return (
+                      <tr key={order.OrdenCompraId}>
+                        <td><strong>{order.Folio}</strong></td>
+                        <td>
+                          <span style={{ fontSize:'11px', fontWeight:600, padding:'2px 8px', borderRadius:'999px',
+                            background: tipoLabel === 'servicios' ? '#f5f3ff' : '#eff6ff',
+                            color: tipoLabel === 'servicios' ? '#7c3aed' : '#1d4ed8' }}>
+                            {tipoLabel === 'servicios' ? 'Servicios' : 'Compras'}
+                          </span>
+                        </td>
+                        <td>{order.Proveedor}</td>
+                        <td>{order.Creador}</td>
+                        <td>{formatMoney(order.Total)}</td>
+                        <td><StatusBadge status={status} /></td>
+                        <td>
+                          <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
+                            <button type="button" className="ghost-button"
+                              style={{ fontSize:'11px', padding:'3px 8px' }}
+                              onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
+                              PDF
+                            </button>
+                            <button type="button" className="ghost-button"
+                              style={{ fontSize:'11px', padding:'3px 8px', color:'#b45309', borderColor:'#fde68a' }}
+                              onClick={() => openModal('factura', order)}>
+                              Factura
+                            </button>
+                            {isAprobada && (
+                              <>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#15803d', borderColor:'#bbf7d0' }}
+                                  onClick={() => openModal('solicitud', order, !isAdmin)}>
+                                  Sol. Fondos
+                                </button>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#1d4ed8', borderColor:'#bfdbfe' }}
+                                  onClick={() => openModal('evaluacion-compras', order)}>
+                                  Eval. Compras
+                                </button>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#7c3aed', borderColor:'#ddd6fe' }}
+                                  onClick={() => openModal('evaluacion-servicios', order)}>
+                                  Eval. Servicios
+                                </button>
+                              </>
+                            )}
+                            {(isAdmin || isAutorizador) && (
+                              <button type="button" className="ghost-button"
+                                style={{ fontSize:'11px', padding:'3px 8px', color:'#dc2626', borderColor:'#fecaca' }}
+                                onClick={() => handleDeleteOrden(order)}>
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ── Modales ── */}

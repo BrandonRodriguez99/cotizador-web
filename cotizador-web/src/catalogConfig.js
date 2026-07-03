@@ -95,10 +95,20 @@ export const CATALOG_DEFINITIONS = {
     columns: [
       { header: 'ID', accessor: 'CursoId' },
       { header: 'Nombre', accessor: 'Nombre' },
+      { header: 'Tipo', accessor: 'TipoCurso' },
+      { header: 'Horas', accessor: 'Horas' },
+      { header: 'Costo', accessor: 'Costo' },
       { header: 'Duración (días)', accessor: 'DuracionDefaultDias' },
     ],
     fields: [
       { name: 'Nombre', label: 'Nombre del curso', required: true },
+      { name: 'TipoCurso', label: 'Tipo de curso', type: 'select', options: [
+        { value: '', label: '-- Seleccionar --' },
+        { value: 'Mandatorio', label: 'Mandatorio' },
+        { value: 'Extraordinario', label: 'Extraordinario' },
+      ]},
+      { name: 'Horas', label: 'Horas', type: 'number' },
+      { name: 'Costo', label: 'Costo ($)', type: 'number' },
       { name: 'DuracionDefaultDias', label: 'Duración por defecto (días)', type: 'number' },
     ],
   },
@@ -113,8 +123,16 @@ export const CATALOG_DEFINITIONS = {
     columns: [
       { header: 'ID', accessor: 'CoachId' },
       { header: 'Nombre', accessor: 'Nombre' },
+      {
+        header: 'Costo',
+        accessor: 'Costo',
+        render: (value) => (value != null ? `$ ${Number(value).toFixed(2)}` : '-'),
+      },
     ],
-    fields: [{ name: 'Nombre', label: 'Nombre del coach', required: true }],
+    fields: [
+      { name: 'Nombre', label: 'Nombre del coach', required: true },
+      { name: 'Costo', label: 'Costo ($)', type: 'number', step: '0.01' },
+    ],
   },
   modalidades: {
     title: 'Modalidades',

@@ -255,11 +255,11 @@ export function deleteConcepto(id, hard = false) {
 }
 
 export async function getCotizaciones() {
-  return fetchJson('cotizaciones');
+  return fetchJson('cotizaciones', { headers: authHeaders() });
 }
 
 export async function getCotizacionById(id) {
-  return fetchJson(`cotizaciones/${id}`);
+  return fetchJson(`cotizaciones/${id}`, { headers: authHeaders() });
 }
 
 export async function deleteCotizacion(id) {
@@ -294,12 +294,24 @@ export async function createCotizacion(data) {
   return postJson('cotizaciones', data);
 }
 
+export async function updateCotizacion(id, data) {
+  return fetchJson(`cotizaciones/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getDashboard() {
   return fetchJson('dashboard', { headers: authHeaders() });
 }
 
 export async function getOrdenesCompra() {
-  return fetchJson('ordenescompra');
+  return fetchJson('ordenescompra', { headers: authHeaders() });
+}
+
+export async function deleteOrdenCompra(id) {
+  return fetchJson(`ordenescompra/${id}`, { method: 'DELETE', headers: authHeaders() });
 }
 
 export async function createOrdenCompra(data) {
@@ -415,6 +427,14 @@ export async function downloadOrdenCompraPdf(id) {
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
+export async function getMe(token) {
+  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export async function login(correo, password) {
   const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
@@ -503,3 +523,63 @@ export async function resetearPasswordUsuario(token, id, password) {
   if (!res.ok) throw new Error(body.error || 'Error al resetear contraseña');
   return body;
 }
+
+// ── Órdenes de Mantenimiento ──────────────────────────────────────────────────
+export function getOrdenesMantenimiento() { return fetchJson('ordenes-mantenimiento', { headers: authHeaders() }) }
+export function getOrdenMantenimientoById(id) { return fetchJson(`ordenes-mantenimiento/${id}`, { headers: authHeaders() }) }
+export function createOrdenMantenimiento(data) { return fetchJson('ordenes-mantenimiento', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateOrdenMantenimiento(id, data) { return fetchJson(`ordenes-mantenimiento/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+
+// ── Inventario ────────────────────────────────────────────────────────────────
+export function getInventario() { return fetchJson('inventario', { headers: authHeaders() }) }
+export function getInventarioDashboard() { return fetchJson('inventario/dashboard', { headers: authHeaders() }) }
+export function createProducto(data) { return fetchJson('inventario', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateProducto(id, data) { return fetchJson(`inventario/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function ajustarStock(id, data) { return fetchJson(`inventario/${id}/ajuste`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+
+// ── Seguridad — Catálogos ─────────────────────────────────────────────────────
+export function getVehiculos() { return fetchJson('seguridad/vehiculos', { headers: authHeaders() }) }
+export function createVehiculo(data) { return fetchJson('seguridad/vehiculos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateVehiculo(id, data) { return fetchJson(`seguridad/vehiculos/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+
+export function getExtintores() { return fetchJson('seguridad/extintores', { headers: authHeaders() }) }
+export function createExtintor(data) { return fetchJson('seguridad/extintores', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateExtintor(id, data) { return fetchJson(`seguridad/extintores/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function getRevisionesExtintor(id) { return fetchJson(`seguridad/extintores/${id}/revisiones`, { headers: authHeaders() }) }
+export function createRevisionExtintor(data) { return fetchJson('seguridad/revisiones-extintores', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+
+export function getPuntosRevision() { return fetchJson('seguridad/puntos-revision', { headers: authHeaders() }) }
+export function createPuntoRevision(data) { return fetchJson('seguridad/puntos-revision', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updatePuntoRevision(id, data) { return fetchJson(`seguridad/puntos-revision/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function createAreaRevision(puntoId, data) { return fetchJson(`seguridad/puntos-revision/${puntoId}/areas`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateAreaRevision(id, data) { return fetchJson(`seguridad/areas/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+
+// ── Seguridad — Rondines ──────────────────────────────────────────────────────
+export function getRondines() { return fetchJson('seguridad/rondines', { headers: authHeaders() }) }
+export function getRondinById(id) { return fetchJson(`seguridad/rondines/${id}`, { headers: authHeaders() }) }
+export function createRondin() { return fetchJson('seguridad/rondines', { method: 'POST', headers: authHeaders(), body: JSON.stringify({}) }) }
+export function marcarRegistroRondin(rondinId, registroId, data) {
+  return fetchJson(`seguridad/rondines/${rondinId}/registro/${registroId}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) })
+}
+export function finalizarRondin(id, data) { return fetchJson(`seguridad/rondines/${id}/finalizar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+
+// ── Seguridad — Visitas ───────────────────────────────────────────────────────
+export function getVisitas(fecha) {
+  const q = fecha ? `?fecha=${fecha}` : ''
+  return fetchJson(`seguridad/visitas${q}`, { headers: authHeaders() })
+}
+export function createVisita(data) { return fetchJson('seguridad/visitas', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function registrarSalidaVisita(id, data) { return fetchJson(`seguridad/visitas/${id}/salida`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data || {}) }) }
+
+// ── Seguridad — Órdenes de Vehículo ──────────────────────────────────────────
+export function getOrdenesVehiculo(params = {}) {
+  const q = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v))).toString()
+  return fetchJson(`seguridad/ordenes-vehiculo${q ? '?' + q : ''}`, { headers: authHeaders() })
+}
+export function createOrdenVehiculo(data) { return fetchJson('seguridad/ordenes-vehiculo', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function autorizarOrdenVehiculo(id) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/autorizar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({}) }) }
+export function rechazarOrdenVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/rechazar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function registrarSalidaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/salida`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function registrarLlegadaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/llegada`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+
+export function getDashboardSeguridad() { return fetchJson('seguridad/dashboard', { headers: authHeaders() }) }

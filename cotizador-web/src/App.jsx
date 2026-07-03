@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import {
   getClientes,
@@ -20,6 +20,8 @@ import {
   createOrdenCompra,
   approveOrdenCompra,
   rejectOrdenCompra,
+  deleteOrdenCompra,
+  getMe,
 } from './api'
 import { CATALOG_DEFINITIONS } from './catalogConfig'
 import CatalogFormModal from './CatalogFormModal'
@@ -32,6 +34,9 @@ import ChangePasswordModal from './ChangePasswordModal'
 import Usuarios from './Usuarios'
 import Dashboard from './Dashboard'
 import Inicio from './Inicio'
+import OrdenesMantenimiento from './OrdenesMantenimiento'
+import Inventario from './Inventario'
+import Seguridad from './Seguridad'
 
 function App() {
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -81,9 +86,13 @@ function App() {
   const [error, setError] = useState(null)
   const rolInicial = usuario?.rol
   const [activeView, setActiveView] = useState(
-    (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
-      ? 'dashboard'
-      : 'inicio'
+    rolInicial === 'mantenimiento'
+      ? 'mantenimiento'
+      : rolInicial === 'seguridad'
+        ? 'seguridad'
+        : (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
+          ? 'dashboard'
+          : 'inicio'
   )
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [catalogItems, setCatalogItems] = useState([])
@@ -117,6 +126,8 @@ function App() {
   const [ordenesLoading, setOrdenesLoading] = useState(false)
   const [ordenesError, setOrdenesError] = useState(null)
   const [orderFolio, setOrderFolio] = useState('')
+  const [editingCotizacion, setEditingCotizacion] = useState(null)
+  const skipFolioGenRef = useRef(false)
 
   function getNextOrderSequence() {
     if (typeof window === 'undefined' || !window.localStorage) {
@@ -142,6 +153,22 @@ function App() {
     const sequence = getNextOrderSequence()
     return `OC-${year}-${String(sequence).padStart(6, '0')}`
   }
+
+  // Sincronizar rol desde DB al iniciar sesión (detecta cambios de rol por admin)
+  useEffect(() => {
+    if (!token) return
+    getMe(token).then((data) => {
+      if (!data) return
+      const rolActual = usuario?.rol
+      if (data.usuario.rol !== rolActual) {
+        window.localStorage.setItem('cotizador-token', data.token)
+        window.localStorage.setItem('cotizador-usuario', JSON.stringify(data.usuario))
+        setToken(data.token)
+        setUsuario(data.usuario)
+      }
+    }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     async function loadCatalogs() {
@@ -269,6 +296,11 @@ function App() {
     await loadOrdenes()
   }
 
+  async function handleDeleteOrden(id) {
+    await deleteOrdenCompra(id)
+    await loadOrdenes()
+  }
+
   async function handleDeleteCotizacion(cotizacionId, folio) {
     if (!window.confirm(`¿Eliminar la cotización ${folio}? Esta acción no se puede deshacer.`)) return
     try {
@@ -294,6 +326,60 @@ function App() {
     }
   }
 
+  async function handleEditarCotizacion(cotizacionId) {
+    try {
+      const { cotizacion, costos, participantes: partic } = await getCotizacionById(cotizacionId)
+
+      setSelectedCliente(String(cotizacion.ClienteId || ''))
+      setSelectedCurso(String(cotizacion.CursoId || ''))
+      setSelectedCoach(String(cotizacion.CoachId || ''))
+      setSelectedModalidad(String(cotizacion.ModalidadId || ''))
+      setSelectedUnidadNegocio(String(cotizacion.UnidadNegocioId || ''))
+      setDuracionDias(String(cotizacion.DuracionDias || ''))
+      setSesionesPorDia(String(cotizacion.SesionesPorDia || ''))
+      setParticipantesCantidad(String(cotizacion.ParticipantesCantidad || ''))
+      setFechaInicio(cotizacion.FechaInicio ? String(cotizacion.FechaInicio).substring(0, 10) : '')
+      setFechaFin(cotizacion.FechaFin ? String(cotizacion.FechaFin).substring(0, 10) : '')
+      setObservaciones(cotizacion.Observaciones || '')
+      setMargenPctDirectos(String(cotizacion.MargenUtilidadPctDirectos ?? 35))
+      setMargenPctIndirectos(String(cotizacion.MargenUtilidadPctIndirectos ?? 10))
+      setFolio(cotizacion.Folio)
+
+      const participantesMapeados = partic.map(p => ({
+        EmpleadoId: p.EmpleadoId || null,
+        NombreCompleto: p.NombreCompleto,
+        Empresa: p.Empresa,
+        Factura2: p.Factura2,
+        Factura3: p.Factura3,
+        observaciones: p.Observaciones,
+      }))
+      setParticipantesSeleccionados(participantesMapeados)
+
+      const costosMapeados = costos.map(c => ({
+        ConceptoCostoId: c.CotizacionCostoId,
+        Nombre: c.Concepto || '',
+        TipoCalculo: c.TipoCalculo || '',
+        Formula: c.Formula || '',
+        TipoCosto: c.TipoCosto || 'Directos',
+        CostoUnitario: Number(c.CostoUnitario) || 0,
+        quantityOverride: c.Cantidad ?? '',
+      }))
+
+      setEditingCotizacion({ id: cotizacion.CotizacionId, initialConcepts: costosMapeados })
+      skipFolioGenRef.current = true
+      setActiveView('cotizacion')
+    } catch (err) {
+      alert('No se pudo cargar la cotización para editar: ' + err.message)
+    }
+  }
+
+  async function handleCotizacionSaved() {
+    resetCotizacionForm()
+    setEditingCotizacion(null)
+    await loadHistorial()
+    setActiveView('historial')
+  }
+
   useEffect(() => {
     async function generateAutomaticFolio() {
       try {
@@ -305,7 +391,11 @@ function App() {
       }
     }
     if (activeView === 'cotizacion') {
-      generateAutomaticFolio()
+      if (skipFolioGenRef.current) {
+        skipFolioGenRef.current = false
+      } else {
+        generateAutomaticFolio()
+      }
     } else {
       setFolio('')
     }
@@ -524,12 +614,20 @@ function App() {
         : activeView === 'ordenesCompra'
           ? 'Ordenes de Compra'
           : activeView === 'cotizacion'
-            ? 'Nueva Cotización'
+            ? (editingCotizacion ? 'Editar Cotización' : 'Nueva Cotización')
             : activeView === 'historial'
               ? 'Historial de Cotizaciones'
               : activeView === 'aprobaciones'
                 ? 'Aprobaciones'
-                : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                : activeView === 'mantenimiento'
+                  ? 'Órdenes de Mantenimiento'
+                  : activeView === 'inventario'
+                    ? 'Inventario'
+                    : activeView === 'seguridad'
+                      ? 'Módulo de Seguridad'
+                      : activeView === 'vehiculos'
+                        ? 'Vehículos'
+                        : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -539,12 +637,20 @@ function App() {
         : activeView === 'ordenesCompra'
           ? 'Ordenes de Compra > Nueva Orden'
           : activeView === 'cotizacion'
-            ? 'Cotizaciones > Nueva Cotización'
+            ? (editingCotizacion ? 'Cotizaciones > Editar Cotización' : 'Cotizaciones > Nueva Cotización')
             : activeView === 'historial'
               ? 'Cotizaciones > Historial de Cotizaciones'
               : activeView === 'aprobaciones'
                 ? 'Cotizaciones > Aprobaciones'
-                : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                : activeView === 'mantenimiento'
+                  ? 'Herramientas > Órdenes de Mantenimiento'
+                  : activeView === 'inventario'
+                    ? 'Herramientas > Inventario'
+                    : activeView === 'seguridad'
+                      ? 'Seguridad > Módulo de Seguridad'
+                      : activeView === 'vehiculos'
+                        ? 'Herramientas > Vehículos'
+                        : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   if (!usuario) {
     return <Login onLogin={handleLogin} />
@@ -567,116 +673,77 @@ function App() {
         </div>
 
         <nav className="sidebar-nav">
-          {(usuario?.rol === 'admin' || usuario?.rol === 'autorizador1' || usuario?.rol === 'autorizador2') && (
+          {usuario?.rol === 'seguridad' ? (
+            // Rol seguridad: solo ve el módulo de seguridad
             <div className="nav-section">
-              <p className="nav-title">Inicio</p>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'dashboard' ? ' active' : ''}`}
-                onClick={() => handleNavClick('dashboard')}
-              >
-                Dashboard
+              <p className="nav-title">Seguridad</p>
+              <button type="button" className={`nav-link${activeView === 'seguridad' ? ' active' : ''}`} onClick={() => handleNavClick('seguridad')}>
+                Módulo de Seguridad
               </button>
             </div>
-          )}
-          {!(usuario?.rol === 'admin' || usuario?.rol === 'autorizador1' || usuario?.rol === 'autorizador2') && (
-            <div className="nav-section">
-              <p className="nav-title">Inicio</p>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'inicio' ? ' active' : ''}`}
-                onClick={() => handleNavClick('inicio')}
-              >
-                Inicio
-              </button>
-            </div>
-          )}
-          <div className="nav-section">
-            <p className="nav-title">Herramientas</p>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`}
-              onClick={() => handleNavClick('ordenesCompra')}
-            >
-              Ordenes de Compra
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'cotizacion' ? ' active' : ''}`}
-              onClick={() => handleNavClick('cotizacion')}
-            >
-              Nueva Cotización
-            </button>
-            <button type="button" className={`nav-link${activeView === 'historial' ? ' active' : ''}`} onClick={() => handleNavClick('historial')}>
-              Historial de Cotizaciones
-            </button>
-            <button type="button" className={`nav-link${activeView === 'aprobaciones' ? ' active' : ''}`} onClick={() => handleNavClick('aprobaciones')}>
-              Aprobaciones
-            </button>
-          </div>
-          <div className="nav-section">
-            <p className="nav-title">Catálogos</p>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'cursos' ? ' active' : ''}`}
-              onClick={() => handleNavClick('cursos')}
-            >
-              Cursos
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'conceptos' ? ' active' : ''}`}
-              onClick={() => handleNavClick('conceptos')}
-            >
-              Conceptos de Costo
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'coaches' ? ' active' : ''}`}
-              onClick={() => handleNavClick('coaches')}
-            >
-              Coaches
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'modalidades' ? ' active' : ''}`}
-              onClick={() => handleNavClick('modalidades')}
-            >
-              Modalidades
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'clientes' ? ' active' : ''}`}
-              onClick={() => handleNavClick('clientes')}
-            >
-              Empresas
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'proveedores' ? ' active' : ''}`}
-              onClick={() => handleNavClick('proveedores')}
-            >
-              Proveedores
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'unidadesNegocio' ? ' active' : ''}`}
-              onClick={() => handleNavClick('unidadesNegocio')}
-            >
-              Unidad de Negocio
-            </button>
-          </div>
-          {usuario?.rol === 'admin' && (
-            <div className="nav-section">
-              <p className="nav-title">Administración</p>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'usuarios' ? ' active' : ''}`}
-                onClick={() => handleNavClick('usuarios')}
-              >
-                Usuarios
-              </button>
-            </div>
+          ) : (
+            <>
+              {usuario?.rol !== 'mantenimiento' && (
+                (usuario?.rol === 'admin' || usuario?.rol === 'autorizador1' || usuario?.rol === 'autorizador2') ? (
+                  <div className="nav-section">
+                    <p className="nav-title">Inicio</p>
+                    <button type="button" className={`nav-link${activeView === 'dashboard' ? ' active' : ''}`} onClick={() => handleNavClick('dashboard')}>
+                      Dashboard
+                    </button>
+                  </div>
+                ) : (
+                  <div className="nav-section">
+                    <p className="nav-title">Inicio</p>
+                    <button type="button" className={`nav-link${activeView === 'inicio' ? ' active' : ''}`} onClick={() => handleNavClick('inicio')}>
+                      Inicio
+                    </button>
+                  </div>
+                )
+              )}
+              <div className="nav-section">
+                <p className="nav-title">Herramientas</p>
+                <button type="button" className={`nav-link${activeView === 'mantenimiento' ? ' active' : ''}`} onClick={() => handleNavClick('mantenimiento')}>
+                  Órdenes de Mantenimiento
+                </button>
+                {usuario?.rol !== 'mantenimiento' && (<>
+                  <button type="button" className={`nav-link${activeView === 'inventario' ? ' active' : ''}`} onClick={() => handleNavClick('inventario')}>
+                    Inventario
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'vehiculos' ? ' active' : ''}`} onClick={() => handleNavClick('vehiculos')}>
+                    Vehículos
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`} onClick={() => handleNavClick('ordenesCompra')}>
+                    Ordenes de Compra
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'cotizacion' ? ' active' : ''}`} onClick={() => handleNavClick('cotizacion')}>
+                    Nueva Cotización
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'historial' ? ' active' : ''}`} onClick={() => handleNavClick('historial')}>
+                    Historial de Cotizaciones
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'aprobaciones' ? ' active' : ''}`} onClick={() => handleNavClick('aprobaciones')}>
+                    Aprobaciones
+                  </button>
+                </>)}
+              </div>
+              {usuario?.rol !== 'mantenimiento' && <div className="nav-section">
+                <p className="nav-title">Catálogos</p>
+                <button type="button" className={`nav-link${activeView === 'cursos' ? ' active' : ''}`} onClick={() => handleNavClick('cursos')}>Cursos</button>
+                <button type="button" className={`nav-link${activeView === 'conceptos' ? ' active' : ''}`} onClick={() => handleNavClick('conceptos')}>Conceptos de Costo</button>
+                <button type="button" className={`nav-link${activeView === 'coaches' ? ' active' : ''}`} onClick={() => handleNavClick('coaches')}>Coaches</button>
+                <button type="button" className={`nav-link${activeView === 'modalidades' ? ' active' : ''}`} onClick={() => handleNavClick('modalidades')}>Modalidades</button>
+                <button type="button" className={`nav-link${activeView === 'clientes' ? ' active' : ''}`} onClick={() => handleNavClick('clientes')}>Empresas</button>
+                <button type="button" className={`nav-link${activeView === 'proveedores' ? ' active' : ''}`} onClick={() => handleNavClick('proveedores')}>Proveedores</button>
+                <button type="button" className={`nav-link${activeView === 'unidadesNegocio' ? ' active' : ''}`} onClick={() => handleNavClick('unidadesNegocio')}>Unidad de Negocio</button>
+              </div>}
+              {usuario?.rol === 'admin' && (
+                <div className="nav-section">
+                  <p className="nav-title">Administración</p>
+                  <button type="button" className={`nav-link${activeView === 'usuarios' ? ' active' : ''}`} onClick={() => handleNavClick('usuarios')}>Usuarios</button>
+                  <button type="button" className={`nav-link${activeView === 'seguridad' ? ' active' : ''}`} onClick={() => handleNavClick('seguridad')}>Seguridad</button>
+                </div>
+              )}
+            </>
           )}
         </nav>
 
@@ -819,6 +886,7 @@ function App() {
             onCreateOrden={handleCreateOrden}
             onApproveOrden={handleApproveOrden}
             onRejectOrden={handleRejectOrden}
+            onDeleteOrden={handleDeleteOrden}
           />
         ) : activeView === 'historial' ? (
           <HistorialCotizaciones
@@ -826,9 +894,33 @@ function App() {
             loading={cotizacionesLoading}
             error={cotizacionesError}
             onVerCotizacion={loadDetallesCotizacion}
+            onEditarCotizacion={handleEditarCotizacion}
             onDeleteCotizacion={handleDeleteCotizacion}
+            currentUser={creadoPor}
+            currentUserRol={usuario?.rol}
           />
-          ) : activeView === 'aprobaciones' ? (
+          ) : activeView === 'mantenimiento' ? (
+          <OrdenesMantenimiento
+            currentUser={creadoPor}
+            currentUserRol={usuario?.rol}
+          />
+        ) : activeView === 'inventario' ? (
+          <section className="panel card">
+            <div className="panel-header">
+              <div>
+                <h2>Inventario de Materiales</h2>
+                <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
+                  Gestiona el stock de materiales y refacciones
+                </p>
+              </div>
+            </div>
+            <Inventario isAdmin={usuario?.rol === 'admin'} />
+          </section>
+        ) : activeView === 'seguridad' ? (
+          <Seguridad usuario={usuario} />
+        ) : activeView === 'vehiculos' ? (
+          <Seguridad usuario={usuario} soloVehiculos={true} />
+        ) : activeView === 'aprobaciones' ? (
             <section className="panel card">
               <div className="panel-header space-between">
                 <div>
@@ -1021,7 +1113,9 @@ function App() {
               setMargenPctDirectos={setMargenPctDirectos}
               margenPctIndirectos={margenPctIndirectos}
               setMargenPctIndirectos={setMargenPctIndirectos}
-              onSaved={resetCotizacionForm}
+              editingCotizacionId={editingCotizacion?.id ?? null}
+              initialConcepts={editingCotizacion?.initialConcepts ?? []}
+              onSaved={handleCotizacionSaved}
             />
           )}
       </main>
