@@ -36,6 +36,7 @@ import Dashboard from './Dashboard'
 import Inicio from './Inicio'
 import OrdenesMantenimiento from './OrdenesMantenimiento'
 import Inventario from './Inventario'
+import Seguridad from './Seguridad'
 
 function App() {
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -87,9 +88,11 @@ function App() {
   const [activeView, setActiveView] = useState(
     rolInicial === 'mantenimiento'
       ? 'mantenimiento'
-      : (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
-        ? 'dashboard'
-        : 'inicio'
+      : rolInicial === 'seguridad'
+        ? 'seguridad'
+        : (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
+          ? 'dashboard'
+          : 'inicio'
   )
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [catalogItems, setCatalogItems] = useState([])
@@ -620,7 +623,11 @@ function App() {
                   ? 'Órdenes de Mantenimiento'
                   : activeView === 'inventario'
                     ? 'Inventario'
-                    : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                    : activeView === 'seguridad'
+                      ? 'Módulo de Seguridad'
+                      : activeView === 'vehiculos'
+                        ? 'Vehículos'
+                        : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -639,7 +646,11 @@ function App() {
                   ? 'Herramientas > Órdenes de Mantenimiento'
                   : activeView === 'inventario'
                     ? 'Herramientas > Inventario'
-                    : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                    : activeView === 'seguridad'
+                      ? 'Seguridad > Módulo de Seguridad'
+                      : activeView === 'vehiculos'
+                        ? 'Herramientas > Vehículos'
+                        : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   if (!usuario) {
     return <Login onLogin={handleLogin} />
@@ -662,133 +673,77 @@ function App() {
         </div>
 
         <nav className="sidebar-nav">
-          {usuario?.rol !== 'mantenimiento' && (
-            (usuario?.rol === 'admin' || usuario?.rol === 'autorizador1' || usuario?.rol === 'autorizador2') ? (
-              <div className="nav-section">
-                <p className="nav-title">Inicio</p>
-                <button
-                  type="button"
-                  className={`nav-link${activeView === 'dashboard' ? ' active' : ''}`}
-                  onClick={() => handleNavClick('dashboard')}
-                >
-                  Dashboard
-                </button>
-              </div>
-            ) : (
-              <div className="nav-section">
-                <p className="nav-title">Inicio</p>
-                <button
-                  type="button"
-                  className={`nav-link${activeView === 'inicio' ? ' active' : ''}`}
-                  onClick={() => handleNavClick('inicio')}
-                >
-                  Inicio
-                </button>
-              </div>
-            )
-          )}
-          <div className="nav-section">
-            <p className="nav-title">Herramientas</p>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'mantenimiento' ? ' active' : ''}`}
-              onClick={() => handleNavClick('mantenimiento')}
-            >
-              Órdenes de Mantenimiento
-            </button>
-            {usuario?.rol !== 'mantenimiento' && (<>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'inventario' ? ' active' : ''}`}
-                onClick={() => handleNavClick('inventario')}
-              >
-                Inventario
-              </button>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`}
-                onClick={() => handleNavClick('ordenesCompra')}
-              >
-                Ordenes de Compra
-              </button>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'cotizacion' ? ' active' : ''}`}
-                onClick={() => handleNavClick('cotizacion')}
-              >
-                Nueva Cotización
-              </button>
-              <button type="button" className={`nav-link${activeView === 'historial' ? ' active' : ''}`} onClick={() => handleNavClick('historial')}>
-                Historial de Cotizaciones
-              </button>
-              <button type="button" className={`nav-link${activeView === 'aprobaciones' ? ' active' : ''}`} onClick={() => handleNavClick('aprobaciones')}>
-                Aprobaciones
-              </button>
-            </>)}
-          </div>
-          {usuario?.rol !== 'mantenimiento' && <div className="nav-section">
-            <p className="nav-title">Catálogos</p>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'cursos' ? ' active' : ''}`}
-              onClick={() => handleNavClick('cursos')}
-            >
-              Cursos
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'conceptos' ? ' active' : ''}`}
-              onClick={() => handleNavClick('conceptos')}
-            >
-              Conceptos de Costo
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'coaches' ? ' active' : ''}`}
-              onClick={() => handleNavClick('coaches')}
-            >
-              Coaches
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'modalidades' ? ' active' : ''}`}
-              onClick={() => handleNavClick('modalidades')}
-            >
-              Modalidades
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'clientes' ? ' active' : ''}`}
-              onClick={() => handleNavClick('clientes')}
-            >
-              Empresas
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'proveedores' ? ' active' : ''}`}
-              onClick={() => handleNavClick('proveedores')}
-            >
-              Proveedores
-            </button>
-            <button
-              type="button"
-              className={`nav-link${activeView === 'unidadesNegocio' ? ' active' : ''}`}
-              onClick={() => handleNavClick('unidadesNegocio')}
-            >
-              Unidad de Negocio
-            </button>
-          </div>}
-          {usuario?.rol === 'admin' && (
+          {usuario?.rol === 'seguridad' ? (
+            // Rol seguridad: solo ve el módulo de seguridad
             <div className="nav-section">
-              <p className="nav-title">Administración</p>
-              <button
-                type="button"
-                className={`nav-link${activeView === 'usuarios' ? ' active' : ''}`}
-                onClick={() => handleNavClick('usuarios')}
-              >
-                Usuarios
+              <p className="nav-title">Seguridad</p>
+              <button type="button" className={`nav-link${activeView === 'seguridad' ? ' active' : ''}`} onClick={() => handleNavClick('seguridad')}>
+                Módulo de Seguridad
               </button>
             </div>
+          ) : (
+            <>
+              {usuario?.rol !== 'mantenimiento' && (
+                (usuario?.rol === 'admin' || usuario?.rol === 'autorizador1' || usuario?.rol === 'autorizador2') ? (
+                  <div className="nav-section">
+                    <p className="nav-title">Inicio</p>
+                    <button type="button" className={`nav-link${activeView === 'dashboard' ? ' active' : ''}`} onClick={() => handleNavClick('dashboard')}>
+                      Dashboard
+                    </button>
+                  </div>
+                ) : (
+                  <div className="nav-section">
+                    <p className="nav-title">Inicio</p>
+                    <button type="button" className={`nav-link${activeView === 'inicio' ? ' active' : ''}`} onClick={() => handleNavClick('inicio')}>
+                      Inicio
+                    </button>
+                  </div>
+                )
+              )}
+              <div className="nav-section">
+                <p className="nav-title">Herramientas</p>
+                <button type="button" className={`nav-link${activeView === 'mantenimiento' ? ' active' : ''}`} onClick={() => handleNavClick('mantenimiento')}>
+                  Órdenes de Mantenimiento
+                </button>
+                {usuario?.rol !== 'mantenimiento' && (<>
+                  <button type="button" className={`nav-link${activeView === 'inventario' ? ' active' : ''}`} onClick={() => handleNavClick('inventario')}>
+                    Inventario
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'vehiculos' ? ' active' : ''}`} onClick={() => handleNavClick('vehiculos')}>
+                    Vehículos
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`} onClick={() => handleNavClick('ordenesCompra')}>
+                    Ordenes de Compra
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'cotizacion' ? ' active' : ''}`} onClick={() => handleNavClick('cotizacion')}>
+                    Nueva Cotización
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'historial' ? ' active' : ''}`} onClick={() => handleNavClick('historial')}>
+                    Historial de Cotizaciones
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'aprobaciones' ? ' active' : ''}`} onClick={() => handleNavClick('aprobaciones')}>
+                    Aprobaciones
+                  </button>
+                </>)}
+              </div>
+              {usuario?.rol !== 'mantenimiento' && <div className="nav-section">
+                <p className="nav-title">Catálogos</p>
+                <button type="button" className={`nav-link${activeView === 'cursos' ? ' active' : ''}`} onClick={() => handleNavClick('cursos')}>Cursos</button>
+                <button type="button" className={`nav-link${activeView === 'conceptos' ? ' active' : ''}`} onClick={() => handleNavClick('conceptos')}>Conceptos de Costo</button>
+                <button type="button" className={`nav-link${activeView === 'coaches' ? ' active' : ''}`} onClick={() => handleNavClick('coaches')}>Coaches</button>
+                <button type="button" className={`nav-link${activeView === 'modalidades' ? ' active' : ''}`} onClick={() => handleNavClick('modalidades')}>Modalidades</button>
+                <button type="button" className={`nav-link${activeView === 'clientes' ? ' active' : ''}`} onClick={() => handleNavClick('clientes')}>Empresas</button>
+                <button type="button" className={`nav-link${activeView === 'proveedores' ? ' active' : ''}`} onClick={() => handleNavClick('proveedores')}>Proveedores</button>
+                <button type="button" className={`nav-link${activeView === 'unidadesNegocio' ? ' active' : ''}`} onClick={() => handleNavClick('unidadesNegocio')}>Unidad de Negocio</button>
+              </div>}
+              {usuario?.rol === 'admin' && (
+                <div className="nav-section">
+                  <p className="nav-title">Administración</p>
+                  <button type="button" className={`nav-link${activeView === 'usuarios' ? ' active' : ''}`} onClick={() => handleNavClick('usuarios')}>Usuarios</button>
+                  <button type="button" className={`nav-link${activeView === 'seguridad' ? ' active' : ''}`} onClick={() => handleNavClick('seguridad')}>Seguridad</button>
+                </div>
+              )}
+            </>
           )}
         </nav>
 
@@ -961,6 +916,10 @@ function App() {
             </div>
             <Inventario isAdmin={usuario?.rol === 'admin'} />
           </section>
+        ) : activeView === 'seguridad' ? (
+          <Seguridad usuario={usuario} />
+        ) : activeView === 'vehiculos' ? (
+          <Seguridad usuario={usuario} soloVehiculos={true} />
         ) : activeView === 'aprobaciones' ? (
             <section className="panel card">
               <div className="panel-header space-between">

@@ -142,6 +142,8 @@ export default function Usuarios({ token }) {
                     empleado: 'Empleado',
                     mantenimiento: 'Personal de Mantenimiento',
                     jefe_mantenimiento: 'Jefe de Mantenimiento',
+                    seguridad: 'Guardia de Seguridad',
+                    encargado_vehiculos: 'Encargado de Vehículos',
                   }[u.Rol] || u.Rol}</td>
                   <td>
                     <span style={{
@@ -215,6 +217,8 @@ export default function Usuarios({ token }) {
                     <option value="jefe_mantenimiento">Jefe de Mantenimiento</option>
                     <option value="autorizador1">Autorizador 1 — Administración</option>
                     <option value="autorizador2">Autorizador 2 — Secretaría Académica</option>
+                    <option value="seguridad">Guardia de Seguridad</option>
+                    <option value="encargado_vehiculos">Encargado de Vehículos</option>
                     <option value="admin">Administrador del sistema</option>
                   </select>
                 </div>
