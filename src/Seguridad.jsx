@@ -11,8 +11,20 @@ import {
   getOrdenesVehiculo, createOrdenVehiculo,
   autorizarOrdenVehiculo, rechazarOrdenVehiculo,
   registrarSalidaVehiculo, registrarLlegadaVehiculo,
-  uploadFotoRondin,
 } from './api'
+
+async function uploadToCloudinary(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('upload_preset', 'douxyql6')
+  const r = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', {
+    method: 'POST',
+    body: formData,
+  })
+  const data = await r.json()
+  if (!r.ok) throw new Error(data.error?.message || 'Error al subir imagen')
+  return data.secure_url
+}
 
 const ESTADOS_VEHICULO = {
   pendiente:  { label: 'Pendiente',  color: '#d97706', bg: '#fef3c7' },
@@ -86,10 +98,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [registroModal, setRegistroModal]   = useState(null)
   const [finalizarObs, setFinalizarObs]     = useState('')
   const [finalizarModal, setFinalizarModal] = useState(false)
-  const [fotoPreview, setFotoPreview]       = useState(null)
-  const [fotoBase64, setFotoBase64]         = useState(null)
-  const [subiendoFoto, setSubiendoFoto]     = useState(false)
-  const [omGenerada, setOmGenerada]         = useState(null)
+  const [fotoPreview, setFotoPreview]   = useState(null)
+  const [fotoFile, setFotoFile]         = useState(null)
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
+  const [omGenerada, setOmGenerada]     = useState(null)
 
   const loadRondines = useCallback(async () => {
     setLoadingR(true); setErrorR('')
@@ -118,22 +130,17 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   function handleFotoChange(e) {
     const file = e.target.files[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      setFotoPreview(ev.target.result)
-      setFotoBase64(ev.target.result)
-    }
-    reader.readAsDataURL(file)
+    setFotoFile(file)
+    setFotoPreview(URL.createObjectURL(file))
   }
 
   async function marcarRegistro(registroId, datos) {
     try {
       let fotoUrl = null
-      if (fotoBase64) {
+      if (fotoFile) {
         setSubiendoFoto(true)
         try {
-          const r = await uploadFotoRondin(fotoBase64)
-          fotoUrl = r.url
+          fotoUrl = await uploadToCloudinary(fotoFile)
         } catch (e) {
           alert('No se pudo subir la foto, se guardará sin imagen.')
         } finally {
@@ -147,7 +154,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
       setRegistroModal(null)
       setIncidenciaForm({})
       setFotoPreview(null)
-      setFotoBase64(null)
+      setFotoFile(null)
     } catch (e) { alert('Error: ' + e.message) }
   }
 
@@ -630,7 +637,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                       <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
                         <img src={fotoPreview} alt="preview"
                           style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', border: '1px solid #e5e7eb', display: 'block' }} />
-                        <button onClick={() => { setFotoPreview(null); setFotoBase64(null) }}
+                        <button onClick={() => { setFotoPreview(null); setFotoFile(null) }}
                           style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '14px', lineHeight: '22px', textAlign: 'center' }}>
                           ×
                         </button>
@@ -639,7 +646,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => { setRegistroModal(null); setIncidenciaForm({}); setFotoPreview(null); setFotoBase64(null) }}>Cancelar</button>
+                    <button className="ghost-button" onClick={() => { setRegistroModal(null); setIncidenciaForm({}); setFotoPreview(null); setFotoFile(null) }}>Cancelar</button>
                     <button className="primary-button" disabled={subiendoFoto}
                       onClick={() => marcarRegistro(registroModal.RegistroId, incidenciaForm)}>
                       {subiendoFoto ? 'Subiendo foto...' : 'Marcar como revisado'}
