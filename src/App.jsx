@@ -37,6 +37,7 @@ import Inicio from './Inicio'
 import OrdenesMantenimiento from './OrdenesMantenimiento'
 import Inventario from './Inventario'
 import Seguridad from './Seguridad'
+import SolicitudVehiculoPublica from './SolicitudVehiculoPublica'
 
 function App() {
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -651,6 +652,10 @@ function App() {
                       : activeView === 'vehiculos'
                         ? 'Herramientas > Vehículos'
                         : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+
+  if (window.location.pathname === '/solicitar-vehiculo') {
+    return <SolicitudVehiculoPublica />
+  }
 
   if (!usuario) {
     return <Login onLogin={handleLogin} />
