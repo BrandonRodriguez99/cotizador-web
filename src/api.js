@@ -583,3 +583,7 @@ export function registrarSalidaVehiculo(id, data) { return fetchJson(`seguridad/
 export function registrarLlegadaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/llegada`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 
 export function getDashboardSeguridad() { return fetchJson('seguridad/dashboard', { headers: authHeaders() }) }
+
+export function uploadFotoRondin(base64) {
+  return fetchJson('upload/foto-rondin', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) })
+}

@@ -11,6 +11,7 @@ import {
   getOrdenesVehiculo, createOrdenVehiculo,
   autorizarOrdenVehiculo, rechazarOrdenVehiculo,
   registrarSalidaVehiculo, registrarLlegadaVehiculo,
+  uploadFotoRondin,
 } from './api'
 
 const ESTADOS_VEHICULO = {
@@ -85,6 +86,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [registroModal, setRegistroModal]   = useState(null)
   const [finalizarObs, setFinalizarObs]     = useState('')
   const [finalizarModal, setFinalizarModal] = useState(false)
+  const [fotoPreview, setFotoPreview]       = useState(null)
+  const [fotoBase64, setFotoBase64]         = useState(null)
+  const [subiendoFoto, setSubiendoFoto]     = useState(false)
+  const [omGenerada, setOmGenerada]         = useState(null)
 
   const loadRondines = useCallback(async () => {
     setLoadingR(true); setErrorR('')
@@ -110,13 +115,39 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     try { setRondinActivo(await getRondinById(id)) } catch (e) { alert(e.message) }
   }
 
+  function handleFotoChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      setFotoPreview(ev.target.result)
+      setFotoBase64(ev.target.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
   async function marcarRegistro(registroId, datos) {
     try {
-      await marcarRegistroRondin(rondinActivo.RondinId, registroId, datos)
+      let fotoUrl = null
+      if (fotoBase64) {
+        setSubiendoFoto(true)
+        try {
+          const r = await uploadFotoRondin(fotoBase64)
+          fotoUrl = r.url
+        } catch (e) {
+          alert('No se pudo subir la foto, se guardará sin imagen.')
+        } finally {
+          setSubiendoFoto(false)
+        }
+      }
+      const res = await marcarRegistroRondin(rondinActivo.RondinId, registroId, { ...datos, FotoUrl: fotoUrl })
+      if (res.omFolio) setOmGenerada(res.omFolio)
       const detalle = await getRondinById(rondinActivo.RondinId)
       setRondinActivo(detalle)
       setRegistroModal(null)
       setIncidenciaForm({})
+      setFotoPreview(null)
+      setFotoBase64(null)
     } catch (e) { alert('Error: ' + e.message) }
   }
 
@@ -453,11 +484,22 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             </td>
                             <td>{r.HoraRevision ? fmt(r.HoraRevision) : '-'}</td>
                             <td>
-                              {r.TieneIncidencia ? (
-                                <Badge estado={r.NivelSeveridad} mapa={SEVERIDADES} />
-                              ) : r.Revisado ? (
-                                <span style={{ color: '#16a34a', fontSize: '13px' }}>Sin incidencia</span>
-                              ) : '-'}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                {r.TieneIncidencia ? (
+                                  <Badge estado={r.NivelSeveridad} mapa={SEVERIDADES} />
+                                ) : r.Revisado ? (
+                                  <span style={{ color: '#16a34a', fontSize: '13px' }}>Sin incidencia</span>
+                                ) : '-'}
+                                {r.FotoUrl && (
+                                  <a href={r.FotoUrl} target="_blank" rel="noopener noreferrer"
+                                    title="Ver foto" style={{ fontSize: '16px', textDecoration: 'none' }}>📷</a>
+                                )}
+                                {r.OrdenMantenimientoId && (
+                                  <span title={`OM generada`} style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', padding: '2px 6px', borderRadius: '10px', fontWeight: '600' }}>
+                                    OM
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             {rondinActivo.Estado === 'en_curso' && (
                               <td>
@@ -524,6 +566,16 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
               </>
             )}
 
+            {/* Notificación OM generada */}
+            {omGenerada && (
+              <div style={{ background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#065f46', fontSize: '13px', fontWeight: '500' }}>
+                  ✅ Orden de Mantenimiento <strong>{omGenerada}</strong> generada automáticamente
+                </span>
+                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46', fontWeight: 'bold' }} onClick={() => setOmGenerada(null)}>×</button>
+              </div>
+            )}
+
             {/* Modal de registro de área */}
             {registroModal && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -553,19 +605,44 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           onChange={e => setIncidenciaForm(f => ({ ...f, DescripcionIncidencia: e.target.value }))}
                           placeholder="Describe la incidencia..." />
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', cursor: 'pointer' }}>
                         <input type="checkbox" checked={!!incidenciaForm.RequiereMantenimiento}
                           onChange={e => setIncidenciaForm(f => ({ ...f, RequiereMantenimiento: e.target.checked }))} />
                         <span style={{ fontSize: '13px' }}>Requiere orden de mantenimiento</span>
                       </label>
+                      {incidenciaForm.RequiereMantenimiento && (
+                        <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#6b7280', background: '#f3f4f6', borderRadius: '6px', padding: '8px 10px' }}>
+                          Se creará automáticamente una Orden de Mantenimiento con los datos de esta incidencia.
+                        </p>
+                      )}
                     </>
                   )}
 
+                  {/* Foto de la incidencia */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>
+                      Foto (opcional)
+                    </label>
+                    <input type="file" accept="image/*" capture="environment"
+                      onChange={handleFotoChange}
+                      style={{ display: 'block', fontSize: '13px', width: '100%' }} />
+                    {fotoPreview && (
+                      <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
+                        <img src={fotoPreview} alt="preview"
+                          style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', border: '1px solid #e5e7eb', display: 'block' }} />
+                        <button onClick={() => { setFotoPreview(null); setFotoBase64(null) }}
+                          style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '14px', lineHeight: '22px', textAlign: 'center' }}>
+                          ×
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => { setRegistroModal(null); setIncidenciaForm({}) }}>Cancelar</button>
-                    <button className="primary-button"
+                    <button className="ghost-button" onClick={() => { setRegistroModal(null); setIncidenciaForm({}); setFotoPreview(null); setFotoBase64(null) }}>Cancelar</button>
+                    <button className="primary-button" disabled={subiendoFoto}
                       onClick={() => marcarRegistro(registroModal.RegistroId, incidenciaForm)}>
-                      Marcar como revisado
+                      {subiendoFoto ? 'Subiendo foto...' : 'Marcar como revisado'}
                     </button>
                   </div>
                 </div>
