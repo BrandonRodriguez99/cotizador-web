@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   getDashboardSeguridad,
-  getVehiculos, createVehiculo, updateVehiculo,
-  getExtintores, createExtintor, updateExtintor,
+  getVehiculos, createVehiculo, updateVehiculo, deleteVehiculo,
+  getExtintores, createExtintor, updateExtintor, deleteExtintor,
   getRevisionesExtintor, createRevisionExtintor,
   getPuntosRevision, createPuntoRevision, updatePuntoRevision,
   createAreaRevision, updateAreaRevision,
-  getRondines, getRondinById, createRondin, marcarRegistroRondin, finalizarRondin,
-  getVisitas, createVisita, registrarSalidaVisita,
+  getRondines, getRondinById, createRondin, marcarRegistroRondin, finalizarRondin, deleteRondin,
+  getVisitas, createVisita, registrarSalidaVisita, deleteVisita,
   getOrdenesVehiculo, createOrdenVehiculo,
   autorizarOrdenVehiculo, rechazarOrdenVehiculo,
-  registrarSalidaVehiculo, registrarLlegadaVehiculo,
+  registrarSalidaVehiculo, registrarLlegadaVehiculo, deleteOrdenVehiculo,
 } from './api'
 
 const ESTADOS_VEHICULO = {
@@ -55,16 +55,17 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const esAdmin    = rol === 'admin'
   const esSeguridad = rol === 'seguridad'
   const esEncargado = rol === 'encargado_vehiculos'
+  const esJefeSeg  = rol === 'jefe_seguridad'
 
   const tabs = []
-  if (!soloVehiculos && (esAdmin || esSeguridad)) {
+  if (!soloVehiculos && (esAdmin || esSeguridad || esJefeSeg)) {
     tabs.push({ id: 'dashboard', label: 'Resumen' })
     tabs.push({ id: 'rondines',  label: 'Rondines' })
     tabs.push({ id: 'extintores',label: 'Extintores' })
     tabs.push({ id: 'visitas',   label: 'Visitas' })
   }
   tabs.push({ id: 'vehiculos', label: 'Vehículos' })
-  if (esAdmin && !soloVehiculos) tabs.push({ id: 'catalogos', label: 'Catálogos' })
+  if ((esAdmin || esJefeSeg) && !soloVehiculos) tabs.push({ id: 'catalogos', label: 'Catálogos' })
 
   const [tab, setTab] = useState(tabs[0]?.id || 'vehiculos')
 
@@ -220,11 +221,11 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     try {
       const params = {}
       if (filtroEstado) params.estado = filtroEstado
-      if (!esEncargado && !esAdmin && !esSeguridad) params.mine = '1'
+      if (!esEncargado && !esAdmin && !esSeguridad && !esJefeSeg) params.mine = '1'
       setOrdenesV(await getOrdenesVehiculo(params))
     } catch (e) { setErrorOV(e.message) }
     finally { setLoadingOV(false) }
-  }, [filtroEstado, esEncargado, esAdmin, esSeguridad])
+  }, [filtroEstado, esEncargado, esAdmin, esSeguridad, esJefeSeg])
 
   useEffect(() => {
     if (tab === 'vehiculos') {
@@ -275,6 +276,24 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     } catch (e) { alert('Error: ' + e.message) }
   }
 
+  async function eliminarRondin(id) {
+    if (!window.confirm('¿Eliminar este rondín? Esta acción no se puede deshacer.')) return
+    try { await deleteRondin(id); await loadRondines() }
+    catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarVisita(id) {
+    if (!window.confirm('¿Eliminar este registro de visita?')) return
+    try { await deleteVisita(id); await loadVisitas() }
+    catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarOrdenV(id) {
+    if (!window.confirm('¿Eliminar esta solicitud? Solo se pueden eliminar solicitudes pendientes o rechazadas.')) return
+    try { await deleteOrdenVehiculo(id); await loadOrdenesV() }
+    catch (e) { alert('Error: ' + e.message) }
+  }
+
   // ─── CATÁLOGOS (admin) ─────────────────────────────────────────────────────
   const [catTab, setCatTab]         = useState('vehiculos')
   const [catVehiculos, setCatV]     = useState([])
@@ -319,6 +338,18 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
       setAreaModal(null); setAreaForm({ Nombre: '' })
       await loadCatalogos()
     } catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarCatVehiculo(id) {
+    if (!window.confirm('¿Desactivar este vehículo del catálogo?')) return
+    try { await deleteVehiculo(id); await loadCatalogos() }
+    catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarCatExtintor(id) {
+    if (!window.confirm('¿Desactivar este extintor?')) return
+    try { await deleteExtintor(id); await loadCatalogos() }
+    catch (e) { alert('Error: ' + e.message) }
   }
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
@@ -510,10 +541,16 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             <td>{r.AreasRevisadas}/{r.TotalAreas}</td>
                             <td style={{ color: r.TotalIncidencias > 0 ? '#dc2626' : '#6b7280' }}>{r.TotalIncidencias || 0}</td>
                             <td>
-                              <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
-                                onClick={() => verRondin(r.RondinId)}>
-                                {r.Estado === 'en_curso' ? 'Continuar' : 'Ver'}
-                              </button>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
+                                  onClick={() => verRondin(r.RondinId)}>
+                                  {r.Estado === 'en_curso' ? 'Continuar' : 'Ver'}
+                                </button>
+                                {(esAdmin || esJefeSeg) && (
+                                  <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                    onClick={() => eliminarRondin(r.RondinId)}>Eliminar</button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -630,6 +667,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                                 onClick={() => verHistorial(e)}>
                                 Historial
                               </button>
+                              {(esAdmin || esJefeSeg) && (
+                                <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                  onClick={() => eliminarCatExtintor(e.ExtintorId)}>Desactivar</button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -750,12 +791,18 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           {v.HoraSalida ? fmt(v.HoraSalida) : '● Adentro'}
                         </td>
                         <td>
-                          {!v.HoraSalida && (
-                            <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
-                              onClick={() => { if (window.confirm(`Registrar salida de ${v.NombreVisitante}?`)) registrarSalida(v.VisitaId) }}>
-                              Registrar salida
-                            </button>
-                          )}
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {!v.HoraSalida && (
+                              <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                onClick={() => { if (window.confirm(`Registrar salida de ${v.NombreVisitante}?`)) registrarSalida(v.VisitaId) }}>
+                                Registrar salida
+                              </button>
+                            )}
+                            {(esAdmin || esJefeSeg) && (
+                              <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                onClick={() => eliminarVisita(v.VisitaId)}>Eliminar</button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -807,7 +854,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <h2 style={{ margin: 0 }}>
-                  {esEncargado || esAdmin ? 'Solicitudes de Vehículo' : esSeguridad ? 'Control de Salidas' : 'Mis Solicitudes'}
+                  {esEncargado || esAdmin || esJefeSeg ? 'Solicitudes de Vehículo' : esSeguridad ? 'Control de Salidas' : 'Mis Solicitudes'}
                 </h2>
                 <select className="form-control" style={{ width: 'auto' }} value={filtroEstado}
                   onChange={e => setFiltroEstado(e.target.value)}>
@@ -859,14 +906,19 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
                                 onClick={() => { setRechazarModal(o.OrdenVehiculoId); setMotivoRechazo('') }}>Rechazar</button>
                             </>)}
-                            {/* Guardia: registrar salida/llegada */}
-                            {(esSeguridad || esAdmin) && o.Estado === 'autorizada' && (
+                            {/* Guardia/jefe: registrar salida/llegada */}
+                            {(esSeguridad || esAdmin || esJefeSeg) && o.Estado === 'autorizada' && (
                               <button className="primary-button" style={{ padding: '3px 8px', fontSize: '12px' }}
                                 onClick={() => { setSalidaModal(o.OrdenVehiculoId); setKmForm('') }}>Registrar salida</button>
                             )}
-                            {(esSeguridad || esAdmin) && o.Estado === 'en_curso' && (
+                            {(esSeguridad || esAdmin || esJefeSeg) && o.Estado === 'en_curso' && (
                               <button className="primary-button" style={{ padding: '3px 8px', fontSize: '12px', background: '#16a34a', borderColor: '#16a34a' }}
                                 onClick={() => { setLlegadaModal(o.OrdenVehiculoId); setKmForm(''); setObsForm('') }}>Registrar llegada</button>
+                            )}
+                            {/* Admin/jefe: eliminar pendientes y rechazadas */}
+                            {(esAdmin || esJefeSeg) && (o.Estado === 'pendiente' || o.Estado === 'rechazada') && (
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                onClick={() => eliminarOrdenV(o.OrdenVehiculoId)}>Eliminar</button>
                             )}
                           </div>
                         </td>
@@ -975,8 +1027,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
           </div>
         )}
 
-        {/* ══ CATÁLOGOS (admin) ═══════════════════════════════════════════════ */}
-        {tab === 'catalogos' && esAdmin && (
+        {/* ══ CATÁLOGOS (admin/jefe_seguridad) ═══════════════════════════════ */}
+        {tab === 'catalogos' && (esAdmin || esJefeSeg) && (
           <div>
             <h2 style={{ margin: '0 0 16px' }}>Catálogos de Seguridad</h2>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
@@ -1003,7 +1055,12 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           <td>{v.Marca}</td><td>{v.Modelo}</td><td>{v.Placa}</td>
                           <td>{v.Año || '-'}</td><td>{v.Color || '-'}</td><td>{v.Capacidad || '-'}</td>
                           <td>{v.Activo ? '✓' : '✗'}</td>
-                          <td><button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('vehiculo', v)}>Editar</button></td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('vehiculo', v)}>Editar</button>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => eliminarCatVehiculo(v.VehiculoId)}>Desactivar</button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1027,7 +1084,12 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                         <tr key={e.ExtintorId}>
                           <td>{e.Codigo}</td><td>{e.Tipo || '-'}</td><td>{e.Ubicacion || '-'}</td>
                           <td>{fmtDate(e.FechaVencimiento)}</td><td>{e.Activo ? '✓' : '✗'}</td>
-                          <td><button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('extintor', e)}>Editar</button></td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('extintor', e)}>Editar</button>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => eliminarCatExtintor(e.ExtintorId)}>Desactivar</button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -582,6 +582,12 @@ export function rechazarOrdenVehiculo(id, data) { return fetchJson(`seguridad/or
 export function registrarSalidaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/salida`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function registrarLlegadaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/llegada`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 
+export function deleteVehiculo(id) { return fetchJson(`seguridad/vehiculos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function deleteExtintor(id) { return fetchJson(`seguridad/extintores/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function deleteVisita(id) { return fetchJson(`seguridad/visitas/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function deleteRondin(id) { return fetchJson(`seguridad/rondines/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function deleteOrdenVehiculo(id) { return fetchJson(`seguridad/ordenes-vehiculo/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+
 export function getDashboardSeguridad() { return fetchJson('seguridad/dashboard', { headers: authHeaders() }) }
 
 export function uploadFotoRondin(base64) {
