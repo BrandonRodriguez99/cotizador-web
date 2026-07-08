@@ -1,4 +1,7 @@
 {
+  "installCommand": "cd cotizador-web && npm install",
+  "buildCommand": "cd cotizador-web && npm run build",
+  "outputDirectory": "cotizador-web/dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
