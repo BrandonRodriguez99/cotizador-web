@@ -18,7 +18,7 @@ async function fetchJson(path, options = {}) {
   if (!response.ok) {
     if (response.status === 401) {
       localStorage.removeItem('cotizador-token');
-      localStorage.removeItem('cotizador-user');
+      localStorage.removeItem('cotizador-usuario');
       window.location.replace('/login');
       throw new Error('Sesión expirada. Por favor inicia sesión nuevamente.');
     }

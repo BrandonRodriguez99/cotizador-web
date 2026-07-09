@@ -43,6 +43,7 @@ function App() {
   const [token, setToken] = useState(() => window.localStorage.getItem('cotizador-token'))
   const [usuario, setUsuario] = useState(() => {
     try {
+      if (!window.localStorage.getItem('cotizador-token')) return null
       const raw = window.localStorage.getItem('cotizador-usuario')
       return raw ? JSON.parse(raw) : null
     } catch { return null }
