@@ -47,6 +47,7 @@ function App() {
       return raw ? JSON.parse(raw) : null
     } catch { return null }
   })
+  const [checkingAuth, setCheckingAuth] = useState(() => !!window.localStorage.getItem('cotizador-token'))
 
   function handleLogin(newToken, newUsuario) {
     window.localStorage.setItem('cotizador-token', newToken)
@@ -154,19 +155,26 @@ function App() {
     return `OC-${year}-${String(sequence).padStart(6, '0')}`
   }
 
-  // Sincronizar rol desde DB al iniciar sesión (detecta cambios de rol por admin)
+  // Verificar token al cargar: si está expirado, cerrar sesión directamente
   useEffect(() => {
-    if (!token) return
+    if (!token) { setCheckingAuth(false); return }
     getMe(token).then((data) => {
-      if (!data) return
-      const rolActual = usuario?.rol
-      if (data.usuario.rol !== rolActual) {
-        window.localStorage.setItem('cotizador-token', data.token)
-        window.localStorage.setItem('cotizador-usuario', JSON.stringify(data.usuario))
-        setToken(data.token)
-        setUsuario(data.usuario)
+      if (!data) {
+        handleLogout()
+      } else {
+        const rolActual = usuario?.rol
+        if (data.usuario.rol !== rolActual) {
+          window.localStorage.setItem('cotizador-token', data.token)
+          window.localStorage.setItem('cotizador-usuario', JSON.stringify(data.usuario))
+          setToken(data.token)
+          setUsuario(data.usuario)
+        }
       }
-    }).catch(() => {})
+    }).catch(() => {
+      handleLogout()
+    }).finally(() => {
+      setCheckingAuth(false)
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -651,6 +659,15 @@ function App() {
                       : activeView === 'vehiculos'
                         ? 'Herramientas > Vehículos'
                         : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+
+  if (checkingAuth) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '12px', color: '#6b7280' }}>
+        <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#1e3a5f', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <span style={{ fontSize: '14px' }}>Verificando sesión...</span>
+      </div>
+    )
+  }
 
   if (!usuario) {
     return <Login onLogin={handleLogin} />

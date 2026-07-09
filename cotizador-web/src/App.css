@@ -1,3 +1,5 @@
+@keyframes spin { to { transform: rotate(360deg); } }
+
 :root {
   --bg: #f5f7fb;
   --surface: #ffffff;
@@ -1134,3 +1136,5 @@ textarea.form-control {
     padding: 28px 20px;
   }
 }
+
+@keyframes spin { to { transform: rotate(360deg); } }
