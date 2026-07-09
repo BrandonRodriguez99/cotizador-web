@@ -532,6 +532,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           <th>Estado</th>
                           <th>Hora revisión</th>
                           <th>Incidencia</th>
+                          <th>Foto</th>
                           {rondinActivo.Estado === 'en_curso' && <th>Acción</th>}
                         </tr>
                       </thead>
@@ -551,6 +552,11 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                               ) : r.Revisado ? (
                                 <span style={{ color: '#16a34a', fontSize: '13px' }}>Sin incidencia</span>
                               ) : '-'}
+                            </td>
+                            <td>
+                              {r.FotoUrl
+                                ? <a href={r.FotoUrl} target="_blank" rel="noreferrer" className="ghost-button" style={{ padding: '3px 10px', fontSize: '12px' }}>📷 Foto</a>
+                                : <span style={{ color: '#9ca3af', fontSize: '13px' }}>-</span>}
                             </td>
                             {rondinActivo.Estado === 'en_curso' && (
                               <td>
