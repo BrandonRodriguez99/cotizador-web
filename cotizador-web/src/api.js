@@ -581,7 +581,18 @@ export function autorizarOrdenVehiculo(id) { return fetchJson(`seguridad/ordenes
 export function rechazarOrdenVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/rechazar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function registrarSalidaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/salida`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function registrarLlegadaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/llegada`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
-export function uploadFotoVehiculo(base64) { return fetchJson('upload/foto-vehiculo', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) }) }
+async function uploadToCloudinary(base64, folder) {
+  const fd = new FormData()
+  fd.append('file', base64)
+  fd.append('upload_preset', 'douxyql6')
+  fd.append('folder', folder)
+  const r = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', { method: 'POST', body: fd })
+  const data = await r.json()
+  if (data.error) throw new Error(data.error.message)
+  return { url: data.secure_url }
+}
+
+export function uploadFotoVehiculo(base64) { return uploadToCloudinary(base64, 'vehiculos') }
 
 export function deleteVehiculo(id) { return fetchJson(`seguridad/vehiculos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function deleteExtintor(id) { return fetchJson(`seguridad/extintores/${id}`, { method: 'DELETE', headers: authHeaders() }) }
@@ -591,6 +602,4 @@ export function deleteOrdenVehiculo(id) { return fetchJson(`seguridad/ordenes-ve
 
 export function getDashboardSeguridad() { return fetchJson('seguridad/dashboard', { headers: authHeaders() }) }
 
-export function uploadFotoRondin(base64) {
-  return fetchJson('upload/foto-rondin', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) })
-}
+export function uploadFotoRondin(base64) { return uploadToCloudinary(base64, 'rondines') }
