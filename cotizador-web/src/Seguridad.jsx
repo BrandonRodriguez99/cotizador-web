@@ -12,6 +12,7 @@ import {
   autorizarOrdenVehiculo, rechazarOrdenVehiculo,
   registrarSalidaVehiculo, registrarLlegadaVehiculo, deleteOrdenVehiculo,
   uploadFotoVehiculo,
+  uploadFotoRondin,
 } from './api'
 
 const ESTADOS_VEHICULO = {
@@ -85,6 +86,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [iniciandoR, setIniciandoR]     = useState(false)
   const [incidenciaForm, setIncidenciaForm] = useState({})
   const [registroModal, setRegistroModal]   = useState(null)
+  const [fotoRondin, setFotoRondin]         = useState(null)
+  const [uploadingFotoR, setUploadingFotoR] = useState(false)
   const [finalizarObs, setFinalizarObs]     = useState('')
   const [finalizarModal, setFinalizarModal] = useState(false)
 
@@ -112,13 +115,30 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     try { setRondinActivo(await getRondinById(id)) } catch (e) { alert(e.message) }
   }
 
+  async function handleFotoRondinChange(file) {
+    if (!file) return
+    setUploadingFotoR(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        try {
+          const { url } = await uploadFotoRondin(ev.target.result)
+          setFotoRondin(url)
+        } catch (e) { alert('Error subiendo foto: ' + e.message) }
+        finally { setUploadingFotoR(false) }
+      }
+      reader.readAsDataURL(file)
+    } catch { setUploadingFotoR(false) }
+  }
+
   async function marcarRegistro(registroId, datos) {
     try {
-      await marcarRegistroRondin(rondinActivo.RondinId, registroId, datos)
+      await marcarRegistroRondin(rondinActivo.RondinId, registroId, { ...datos, FotoUrl: fotoRondin })
       const detalle = await getRondinById(rondinActivo.RondinId)
       setRondinActivo(detalle)
       setRegistroModal(null)
       setIncidenciaForm({})
+      setFotoRondin(null)
     } catch (e) { alert('Error: ' + e.message) }
   }
 
@@ -535,7 +555,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             {rondinActivo.Estado === 'en_curso' && (
                               <td>
                                 <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
-                                  onClick={() => setRegistroModal(r)}>
+                                  onClick={() => { setRegistroModal(r); setFotoRondin(r.FotoUrl || null); setIncidenciaForm({ TieneIncidencia: r.TieneIncidencia, NivelSeveridad: r.NivelSeveridad, DescripcionIncidencia: r.DescripcionIncidencia, RequiereMantenimiento: r.RequiereMantenimiento }) }}>
                                   {r.Revisado ? 'Ver/Editar' : 'Revisar'}
                                 </button>
                               </td>
@@ -640,8 +660,31 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                     </>
                   )}
 
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Foto de evidencia (opcional)</label>
+                    <label style={{ cursor: 'pointer', border: `2px dashed ${fotoRondin ? '#16a34a' : '#d1d5db'}`, borderRadius: '8px', overflow: 'hidden', background: fotoRondin ? '#f0fdf4' : '#f9fafb', minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFotoRondinChange(e.target.files[0])} />
+                      {uploadingFotoR ? (
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>Subiendo...</div>
+                      ) : fotoRondin ? (
+                        <img src={fotoRondin} alt="evidencia" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '16px' }}>
+                          <div style={{ fontSize: '28px', marginBottom: '4px' }}>📷</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>Toca para agregar foto</div>
+                        </div>
+                      )}
+                    </label>
+                    {fotoRondin && (
+                      <button type="button" onClick={() => setFotoRondin(null)}
+                        style={{ marginTop: '6px', fontSize: '12px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                        Quitar foto
+                      </button>
+                    )}
+                  </div>
+
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => { setRegistroModal(null); setIncidenciaForm({}) }}>Cancelar</button>
+                    <button className="ghost-button" onClick={() => { setRegistroModal(null); setIncidenciaForm({}); setFotoRondin(null) }}>Cancelar</button>
                     <button className="primary-button"
                       onClick={() => marcarRegistro(registroModal.RegistroId, incidenciaForm)}>
                       Marcar como revisado
