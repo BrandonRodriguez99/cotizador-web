@@ -11,6 +11,7 @@ import {
   getOrdenesVehiculo, createOrdenVehiculo,
   autorizarOrdenVehiculo, rechazarOrdenVehiculo,
   registrarSalidaVehiculo, registrarLlegadaVehiculo, deleteOrdenVehiculo,
+  uploadFotoVehiculo,
 } from './api'
 
 const ESTADOS_VEHICULO = {
@@ -215,6 +216,17 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [kmForm, setKmForm]               = useState('')
   const [obsForm, setObsForm]             = useState('')
   const [filtroEstado, setFiltroEstado]   = useState('')
+  const ANGULOS = [
+    { key: 'Frontal',    label: 'Frontal' },
+    { key: 'Trasero',    label: 'Trasero' },
+    { key: 'LateralIzq', label: 'Lat. Izquierdo' },
+    { key: 'LateralDer', label: 'Lat. Derecho' },
+  ]
+  const fotoVacía = { Frontal: null, Trasero: null, LateralIzq: null, LateralDer: null }
+  const [fotosSalida, setFotosSalida]     = useState(fotoVacía)
+  const [fotosLlegada, setFotosLlegada]   = useState(fotoVacía)
+  const [uploadingFoto, setUploadingFoto] = useState({})
+  const [fotoModal, setFotoModal]         = useState(null)
 
   const loadOrdenesV = useCallback(async () => {
     setLoadingOV(true); setErrorOV('')
@@ -260,18 +272,48 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     } catch (e) { alert('Error: ' + e.message) }
   }
 
+  async function handleFotoChange(angulo, tipo, file) {
+    if (!file) return
+    const key = `${tipo}_${angulo}`
+    setUploadingFoto(p => ({ ...p, [key]: true }))
+    try {
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        try {
+          const { url } = await uploadFotoVehiculo(ev.target.result)
+          if (tipo === 'salida') setFotosSalida(p => ({ ...p, [angulo]: url }))
+          else setFotosLlegada(p => ({ ...p, [angulo]: url }))
+        } catch (e) { alert('Error subiendo foto: ' + e.message) }
+        finally { setUploadingFoto(p => ({ ...p, [key]: false })) }
+      }
+      reader.readAsDataURL(file)
+    } catch { setUploadingFoto(p => ({ ...p, [key]: false })) }
+  }
+
   async function registrarSalida() {
     try {
-      await registrarSalidaVehiculo(salidaModal, { KmInicial: kmForm })
-      setSalidaModal(null); setKmForm('')
+      await registrarSalidaVehiculo(salidaModal, {
+        KmInicial: kmForm,
+        FotoSalidaFrontal:    fotosSalida.Frontal,
+        FotoSalidaTrasero:    fotosSalida.Trasero,
+        FotoSalidaLateralIzq: fotosSalida.LateralIzq,
+        FotoSalidaLateralDer: fotosSalida.LateralDer,
+      })
+      setSalidaModal(null); setKmForm(''); setFotosSalida(fotoVacía)
       await loadOrdenesV()
     } catch (e) { alert('Error: ' + e.message) }
   }
 
   async function registrarLlegada() {
     try {
-      await registrarLlegadaVehiculo(llegadaModal, { KmFinal: kmForm, Observaciones: obsForm })
-      setLlegadaModal(null); setKmForm(''); setObsForm('')
+      await registrarLlegadaVehiculo(llegadaModal, {
+        KmFinal: kmForm, Observaciones: obsForm,
+        FotoLlegadaFrontal:    fotosLlegada.Frontal,
+        FotoLlegadaTrasero:    fotosLlegada.Trasero,
+        FotoLlegadaLateralIzq: fotosLlegada.LateralIzq,
+        FotoLlegadaLateralDer: fotosLlegada.LateralDer,
+      })
+      setLlegadaModal(null); setKmForm(''); setObsForm(''); setFotosLlegada(fotoVacía)
       await loadOrdenesV()
     } catch (e) { alert('Error: ' + e.message) }
   }
@@ -920,6 +962,11 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
                                 onClick={() => eliminarOrdenV(o.OrdenVehiculoId)}>Eliminar</button>
                             )}
+                            {/* Ver fotos si hay alguna */}
+                            {(o.FotoSalidaFrontal || o.FotoLlegadaFrontal) && (
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }}
+                                onClick={() => setFotoModal(o)}>📷 Fotos</button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -995,13 +1042,38 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
 
             {/* Modal salida */}
             {salidaModal && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '380px' }}>
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
                   <h3 style={{ margin: '0 0 16px' }}>Registrar Salida</h3>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Kilómetros iniciales</label>
-                  <input type="number" className="form-control" value={kmForm} onChange={e => setKmForm(e.target.value)} style={{ marginBottom: '16px' }} />
+                  <input type="number" className="form-control" value={kmForm} onChange={e => setKmForm(e.target.value)} style={{ marginBottom: '20px' }} />
+                  <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: '#1e3a5f' }}>Evidencia fotográfica del vehículo (salida)</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                    {ANGULOS.map(({ key, label }) => {
+                      const uploading = uploadingFoto[`salida_${key}`]
+                      const url = fotosSalida[key]
+                      return (
+                        <label key={key} style={{ cursor: 'pointer', border: `2px dashed ${url ? '#16a34a' : '#d1d5db'}`, borderRadius: '8px', overflow: 'hidden', background: url ? '#f0fdf4' : '#f9fafb', position: 'relative', minHeight: '90px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFotoChange(key, 'salida', e.target.files[0])} />
+                          {uploading ? (
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>Subiendo...</div>
+                          ) : url ? (
+                            <>
+                              <img src={url} alt={label} style={{ width: '100%', height: '80px', objectFit: 'cover' }} />
+                              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600', padding: '2px' }}>✓ {label}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: '22px' }}>📷</span>
+                              <span style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', textAlign: 'center', padding: '0 4px' }}>{label}</span>
+                            </>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => setSalidaModal(null)}>Cancelar</button>
+                    <button className="ghost-button" onClick={() => { setSalidaModal(null); setFotosSalida(fotoVacía) }}>Cancelar</button>
                     <button className="primary-button" onClick={registrarSalida}>Confirmar salida</button>
                   </div>
                 </div>
@@ -1010,17 +1082,79 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
 
             {/* Modal llegada */}
             {llegadaModal && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '380px' }}>
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
                   <h3 style={{ margin: '0 0 16px' }}>Registrar Llegada</h3>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Kilómetros finales</label>
                   <input type="number" className="form-control" value={kmForm} onChange={e => setKmForm(e.target.value)} style={{ marginBottom: '12px' }} />
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Observaciones</label>
-                  <textarea className="form-control" rows={2} value={obsForm} onChange={e => setObsForm(e.target.value)} style={{ marginBottom: '16px' }} />
+                  <textarea className="form-control" rows={2} value={obsForm} onChange={e => setObsForm(e.target.value)} style={{ marginBottom: '20px' }} />
+                  <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: '#1e3a5f' }}>Evidencia fotográfica del vehículo (llegada)</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                    {ANGULOS.map(({ key, label }) => {
+                      const uploading = uploadingFoto[`llegada_${key}`]
+                      const url = fotosLlegada[key]
+                      return (
+                        <label key={key} style={{ cursor: 'pointer', border: `2px dashed ${url ? '#16a34a' : '#d1d5db'}`, borderRadius: '8px', overflow: 'hidden', background: url ? '#f0fdf4' : '#f9fafb', position: 'relative', minHeight: '90px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFotoChange(key, 'llegada', e.target.files[0])} />
+                          {uploading ? (
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>Subiendo...</div>
+                          ) : url ? (
+                            <>
+                              <img src={url} alt={label} style={{ width: '100%', height: '80px', objectFit: 'cover' }} />
+                              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600', padding: '2px' }}>✓ {label}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: '22px' }}>📷</span>
+                              <span style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', textAlign: 'center', padding: '0 4px' }}>{label}</span>
+                            </>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => setLlegadaModal(null)}>Cancelar</button>
+                    <button className="ghost-button" onClick={() => { setLlegadaModal(null); setFotosLlegada(fotoVacía) }}>Cancelar</button>
                     <button className="primary-button" style={{ background: '#16a34a', borderColor: '#16a34a' }} onClick={registrarLlegada}>Confirmar llegada</button>
                   </div>
+                </div>
+              </div>
+            )}
+            {/* Modal ver fotos */}
+            {fotoModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0 }}>Evidencia fotográfica — {fotoModal.Folio}</h3>
+                    <button className="ghost-button" onClick={() => setFotoModal(null)}>Cerrar</button>
+                  </div>
+                  {[
+                    { titulo: 'Fotos de Salida', keys: ['FotoSalidaFrontal', 'FotoSalidaTrasero', 'FotoSalidaLateralIzq', 'FotoSalidaLateralDer'], labels: ['Frontal', 'Trasero', 'Lat. Izquierdo', 'Lat. Derecho'] },
+                    { titulo: 'Fotos de Llegada', keys: ['FotoLlegadaFrontal', 'FotoLlegadaTrasero', 'FotoLlegadaLateralIzq', 'FotoLlegadaLateralDer'], labels: ['Frontal', 'Trasero', 'Lat. Izquierdo', 'Lat. Derecho'] },
+                  ].map(grupo => {
+                    const hayFotos = grupo.keys.some(k => fotoModal[k])
+                    if (!hayFotos) return null
+                    return (
+                      <div key={grupo.titulo} style={{ marginBottom: '24px' }}>
+                        <p style={{ fontWeight: '600', fontSize: '14px', color: '#1e3a5f', marginBottom: '12px' }}>{grupo.titulo}</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                          {grupo.keys.map((k, i) => (
+                            <div key={k}>
+                              <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>{grupo.labels[i]}</p>
+                              {fotoModal[k] ? (
+                                <a href={fotoModal[k]} target="_blank" rel="noreferrer">
+                                  <img src={fotoModal[k]} alt={grupo.labels[i]} style={{ width: '100%', borderRadius: '6px', objectFit: 'cover', maxHeight: '160px', border: '1px solid #e5e7eb' }} />
+                                </a>
+                              ) : (
+                                <div style={{ width: '100%', height: '100px', background: '#f3f4f6', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '12px' }}>Sin foto</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}

@@ -581,6 +581,7 @@ export function autorizarOrdenVehiculo(id) { return fetchJson(`seguridad/ordenes
 export function rechazarOrdenVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/rechazar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function registrarSalidaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/salida`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function registrarLlegadaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/llegada`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function uploadFotoVehiculo(base64) { return fetchJson('upload/foto-vehiculo', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) }) }
 
 export function deleteVehiculo(id) { return fetchJson(`seguridad/vehiculos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function deleteExtintor(id) { return fetchJson(`seguridad/extintores/${id}`, { method: 'DELETE', headers: authHeaders() }) }
