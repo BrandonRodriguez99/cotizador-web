@@ -1105,6 +1105,7 @@ function emptyOrderForm(folioValue) {
     Folio: folioValue || '', UnidadNegocioId: '', ProveedorId: '',
     Fecha: new Date().toISOString().slice(0, 10),
     Tipo: 'compras', Destino: '', Observaciones: '',
+    ConIva: true,
     LineItems: [createEmptyLine()],
   }
 }
@@ -1162,10 +1163,10 @@ export default function OrdenesCompra({
 
   const summary = useMemo(() => {
     const subtotal = computedLines.reduce((sum, line) => sum + line.subtotal, 0)
-    const iva = Number((subtotal * 0.16).toFixed(2))
+    const iva = form.ConIva ? Number((subtotal * 0.16).toFixed(2)) : 0
     const total = Number((subtotal + iva).toFixed(2))
     return { subtotal, iva, total }
-  }, [computedLines])
+  }, [computedLines, form.ConIva])
 
   function updateField(name, value) { setForm((prev) => ({ ...prev, [name]: value })) }
   function updateLine(id, name, value) {
@@ -1496,13 +1497,27 @@ export default function OrdenesCompra({
 
             <button type="button" className="ghost-button" onClick={addLine}>+ Agregar partida</button>
 
-            <div className="panel card cost-panel" style={{ marginTop: '16px', padding: '16px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+              <input
+                type="checkbox"
+                id="conIva"
+                checked={form.ConIva}
+                onChange={(e) => updateField('ConIva', e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <label htmlFor="conIva" style={{ margin: 0, cursor: 'pointer', fontWeight: 500 }}>
+                Aplicar IVA 16%
+              </label>
+            </div>
+
+            <div className="panel card cost-panel" style={{ marginTop: '12px', padding: '16px 20px' }}>
               <div className="summary-column" style={{ gap: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Subtotal</span><strong>{formatMoney(summary.subtotal)}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>IVA 16%</span><strong>{formatMoney(summary.iva)}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: form.ConIva ? 'inherit' : '#9ca3af' }}>
+                  <span>{form.ConIva ? 'IVA 16%' : 'Sin IVA'}</span>
+                  <strong>{form.ConIva ? formatMoney(summary.iva) : '—'}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
                   <span><strong>Total</strong></span><strong>{formatMoney(summary.total)}</strong>
