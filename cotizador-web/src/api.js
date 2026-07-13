@@ -318,12 +318,12 @@ export async function createOrdenCompra(data) {
   return postJson('ordenescompra', data);
 }
 
-export async function approveOrdenCompra(id, aprobador) {
+export async function approveOrdenCompra(id, aprobador, nombre) {
   const paso = aprobador === "Administración" ? 1 : 2;
   return fetchJson(`ordenescompra/${id}/aprobar`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ paso, aprobador }),
+    body: JSON.stringify({ paso, aprobador: nombre || aprobador }),
   });
 }
 

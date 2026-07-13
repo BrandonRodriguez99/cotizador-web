@@ -297,7 +297,7 @@ function App() {
   }
 
   async function handleApproveOrden(id, aprobador) {
-    await approveOrdenCompra(id, aprobador)
+    await approveOrdenCompra(id, aprobador, usuario?.nombre)
     await loadOrdenes()
   }
 

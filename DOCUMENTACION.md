@@ -1,7 +1,7 @@
 # Cotizador Servicios UDAT — Documentación del Proyecto
 
-**Versión:** 2.0  
-**Fecha:** Junio 2026  
+**Versión:** 3.0  
+**Fecha:** Julio 2026  
 **Autor:** Brandon Rodriguez
 
 ---
@@ -17,10 +17,12 @@
 7. [Autenticación y Roles](#7-autenticación-y-roles)
 8. [Flujos Principales](#8-flujos-principales)
 9. [Notificaciones por Correo Electrónico](#9-notificaciones-por-correo-electrónico)
-10. [Lógica de Cálculos](#10-lógica-de-cálculos)
-11. [Configuración y Variables de Entorno](#11-configuración-y-variables-de-entorno)
-12. [Instalación y Ejecución](#12-instalación-y-ejecución)
-13. [Dependencias](#13-dependencias)
+10. [Evidencia Fotográfica (Cloudinary)](#10-evidencia-fotográfica-cloudinary)
+11. [Lógica de Cálculos](#11-lógica-de-cálculos)
+12. [Configuración y Variables de Entorno](#12-configuración-y-variables-de-entorno)
+13. [Instalación y Ejecución](#13-instalación-y-ejecución)
+14. [Dependencias](#14-dependencias)
+15. [Historial de Cambios](#15-historial-de-cambios)
 
 ---
 
@@ -32,6 +34,9 @@
 - Administrar un flujo de aprobación de dos niveles para órdenes de compra
 - Gestionar **órdenes de mantenimiento** con flujo de solicitud y atención técnica
 - Controlar un **inventario de materiales y refacciones** con movimientos de entrada/salida
+- Gestionar un **módulo de seguridad** completo: rondines por área, extintores, visitas y vehículos
+- Emitir **órdenes de salida de vehículos** con evidencia fotográfica (4 ángulos salida + 4 llegada)
+- Recibir **solicitudes de vehículo públicas** sin requerir login (`/solicitud-vehiculo`)
 - Gestionar catálogos de clientes, cursos, coaches, proveedores y más
 - Visualizar KPIs y estadísticas en un dashboard
 - Administrar usuarios con distintos roles y permisos
@@ -45,11 +50,12 @@
 | Backend | Node.js + Express.js (monolito `server.js`) |
 | Base de Datos | SQL Server (Azure) |
 | Autenticación | JWT (JSON Web Tokens) |
-| Correo electrónico | Nodemailer + Office 365 SMTP |
+| Correo electrónico | Nodemailer + Gmail SMTP |
+| Almacenamiento de fotos | Cloudinary (upload sin firma, preset `douxyql6`) |
 | Generación de PDF | jsPDF |
 | Estilos | CSS personalizado + Bootstrap 5 |
 | Deploy Frontend | Vercel (auto-deploy desde GitHub) |
-| Deploy Backend | Render (auto-deploy desde GitHub) |
+| Deploy Backend | Railway (auto-deploy desde GitHub, ~2 min) |
 
 ---
 
@@ -63,15 +69,16 @@
                          │ HTTP / REST + JWT
                          ▼
 ┌──────────────────────────────────────────────────────┐
-│              Backend API (Render)                     │
+│              Backend API (Railway)                    │
 │              Node.js + Express.js                     │
 │                                                      │
 │  /api/auth                /api/cotizaciones          │
 │  /api/catalogos           /api/ordenescompra         │
 │  /api/usuarios            /api/ordenes-mantenimiento │
-│  /api/inventario                                     │
+│  /api/inventario          /api/seguridad             │
+│  /api/vehiculos           /api/solicitud-vehiculo    │
 │                                                      │
-│  Nodemailer → Office 365 SMTP (notificaciones)       │
+│  Nodemailer → Gmail SMTP (notificaciones)            │
 └────────────────────────┬─────────────────────────────┘
                          │ mssql
                          ▼
@@ -79,9 +86,18 @@
 │     SQL Server en Azure (biUDAT)                     │
 │     udatserver.southcentralus.cloudapp.azure.com     │
 └──────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────┐
+│     Cloudinary (cloud_name: kcj1hrdy)                │
+│     Upload directo browser → Cloudinary              │
+│     Preset: douxyql6 (sin firma)                     │
+│     Carpetas: /rondines  /vehiculos                  │
+└──────────────────────────────────────────────────────┘
 ```
 
 La comunicación frontend→backend se realiza mediante peticiones HTTP/REST. El frontend usa `api.js` como cliente centralizado que adjunta automáticamente el token JWT en cada petición.
+
+**Upload de fotos:** El frontend sube imágenes directamente a Cloudinary (sin pasar por el backend) usando un preset de upload sin firma. El backend solo recibe la URL ya procesada.
 
 **Auto-migración de base de datos:** Al arrancar el servidor, se ejecutan sentencias `IF NOT EXISTS` / `IF OBJECT_ID IS NULL` que crean tablas y columnas faltantes. No se requiere ejecutar scripts manuales de migración.
 
@@ -96,7 +112,7 @@ CotizadorServiciosUDAT/
 │   ├── src/
 │   │   ├── App.jsx                 # Componente raíz: estado global, navegación, layout
 │   │   ├── main.jsx                # Punto de entrada de React
-│   │   ├── api.js                  # Cliente HTTP centralizado (adjunta JWT)
+│   │   ├── api.js                  # Cliente HTTP centralizado (adjunta JWT + Cloudinary upload)
 │   │   ├── catalogConfig.js        # Definición de catálogos (campos, etiquetas)
 │   │   ├── App.css                 # Variables CSS, sidebar, componentes globales
 │   │   ├── index.css               # Reset y estilos base
@@ -107,6 +123,8 @@ CotizadorServiciosUDAT/
 │   │   ├── OrdenesCompra.jsx       # Gestión de órdenes de compra + selector inventario
 │   │   ├── OrdenesMantenimiento.jsx # Gestión de órdenes de mantenimiento + PDF
 │   │   ├── Inventario.jsx          # Módulo de inventario de materiales
+│   │   ├── Seguridad.jsx           # Módulo de seguridad: rondines, extintores, visitas, vehículos
+│   │   ├── SolicitudVehiculoPublica.jsx  # Formulario público (sin login) para solicitar vehículo
 │   │   ├── Usuarios.jsx            # Administración de usuarios (solo admin)
 │   │   │
 │   │   ├── CatalogFormModal.jsx        # Modal genérico para catálogos
@@ -116,6 +134,7 @@ CotizadorServiciosUDAT/
 │   ├── public/
 │   ├── index.html
 │   ├── vite.config.js
+│   ├── vercel.json                 # SPA rewrite: todas las rutas → index.html
 │   └── package.json
 │
 ├── cotizador-api/                  # Backend Node.js (repo: cotizador-api)
@@ -193,7 +212,7 @@ CotizadorServiciosUDAT/
 | FechaInicio, FechaFin | Rango de fechas |
 | TotalCostos, Ganancia, TotalConGanancia, PrecioPorParticipante | Resumen financiero |
 | MargenUtilidadPctDirectos, MargenUtilidadPctIndirectos | Porcentajes de margen |
-| Estado | Borrador / Pendiente / Aprobada / Rechazada |
+| Estado | Borrador / Pendiente / Aprobada / Rechazada / Enviada |
 | AprobadoPor, FechaAprobacion, ComentariosAprobacion | Datos de aprobación |
 | Creador, FechaCreacion | Auditoría |
 
@@ -319,9 +338,114 @@ CotizadorServiciosUDAT/
 
 ---
 
+### 4.7 Tablas del Módulo de Seguridad *(nuevo en v3.0)*
+
+#### `RondinesArea`
+Registro de rondines de vigilancia por área del edificio.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| RondinId | INT (PK) | Identificador |
+| Area | NVARCHAR | Nombre del área revisada |
+| Turno | NVARCHAR | `Matutino` / `Vespertino` / `Nocturno` |
+| Responsable | NVARCHAR | Personal que realizó el rondin |
+| FechaHora | DATETIME | Timestamp del rondin |
+| Estado | NVARCHAR | `Sin novedad` / `Con novedad` |
+| Incidencia | NVARCHAR | Descripción de la novedad (si aplica) |
+| FotoUrl | NVARCHAR(500) | URL Cloudinary de la foto de evidencia (opcional) |
+| Activo | BIT | Soft delete |
+
+#### `Extintores`
+Inventario y estado de extintores.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| ExtintorId | INT (PK) | Identificador |
+| Ubicacion | NVARCHAR | Ubicación física del extintor |
+| Tipo | NVARCHAR | Tipo de extintor (ABC, CO2, etc.) |
+| Capacidad | NVARCHAR | Capacidad (ej. 6 kg) |
+| FechaUltimaRecarga | DATE | Última recarga |
+| FechaProximaRevision | DATE | Próxima revisión programada |
+| Estado | NVARCHAR | `Activo` / `Vencido` / `Dañado` |
+| Activo | BIT | Soft delete |
+
+#### `Visitas`
+Control de acceso de visitantes.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| VisitaId | INT (PK) | Identificador |
+| NombreVisitante | NVARCHAR | Nombre completo |
+| Empresa | NVARCHAR | Empresa del visitante |
+| PersonaVisita | NVARCHAR | A quien visita dentro de UDAT |
+| Motivo | NVARCHAR | Motivo de la visita |
+| HoraEntrada | DATETIME | Timestamp de entrada |
+| HoraSalida | DATETIME | Timestamp de salida (nullable) |
+| Activo | BIT | Soft delete |
+
+#### `VehiculosSeguridad`
+Catálogo de vehículos de la institución.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| VehiculoId | INT (PK) | Identificador |
+| Marca | NVARCHAR | Marca del vehículo |
+| Modelo | NVARCHAR | Modelo |
+| Anio | INT | Año |
+| Placas | NVARCHAR | Número de placas |
+| Color | NVARCHAR | Color |
+| NumeroEconomico | NVARCHAR | Número económico interno |
+| Estado | NVARCHAR | `Disponible` / `En uso` / `Mantenimiento` |
+| Activo | BIT | Soft delete |
+
+#### `OrdenesVehiculo`
+Órdenes de salida y llegada de vehículos con evidencia fotográfica.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| OrdenVehiculoId | INT (PK) | Identificador |
+| VehiculoId | INT (FK) | Vehículo asignado |
+| Conductor | NVARCHAR | Nombre del conductor |
+| Destino | NVARCHAR | Destino del viaje |
+| Motivo | NVARCHAR | Motivo de la salida |
+| FechaSalida | DATETIME | Fecha y hora de salida |
+| FechaLlegada | DATETIME | Fecha y hora de llegada (nullable) |
+| KmSalida | INT | Kilometraje al salir |
+| KmLlegada | INT | Kilometraje al llegar (nullable) |
+| Estado | NVARCHAR | `Pendiente` / `En uso` / `Completada` |
+| AutorizadoPor | NVARCHAR | Quien autorizó la salida |
+| Observaciones | NVARCHAR | Observaciones generales |
+| FotoSalidaFrontal | NVARCHAR(500) | URL Cloudinary — foto frontal al salir |
+| FotoSalidaTrasero | NVARCHAR(500) | URL Cloudinary — foto trasera al salir |
+| FotoSalidaLateralIzq | NVARCHAR(500) | URL Cloudinary — lateral izquierdo al salir |
+| FotoSalidaLateralDer | NVARCHAR(500) | URL Cloudinary — lateral derecho al salir |
+| FotoLlegadaFrontal | NVARCHAR(500) | URL Cloudinary — foto frontal al llegar |
+| FotoLlegadaTrasero | NVARCHAR(500) | URL Cloudinary — foto trasera al llegar |
+| FotoLlegadaLateralIzq | NVARCHAR(500) | URL Cloudinary — lateral izquierdo al llegar |
+| FotoLlegadaLateralDer | NVARCHAR(500) | URL Cloudinary — lateral derecho al llegar |
+| Activo | BIT | Soft delete |
+
+#### `SolicitudesVehiculo`
+Solicitudes de uso de vehículo enviadas desde el formulario público.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| SolicitudId | INT (PK) | Identificador |
+| Solicitante | NVARCHAR | Nombre del solicitante |
+| Departamento | NVARCHAR | Departamento |
+| Destino | NVARCHAR | Destino del viaje |
+| FechaSalida | DATE | Fecha requerida |
+| Motivo | NVARCHAR | Motivo de la solicitud |
+| Estado | NVARCHAR | `Pendiente` / `Aprobada` / `Rechazada` |
+| FechaCreacion | DATETIME | Timestamp automático |
+
+> Las columnas de fotos en `OrdenesVehiculo` (`FotoSalidaFrontal`, `FotoSalidaTrasero`, `FotoSalidaLateralIzq`, `FotoSalidaLateralDer`, `FotoLlegadaFrontal`, `FotoLlegadaTrasero`, `FotoLlegadaLateralIzq`, `FotoLlegadaLateralDer`) se agregan automáticamente al iniciar el servidor si no existen (migración v3).
+
+---
+
 ## 5. Backend — API REST
 
-El servidor Express corre en **Render** y expone los siguientes grupos de endpoints. Todos requieren autenticación JWT excepto los de `/api/auth`.
+El servidor Express corre en **Railway** y expone los siguientes grupos de endpoints. Todos requieren autenticación JWT excepto los de `/api/auth` y `POST /api/solicitud-vehiculo`.
 
 ### 5.1 Autenticación — `/api/auth`
 
@@ -369,8 +493,11 @@ El servidor Express corre en **Render** y expone los siguientes grupos de endpoi
 | GET | `/` | Historial de cotizaciones |
 | GET | `/:id` | Detalle de una cotización |
 | GET | `/generate/folio` | Genera el siguiente folio |
-| POST | `/` | Crea nueva cotización |
-| POST | `/:id/aprobar` | Aprueba o rechaza |
+| POST | `/` | Crea nueva cotización → notifica a autorizadores |
+| POST | `/:id/enviar` | Cambia estado a "Enviada" → notifica a autorizadores |
+| POST | `/:id/aprobar` | Aprueba o rechaza → notifica al creador |
+
+> **Nota sobre botones en el frontend:** El botón **"Guardar Cotización"** crea la cotización (POST `/`). El botón **"Enviar a Aprobación"** llama a POST `/:id/enviar`. Ambos endpoints envían correo a los autorizadores (autorizador1 + admin).
 
 ---
 
@@ -428,13 +555,70 @@ El servidor Express corre en **Render** y expone los siguientes grupos de endpoi
 
 ---
 
+### 5.8 Módulo de Seguridad *(nuevo en v3.0)*
+
+#### Rondines — `/api/seguridad/rondines`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Lista rondines (filtrable por fecha) |
+| POST | `/` | Registra nuevo rondin con foto opcional |
+| PUT | `/:id` | Actualiza rondin (agregar/cambiar foto, incidencia) |
+| DELETE | `/:id` | Soft delete |
+
+#### Extintores — `/api/seguridad/extintores`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Lista extintores con estado |
+| POST | `/` | Registra extintor |
+| PUT | `/:id` | Actualiza datos / estado |
+| DELETE | `/:id` | Soft delete |
+
+#### Visitas — `/api/seguridad/visitas`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Lista visitas del día / rango de fechas |
+| POST | `/` | Registra entrada de visita |
+| PUT | `/:id/salida` | Registra hora de salida |
+| DELETE | `/:id` | Soft delete |
+
+#### Vehículos — `/api/vehiculos`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Catálogo de vehículos |
+| POST | `/` | Agrega vehículo |
+| PUT | `/:id` | Edita vehículo |
+| DELETE | `/:id` | Soft delete |
+
+#### Órdenes de Vehículo — `/api/vehiculos/ordenes`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Lista órdenes de salida |
+| POST | `/` | Crea orden de salida con URLs de fotos (4 ángulos) |
+| PUT | `/:id/llegada` | Registra llegada con URLs de fotos (4 ángulos) |
+| DELETE | `/:id` | Soft delete |
+
+#### Solicitudes Públicas — `/api/solicitud-vehiculo` *(sin autenticación)*
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/` | Recibe solicitud pública de vehículo (no requiere JWT) |
+| GET | `/` | Lista solicitudes (requiere JWT + rol seguridad/admin) |
+
+---
+
 ## 6. Frontend — Interfaz de Usuario
 
 ### 6.1 Componentes Principales
 
 #### `App.jsx` — Componente Raíz
 Centraliza todo el estado de la aplicación:
-- **Autenticación:** `token`, `usuario` (persistidos en `localStorage`)
+- **Autenticación:** `token`, `usuario` (persistidos en `localStorage` con claves `cotizador-token` y `cotizador-usuario`)
+- **Ruta pública:** antes de cualquier guardia de autenticación, si `window.location.pathname === '/solicitud-vehiculo'` se renderiza `SolicitudVehiculoPublica` directamente
 - **Navegación:** `activeView` controla qué vista se muestra
 - **Catálogos:** se cargan al iniciar sesión y se pasan como props
 - **Lógica de roles:** determina qué secciones son accesibles en el sidebar
@@ -444,12 +628,13 @@ Centraliza todo el estado de la aplicación:
 |-------|-----------|--------|
 | `dashboard` | Dashboard.jsx | admin, autorizador1, autorizador2 |
 | `inicio` | (inline en App.jsx) | empleado, jefe_mantenimiento |
-| `cotizacion` | NuevaCotizacion.jsx | Todos excepto `mantenimiento` |
-| `historial` | (inline en App.jsx) | Todos excepto `mantenimiento` |
+| `cotizacion` | NuevaCotizacion.jsx | Todos excepto mantenimiento / seguridad / encargado_vehiculos |
+| `historial` | (inline en App.jsx) | Todos excepto mantenimiento / seguridad / encargado_vehiculos |
 | `aprobaciones` | (inline en App.jsx) | autorizador1, autorizador2 |
-| `ordenesCompra` | OrdenesCompra.jsx | Todos excepto `mantenimiento` |
+| `ordenesCompra` | OrdenesCompra.jsx | Todos excepto mantenimiento / seguridad / encargado_vehiculos |
 | `mantenimiento` | OrdenesMantenimiento.jsx | Todos |
-| `inventario` | Inventario.jsx | Todos excepto `mantenimiento` |
+| `inventario` | Inventario.jsx | Todos excepto mantenimiento / seguridad / encargado_vehiculos |
+| `seguridad` | Seguridad.jsx | seguridad, jefe_seguridad, encargado_vehiculos, admin |
 | `usuarios` | Usuarios.jsx | Solo admin |
 | `catalogo_*` | (CatalogFormModal genérico) | Solo admin |
 
@@ -458,6 +643,7 @@ Centraliza todo el estado de la aplicación:
 |-----|--------------|
 | `admin`, `autorizador1`, `autorizador2` | `dashboard` |
 | `mantenimiento` | `mantenimiento` |
+| `seguridad`, `jefe_seguridad`, `encargado_vehiculos` | `seguridad` |
 | `empleado`, `jefe_mantenimiento`, otros | `inicio` |
 
 ---
@@ -476,6 +662,10 @@ Requiere rol admin o autorizador. Muestra KPI Cards, gráfico de cursos más cot
 
 #### `NuevaCotizacion.jsx`
 Formulario multi-sección: datos generales, fechas, participantes (búsqueda en tabla STG), tabla de costos con fórmulas dinámicas y resumen financiero.
+
+**Botones de acción:**
+- **Guardar Cotización** — crea la cotización en BD con estado "Pendiente" y notifica a autorizadores por correo
+- **Enviar a Aprobación** — cambia el estado a "Enviada" y vuelve a notificar a autorizadores por correo
 
 ---
 
@@ -536,12 +726,61 @@ Módulo independiente de gestión de inventario:
 
 ---
 
+#### `Seguridad.jsx` *(nuevo en v3.0)*
+Módulo de seguridad con cuatro secciones accesibles mediante pestañas:
+
+**Pestaña Rondines:**
+- Tabla de rondines por área con columnas: Área, Turno, Responsable, Fecha/Hora, Estado, Incidencia, Foto
+- La columna **Foto** muestra un enlace `📷 Foto` que abre la imagen de Cloudinary en nueva pestaña
+- Botón "Registrar Rondin" abre modal con campos: Área, Turno, Responsable, Fecha/Hora, Estado, Incidencia
+- El modal incluye selector de foto: seleccionar archivo → preview → upload a Cloudinary → URL guardada
+- Al pulsar "Revisar" en un registro existente, el modal se pre-carga con los datos actuales
+- Roles con acceso completo: `seguridad`, `jefe_seguridad`, `admin`
+
+**Pestaña Extintores:**
+- Tabla con todos los extintores y su estado (badge de color según estado)
+- CRUD completo: agregar, editar, eliminar extintor
+- Campos: Ubicación, Tipo, Capacidad, Fecha Última Recarga, Fecha Próxima Revisión, Estado
+
+**Pestaña Visitas:**
+- Registro de entrada y salida de visitantes
+- Tabla del día con opción de filtrar por rango de fechas
+- Al registrar salida, se calcula automáticamente el tiempo de estancia
+
+**Pestaña Vehículos / Órdenes:**
+- Sub-vista del catálogo de vehículos con CRUD completo
+- Sub-vista de órdenes de salida: crear orden, registrar llegada
+- **Evidencia fotográfica de salida:** 4 campos de foto (Frontal, Trasero, Lateral Izq, Lateral Der) al crear la orden
+- **Evidencia fotográfica de llegada:** 4 campos de foto (mismos ángulos) al registrar llegada
+- Todas las fotos se suben a Cloudinary; el backend recibe y guarda solo las URLs
+- Roles con acceso a vehículos: `encargado_vehiculos`, `jefe_seguridad`, `admin`
+
+---
+
+#### `SolicitudVehiculoPublica.jsx` *(nuevo en v3.0)*
+Formulario público accesible en `/solicitud-vehiculo` **sin requerir login**.
+
+- Campos: Nombre del solicitante, Departamento, Destino, Fecha de salida requerida, Motivo
+- Al enviar, crea un registro en `SolicitudesVehiculo` con estado `Pendiente`
+- El personal de seguridad puede ver y gestionar estas solicitudes desde el módulo de seguridad
+
+**Implementación técnica — cómo funciona la ruta pública:**  
+En `App.jsx`, antes de cualquier verificación de autenticación:
+```javascript
+if (window.location.pathname === '/solicitud-vehiculo') {
+  return <SolicitudVehiculoPublica />
+}
+```
+En `vercel.json`, la reescritura SPA envía todas las rutas a `index.html`, lo que permite que esta URL funcione incluso en recargas directas del navegador.
+
+---
+
 #### `Usuarios.jsx` (Solo Admin)
 - Tabla con todos los usuarios del sistema
 - Crear usuario: correo, nombre, rol, contraseña inicial
 - Editar: nombre, rol, activo/inactivo
 - Resetear contraseña (`DebeReiniciarPass = 1`)
-- Roles disponibles en el dropdown: empleado, mantenimiento, jefe_mantenimiento, autorizador1, autorizador2, admin
+- Roles disponibles en el dropdown: `empleado`, `mantenimiento`, `jefe_mantenimiento`, `autorizador1`, `autorizador2`, `seguridad`, `jefe_seguridad`, `encargado_vehiculos`, `admin`
 
 ---
 
@@ -555,11 +794,11 @@ Modal genérico que renderiza formularios según `catalogConfig.js`. Soporta cam
 Wrapper sobre `fetch` que:
 - Usa `VITE_API_BASE_URL` como base URL
 - Adjunta automáticamente `Authorization: Bearer <token>` mediante `authHeaders()`
-- Limpia `localStorage` y recarga la página si el servidor responde 401
+- Limpia `localStorage` y recarga la página si el servidor responde 401 (token expirado o inválido)
 
 > **Importante:** Las funciones `postJson` y `putJson` NO incluyen headers de autorización. Para endpoints con middleware `autenticar`, usar `fetchJson` directamente con `authHeaders()`.
 
-**Funciones de API para módulos nuevos:**
+**Funciones de API — todos los módulos:**
 ```javascript
 // Inventario
 getInventario()              // GET /inventario
@@ -573,6 +812,42 @@ getOrdenesMantenimiento()          // GET /ordenes-mantenimiento
 getOrdenMantenimientoById(id)      // GET /ordenes-mantenimiento/:id
 createOrdenMantenimiento(data)     // POST /ordenes-mantenimiento
 updateOrdenMantenimiento(id, data) // PUT /ordenes-mantenimiento/:id
+
+// Seguridad — rondines, extintores, visitas
+getRondines() / createRondin(data) / updateRondin(id, data) / deleteRondin(id)
+getExtintores() / createExtintor(data) / updateExtintor(id, data) / deleteExtintor(id)
+getVisitas() / createVisita(data) / registrarSalida(id) / deleteVisita(id)
+
+// Vehículos y órdenes de vehículo
+getVehiculos() / createVehiculo(data) / updateVehiculo(id, data) / deleteVehiculo(id)
+getOrdenesVehiculo()                     // GET /vehiculos/ordenes
+createOrdenVehiculo(data)                // POST /vehiculos/ordenes (incluye URLs fotos salida)
+registrarLlegadaVehiculo(id, data)       // PUT /vehiculos/ordenes/:id/llegada (URLs fotos llegada)
+
+// Solicitud pública (sin auth)
+crearSolicitudVehiculo(data)             // POST /solicitud-vehiculo
+
+// Upload de fotos a Cloudinary (directo browser→Cloudinary, sin backend)
+uploadFotoVehiculo(base64)   // → carpeta 'vehiculos'
+uploadFotoRondin(base64)     // → carpeta 'rondines'
+```
+
+**Implementación del upload a Cloudinary:**
+```javascript
+async function uploadToCloudinary(base64, folder) {
+  const fd = new FormData()
+  fd.append('file', base64)
+  fd.append('upload_preset', 'douxyql6')   // preset sin firma (Unsigned)
+  fd.append('folder', folder)
+  const r = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', {
+    method: 'POST', body: fd
+  })
+  const data = await r.json()
+  if (data.error) throw new Error(data.error.message)
+  return { url: data.secure_url }
+}
+export function uploadFotoVehiculo(base64) { return uploadToCloudinary(base64, 'vehiculos') }
+export function uploadFotoRondin(base64)   { return uploadToCloudinary(base64, 'rondines') }
 ```
 
 ---
@@ -607,10 +882,11 @@ updateOrdenMantenimiento(id, data) // PUT /ordenes-mantenimiento/:id
 - **Expiración:** 8 horas
 - **Payload:** `{ id, correo, nombre, rol }`
 - **Almacenamiento:** `localStorage` con claves `cotizador-token` y `cotizador-usuario`
+- **Token expirado:** si el servidor responde 401, `api.js` limpia `localStorage` y recarga la página automáticamente (no hay bucle de redirecciones)
 
 ### 7.2 Roles y Permisos
 
-| Rol | Dashboard | Cotiz. | OC | Mant. | Inventario | Catálogos | Usuarios |
+| Rol | Dashboard | Cotiz. | OC | Mant. | Inventario | Seguridad | Usuarios |
 |-----|-----------|--------|----|-------|-----------|----------|---------|
 | `admin` | ✅ | ✅ | ✅ | ✅ | ✅ (editar) | ✅ | ✅ |
 | `autorizador1` | ✅ | ✅ | ✅ | ✅ | ✅ (ver) | ❌ | ❌ |
@@ -618,10 +894,15 @@ updateOrdenMantenimiento(id, data) // PUT /ordenes-mantenimiento/:id
 | `empleado` | ❌ | ✅ | ✅ | ✅ | ✅ (ver) | ❌ | ❌ |
 | `jefe_mantenimiento` | ❌ | ✅ | ✅ | ✅ | ✅ (ver) | ❌ | ❌ |
 | `mantenimiento` | ❌ | ❌ | ❌ | ✅ (solo) | ❌ | ❌ | ❌ |
+| `seguridad` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (rondines, extintores, visitas) | ❌ |
+| `jefe_seguridad` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (todo) | ❌ |
+| `encargado_vehiculos` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (solo vehículos/órdenes) | ❌ |
 
 > `jefe_mantenimiento` tiene acceso idéntico a `empleado`. La distinción existe únicamente para enrutar notificaciones de correo electrónico de mantenimiento.
 
-> El rol `mantenimiento` solo ve el módulo de Órdenes de Mantenimiento en el sidebar.
+> `jefe_seguridad` tiene acceso completo al módulo de seguridad incluyendo la gestión de vehículos.
+
+> `encargado_vehiculos` solo ve la sección de vehículos y órdenes dentro del módulo de seguridad.
 
 ### 7.3 Credenciales Iniciales
 
@@ -649,12 +930,15 @@ updateOrdenMantenimiento(id, data) // PUT /ordenes-mantenimiento/:id
 ```
 Usuario abre la app
         ↓
+¿URL es /solicitud-vehiculo?
+    SÍ → Renderizar SolicitudVehiculoPublica (sin auth)
+    NO ↓
 ¿Tiene token en localStorage?
     NO → Pantalla Login
     SÍ → Validar token con servidor
             ↓
         ¿Token válido?
-            NO → Pantalla Login (limpia localStorage)
+            NO → Limpiar localStorage → Pantalla Login
             SÍ → ¿debeReiniciarPass?
                     SÍ → Modal ChangePassword (obligatorio)
                     NO → App principal según rol
@@ -666,12 +950,15 @@ Usuario abre la app
 
 ```
 1. Empleado crea cotización
-   └── Selecciona catalogos, configura costos con fórmulas dinámicas
+   └── Selecciona catálogos, configura costos con fórmulas dinámicas
 
-2. POST /api/cotizaciones → Estado = "Pendiente"
-   └── Email a autorizador1 y al creador
+2. "Guardar Cotización" → POST /api/cotizaciones → Estado = "Pendiente"
+   └── Email a autorizador1 + admin
 
-3. Autorizador aprueba o rechaza
+3. "Enviar a Aprobación" → POST /api/cotizaciones/:id/enviar → Estado = "Enviada"
+   └── Email a autorizador1 + admin
+
+4. Autorizador aprueba o rechaza → POST /api/cotizaciones/:id/aprobar
    └── Email de resultado al creador
 ```
 
@@ -746,38 +1033,94 @@ Alertas:
 
 ---
 
+### 8.6 Flujo de Orden de Vehículo *(nuevo en v3.0)*
+
+```
+1. Persona solicita vehículo (formulario público, sin login)
+   └── POST /api/solicitud-vehiculo → SolicitudesVehiculo, Estado = "Pendiente"
+
+2. Encargado de vehículos autoriza y crea orden de salida
+   ├── Selecciona vehículo, asigna conductor, destino, motivo, km salida
+   ├── Captura 4 fotos de salida (Frontal, Trasero, Lat. Izq, Lat. Der)
+   │   └── Browser sube fotos a Cloudinary (carpeta 'vehiculos') → obtiene URLs
+   └── POST /api/vehiculos/ordenes (con URLs de fotos) → Estado = "En uso"
+
+3. Conductor regresa — encargado registra llegada
+   ├── Ingresa KmLlegada, fecha/hora llegada, observaciones
+   ├── Captura 4 fotos de llegada (mismos ángulos)
+   │   └── Browser sube fotos a Cloudinary → obtiene URLs
+   └── PUT /api/vehiculos/ordenes/:id/llegada (con URLs fotos) → Estado = "Completada"
+
+4. Orden archivada con evidencia completa (8 fotos + datos de km y tiempos)
+```
+
+---
+
+### 8.7 Flujo de Rondin de Seguridad *(nuevo en v3.0)*
+
+```
+1. Personal de seguridad inicia ronda
+   └── Abre modal "Registrar Rondin" en pestaña Rondines
+
+2. Por cada área revisada:
+   ├── Selecciona Área, Turno, nombre del Responsable
+   ├── Establece Estado: "Sin novedad" / "Con novedad"
+   ├── Si hay novedad: describe la incidencia en campo de texto
+   ├── Opcional: selecciona foto de evidencia
+   │   └── Browser sube a Cloudinary (carpeta 'rondines') → URL guardada en FotoUrl
+   └── Guarda registro → POST /api/seguridad/rondines
+
+3. Jefe de seguridad o personal puede revisar/editar cualquier registro
+   └── Modal se pre-carga con datos existentes → PUT /api/seguridad/rondines/:id
+
+4. Tabla muestra enlace "📷 Foto" por cada registro que tenga FotoUrl
+   └── Abre la imagen en nueva pestaña del navegador
+```
+
+---
+
 ## 9. Notificaciones por Correo Electrónico
 
-El sistema usa **Nodemailer con Office 365 SMTP** (`smtp.office365.com:587`). Los correos son **fire-and-forget** (no bloquean la respuesta de la API).
+El sistema usa **Nodemailer con Gmail SMTP** (`smtp.gmail.com:587`). Los correos son **fire-and-forget** implementados como async IIFE para no bloquear la respuesta de la API, con logging explícito en consola de Railway.
 
 ### 9.1 Infraestructura
 
 ```javascript
-// Variables de entorno requeridas
-SMTP_USER=correo@udat.com
-SMTP_PASS=contraseña
+// Variables de entorno requeridas en Railway
+SMTP_USER=correo@gmail.com
+SMTP_PASS=xxxx_xxxx_xxxx_xxxx   // Contraseña de aplicación Google (16 caracteres)
 APP_URL=https://cotizador-web.vercel.app
 ```
 
+> Se debe usar una **contraseña de aplicación** de Google (no la contraseña principal). Se genera en: Cuenta Google → Seguridad → Verificación en dos pasos → Contraseñas de aplicaciones.
+
 Si `SMTP_USER` / `SMTP_PASS` no están configurados, el sistema funciona normalmente pero registra en consola que los correos no se enviaron.
+
+**Patrón de logging en Railway:**
+```
+📧 Cotización COT-000003 /enviar — autorizadores: admin@udat.com,autorizador@udat.com
+✅ Email /enviar enviado a: admin@udat.com,autorizador@udat.com
+❌ Error email /enviar cotización: [mensaje de error]
+```
 
 ### 9.2 Funciones de Consulta de Destinatarios
 
 | Función | Consulta | Descripción |
 |---------|---------|-------------|
-| `getEmailsDeRol(rol)` | `WHERE Rol=@rol OR Rol='admin'` | Rol específico + admins |
-| `getEmailDeUsuario(nombre)` | `WHERE Nombre=@nombre` | Usuario por nombre |
-| `getEmailsPorRoles(roles[])` | `WHERE Rol IN (...)` | Roles exactos, sin incluir admins |
+| `getEmailsDeRol(rol)` | `WHERE (Rol=@rol OR Rol='admin') AND Activo=1` | Rol específico + admins |
+| `getEmailDeUsuario(nombre)` | `WHERE Nombre=@nombre AND Activo=1` | Usuario por nombre |
+| `getEmailsPorRoles(roles[])` | `WHERE Rol IN (...) AND Activo=1` | Roles exactos, sin incluir admins |
 
 ### 9.3 Eventos y Destinatarios
 
 | Módulo | Evento | Destinatarios |
 |--------|--------|---------------|
-| **OC** | OC creada | autorizador1 + creador + todos los `empleado` |
+| **OC** | OC creada | autorizador1 + admin + creador + todos los `empleado` |
 | **OC** | Aprobada paso 1 | autorizador2 |
 | **OC** | Aprobada paso 2 (final) | creador + todos los `empleado` |
 | **OC** | Rechazada | creador + todos los `empleado` |
-| **Cotización** | Cotización creada | autorizador1 + creador |
+| **Cotización** | Creada (POST `/cotizaciones`) | autorizador1 + admin |
+| **Cotización** | Enviada a aprobación (POST `/cotizaciones/:id/enviar`) | autorizador1 + admin |
 | **Cotización** | Aprobada/Rechazada | creador |
 | **Mantenimiento** | Orden creada | todos los `mantenimiento` + todos los `jefe_mantenimiento` |
 | **Mantenimiento** | Orden completada | todos los `jefe_mantenimiento` |
@@ -793,15 +1136,59 @@ Si `SMTP_USER` / `SMTP_PASS` no están configurados, el sistema funciona normalm
 | `emailOCResultado` | `Tu orden X fue aprobada/rechazada` | Resultado con motivo |
 | `emailOMCreada` | `Nueva Orden de Mantenimiento — X` | Folio, equipo, tipo, solicitante |
 | `emailOMCompletada` | `Orden X completada` | Técnico, tipo falla, descripción, materiales |
-| `emailCotizacionPendiente` | `Nueva cotización requiere aprobación` | Folio, curso, total |
+| `emailCotizacionPendiente` | `Nueva cotización X requiere aprobación` | Folio, cliente, curso, total, creador |
 | `emailCotizacionConfirmacion` | `Tu cotización fue registrada` | Confirmación al creador |
 | `emailCotizacionResuelta` | `Cotización aprobada/rechazada` | Resultado con comentarios |
 
 ---
 
-## 10. Lógica de Cálculos
+## 10. Evidencia Fotográfica (Cloudinary) *(nuevo en v3.0)*
 
-### 10.1 Fórmulas de Cantidad en Costos de Cotización
+### 10.1 Configuración
+
+| Parámetro | Valor |
+|-----------|-------|
+| Cloud name | `kcj1hrdy` |
+| Upload preset | `douxyql6` (tipo: Unsigned) |
+| Carpeta vehículos | `vehiculos/` |
+| Carpeta rondines | `rondines/` |
+| Endpoint de upload | `https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload` |
+
+### 10.2 Flujo de Upload
+
+El upload se realiza **100% en el browser**, sin pasar por el backend:
+
+```
+1. Usuario selecciona / captura foto
+2. Frontend lee el archivo como base64 (FileReader)
+3. Frontend llama uploadToCloudinary(base64, 'vehiculos') desde api.js
+4. Petición directa a la API de Cloudinary (sin firma)
+5. Cloudinary responde con { secure_url: "https://res.cloudinary.com/..." }
+6. Frontend almacena la URL y la incluye en el payload al backend
+7. Backend guarda solo la URL en la columna correspondiente de la BD
+```
+
+### 10.3 Por qué se usa upload sin firma (unsigned)
+
+El preset de upload sin firma (`douxyql6`) permite subir imágenes directamente desde el browser sin necesitar que el servidor genere una firma criptográfica. Esto:
+- Elimina la dependencia del SDK de Cloudinary en el backend
+- Evita errores de firma inválida al eliminar la complejidad criptográfica del servidor
+- Reduce la latencia al eliminar un round-trip al backend antes del upload
+- No agrega paquetes npm al backend
+
+### 10.4 Módulos que usan Cloudinary
+
+| Módulo | Campo(s) | Carpeta |
+|--------|---------|---------|
+| Rondines | `FotoUrl` (1 foto por área) | `rondines/` |
+| Órdenes vehículo — salida | `FotoSalidaFrontal`, `FotoSalidaTrasero`, `FotoSalidaLateralIzq`, `FotoSalidaLateralDer` | `vehiculos/` |
+| Órdenes vehículo — llegada | `FotoLlegadaFrontal`, `FotoLlegadaTrasero`, `FotoLlegadaLateralIzq`, `FotoLlegadaLateralDer` | `vehiculos/` |
+
+---
+
+## 11. Lógica de Cálculos
+
+### 11.1 Fórmulas de Cantidad en Costos de Cotización
 
 | Fórmula | Cálculo | Ejemplo (3 sesiones, 5 días, 20 participantes) |
 |---------|---------|-----------------------------------------------|
@@ -812,7 +1199,7 @@ Si `SMTP_USER` / `SMTP_PASS` no están configurados, el sistema funciona normalm
 
 ---
 
-### 10.2 Márgenes y Precios en Cotizaciones
+### 11.2 Márgenes y Precios en Cotizaciones
 
 ```
 Total Costos Directos   = Σ costos donde TipoCosto = "Directo"
@@ -829,7 +1216,7 @@ Precio por Participante = Total con Ganancia / ParticipantesCantidad
 
 ---
 
-### 10.3 Cálculo de Órdenes de Compra
+### 11.3 Cálculo de Órdenes de Compra
 
 ```
 Subtotal = Σ (Cantidad × PrecioUnitario) por cada línea
@@ -839,7 +1226,7 @@ Total    = Subtotal + IVA
 
 ---
 
-### 10.4 Estado de Stock en Inventario
+### 11.4 Estado de Stock en Inventario
 
 ```sql
 CASE
@@ -853,11 +1240,11 @@ END AS EstadoStock
 
 ---
 
-## 11. Configuración y Variables de Entorno
+## 12. Configuración y Variables de Entorno
 
 ### Frontend — `cotizador-web/.env`
 ```env
-VITE_API_BASE_URL=https://cotizador-api.onrender.com/api
+VITE_API_BASE_URL=https://<proyecto>.up.railway.app/api
 ```
 
 ### Backend — `cotizador-api/.env`
@@ -878,17 +1265,19 @@ PORT=4000
 JWT_SECRET=<secreto>
 JWT_EXPIRES_IN=8h
 
-# SMTP (Office 365)
-SMTP_USER=<correo@udat.com>
-SMTP_PASS=<contraseña>
+# SMTP (Gmail)
+SMTP_USER=<correo@gmail.com>
+SMTP_PASS=<contraseña_de_aplicación_16_caracteres>
 APP_URL=https://cotizador-web.vercel.app
 ```
+
+> **Nota sobre Cloudinary:** No se requieren variables de entorno en el backend para Cloudinary. El upload se hace directamente desde el browser usando el preset público `douxyql6`.
 
 > **Importante:** El archivo `.env` nunca debe subirse al repositorio.
 
 ---
 
-## 12. Instalación y Ejecución
+## 13. Instalación y Ejecución
 
 ### Requisitos previos
 - Node.js 18+
@@ -915,7 +1304,7 @@ npm install
 
 ### 3. Configurar variables de entorno
 
-Crear `.env` en cada proyecto con los valores de la sección 11.
+Crear `.env` en cada proyecto con los valores de la sección 12.
 
 ### 4. Ejecutar en desarrollo
 
@@ -940,12 +1329,13 @@ npm run build
 ### 6. Deploy
 
 - **Frontend:** Push a `main` en `cotizador-web` → Vercel detecta y despliega automáticamente
-- **Backend:** Push a `main` en `cotizador-api` → Render detecta y despliega automáticamente
-- **Base de datos:** Las migraciones se aplican automáticamente al reiniciar el servidor en Render
+  - El `vercel.json` debe tener `buildCommand: "npm run build"` y `outputDirectory: "dist"` para que Vercel encuentre el build de Vite correctamente
+- **Backend:** Push a `main` en `cotizador-api` → Railway detecta y despliega automáticamente (~2 min)
+- **Base de datos:** Las migraciones se aplican automáticamente al reiniciar el servidor en Railway
 
 ---
 
-## 13. Dependencias
+## 14. Dependencias
 
 ### Backend (`cotizador-api/package.json`)
 
@@ -955,7 +1345,7 @@ npm run build
 | `mssql` | Cliente SQL Server |
 | `bcryptjs` | Hash de contraseñas |
 | `jsonwebtoken` | Generación/validación JWT |
-| `nodemailer` | Envío de correos electrónicos (Office 365 SMTP) |
+| `nodemailer` | Envío de correos electrónicos (Gmail SMTP) |
 | `cors` | Cabeceras CORS |
 | `dotenv` | Variables de entorno |
 
@@ -968,6 +1358,61 @@ npm run build
 | `jspdf` | Generación de PDFs en el cliente (descarga automática) |
 | `bootstrap` | Componentes CSS adicionales |
 
+> **Cloudinary:** Se consume mediante `fetch` nativo del navegador, sin paquete npm adicional.
+
 ---
 
-*Documentación actualizada el 24 de junio de 2026. Versión 2.0.*
+## 15. Historial de Cambios
+
+### v3.0 — Julio 2026
+
+#### Nuevo: Módulo de Seguridad completo
+- Nuevo componente `Seguridad.jsx` con pestañas: Rondines, Extintores, Visitas, Vehículos
+- CRUD completo para rondines por área, extintores, visitas y catálogo de vehículos
+- Órdenes de salida de vehículos con evidencia fotográfica (4 ángulos: Frontal, Trasero, Lateral Izq, Lateral Der) tanto en salida como en llegada
+- Foto de evidencia en revisión de rondines (1 foto por área con preview y opción de eliminar)
+- Columna "📷 Foto" en tabla de rondines con enlace directo a Cloudinary
+- Tres nuevos roles: `seguridad`, `jefe_seguridad`, `encargado_vehiculos`
+- Nuevas tablas: `RondinesArea`, `Extintores`, `Visitas`, `VehiculosSeguridad`, `OrdenesVehiculo`, `SolicitudesVehiculo`
+
+#### Nuevo: Formulario Público de Solicitud de Vehículo
+- Nuevo componente `SolicitudVehiculoPublica.jsx` accesible en `/solicitud-vehiculo` sin login
+- Implementado como ruta especial antes de los guardias de autenticación en `App.jsx`
+
+#### Nuevo: Integración con Cloudinary para fotos
+- Upload directo browser→Cloudinary usando preset sin firma `douxyql6`
+- Funciones `uploadFotoVehiculo` y `uploadFotoRondin` en `api.js`
+- Migración automática de 8 columnas de fotos en tabla `OrdenesVehiculo` al iniciar el servidor
+
+#### Fix: Correos de Cotización no se enviaban
+- Corregido el manejo silencioso de errores en el email de creación (`.catch(() => {})` ocultaba todos los fallos)
+- Añadido envío de correo al endpoint `POST /api/cotizaciones/:id/enviar` — antes solo actualizaba el estado en BD sin notificar
+- Refactorizado a async IIFE con logging explícito (`📧`, `✅`, `❌`) visible en Railway
+
+#### Fix: Autenticación — token expirado
+- Corrección de la lógica en `api.js`: al recibir 401 ahora limpia `localStorage` y recarga la página sin bucle de redirecciones
+
+#### Fix: Deploy en Vercel
+- Corregido `vercel.json` con `buildCommand` y `outputDirectory` correctos para que Vercel encuentre el build generado por Vite
+
+#### Cambios de infraestructura
+- Backend migrado de **Render** a **Railway** (deploys ~2 min, sin cold starts prolongados)
+- SMTP migrado de **Office 365** a **Gmail** con contraseña de aplicación
+
+---
+
+### v2.0 — Junio 2026
+
+- Sistema de autenticación completo (JWT, cambio de contraseña, recuperación por código)
+- Módulo de cotizaciones con fórmulas dinámicas y flujo de aprobación
+- Módulo de órdenes de compra con aprobación en dos pasos
+- Módulo de órdenes de mantenimiento con exportación a PDF
+- Módulo de inventario con movimientos automáticos (ingresos por OC, consumos por mantenimiento)
+- Dashboard con KPIs y gráficos
+- Gestión de usuarios y catálogos (solo admin)
+- Notificaciones por correo electrónico en todos los eventos clave
+- Auto-migración de base de datos al iniciar el servidor
+
+---
+
+*Documentación actualizada el 9 de julio de 2026. Versión 3.0.*
