@@ -6,6 +6,9 @@ import {
   createOrdenMantenimiento,
   updateOrdenMantenimiento,
   getInventario,
+  getAreasConsumo,
+  getConsumos,
+  registrarConsumo,
 } from './api'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -374,9 +377,18 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   const [inventario, setInventario] = useState([])
 
   // Para completar una orden (técnico)
-  const [selectedOrden, setSelectedOrden] = useState(null)   // { orden, materiales }
+  const [selectedOrden, setSelectedOrden] = useState(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [pdfLoading, setPdfLoading]       = useState(null)
+
+  // Consumos de limpieza
+  const [areasConsumo, setAreasConsumo] = useState([])
+  const [consumos, setConsumos]         = useState([])
+  const [loadingConsumos, setLoadingConsumos] = useState(false)
+  const [consumoForm, setConsumoForm]   = useState({ productoId: '', areaConsumoId: '', cantidad: '', observaciones: '' })
+  const [consumoSearch, setConsumoSearch] = useState('')
+  const [savingConsumo, setSavingConsumo] = useState(false)
+  const [consumoError, setConsumoError] = useState(null)
 
   async function loadOrdenes() {
     setLoading(true)
@@ -384,13 +396,20 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     catch {} finally { setLoading(false) }
   }
 
+  async function loadConsumos() {
+    setLoadingConsumos(true)
+    try { setConsumos(await getConsumos()) }
+    catch {} finally { setLoadingConsumos(false) }
+  }
+
   useEffect(() => {
-    // Cargar inventario activo para el selector de materiales
     getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
+    getAreasConsumo().then(setAreasConsumo).catch(() => {})
   }, [])
 
   useEffect(() => {
     if (activeTab !== 'nueva') loadOrdenes()
+    if (activeTab === 'consumos') loadConsumos()
   }, [activeTab])
 
   function showSuccess(msg) {
@@ -406,15 +425,43 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     } catch {} finally { setLoadingDetail(false) }
   }
 
+  async function handleRegistrarConsumo(e) {
+    e.preventDefault()
+    setConsumoError(null)
+    if (!consumoForm.productoId) { setConsumoError('Selecciona un material'); return }
+    if (!consumoForm.cantidad || Number(consumoForm.cantidad) <= 0) { setConsumoError('Ingresa una cantidad válida'); return }
+    setSavingConsumo(true)
+    try {
+      const r = await registrarConsumo({
+        productoId:    Number(consumoForm.productoId),
+        areaConsumoId: consumoForm.areaConsumoId ? Number(consumoForm.areaConsumoId) : null,
+        cantidad:      Number(consumoForm.cantidad),
+        observaciones: consumoForm.observaciones || null,
+      })
+      setConsumoForm({ productoId: '', areaConsumoId: '', cantidad: '', observaciones: '' })
+      await loadConsumos()
+      // Refrescar inventario para mostrar stock actualizado
+      getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
+      showSuccess(`Consumo registrado correctamente. Stock nuevo: ${r.stockNuevo}`)
+    } catch (err) {
+      setConsumoError(err?.message || 'Error al registrar consumo')
+    } finally {
+      setSavingConsumo(false)
+    }
+  }
+
   const isAdmin = currentUserRol === 'admin'
   const misOrdenes = ordenes.filter(o => o.CreadoPor === currentUser)
   const pendientes = ordenes.filter(o => o.Estado !== 'Completada')
+
+  const puedeVerConsumos = ['mantenimiento', 'jefe_mantenimiento', 'admin'].includes(currentUserRol)
 
   const TABS = [
     { key: 'nueva',     label: 'Nueva Solicitud' },
     { key: 'mis',       label: `Mis Solicitudes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
     { key: 'completar', label: `Por Atender${pendientes.length ? ` (${pendientes.length})` : ''}` },
     ...(isAdmin ? [{ key: 'todas', label: 'Todas las Órdenes' }] : []),
+    ...(puedeVerConsumos ? [{ key: 'consumos', label: 'Consumos' }] : []),
   ]
 
   const tabBtnStyle = (key) => ({
@@ -799,6 +846,130 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
             ? <p style={{ color: '#9ca3af', padding: '24px 0' }}>Cargando...</p>
             : <OrdenTable lista={ordenes} />
         )}
+
+        {/* ── CONSUMOS DE LIMPIEZA ── */}
+        {activeTab === 'consumos' && puedeVerConsumos && (() => {
+          const inventarioFiltrado = consumoSearch.trim()
+            ? inventario.filter(p => p.NombreProducto.toLowerCase().includes(consumoSearch.toLowerCase()))
+            : inventario
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '24px', marginTop: '8px' }}>
+
+              {/* Formulario registro */}
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>Registrar Consumo</h3>
+                <form onSubmit={handleRegistrarConsumo} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                  {/* Buscador de material */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>Material</label>
+                    <input
+                      placeholder="Buscar material..."
+                      value={consumoSearch}
+                      onChange={e => { setConsumoSearch(e.target.value); setConsumoForm(f => ({ ...f, productoId: '' })) }}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                    {consumoSearch && (
+                      <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', maxHeight: '180px', overflowY: 'auto', background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                        {inventarioFiltrado.length === 0
+                          ? <p style={{ padding: '12px', margin: 0, fontSize: '13px', color: '#9ca3af' }}>Sin resultados</p>
+                          : inventarioFiltrado.map(p => (
+                            <button key={p.ProductoId} type="button"
+                              onClick={() => { setConsumoForm(f => ({ ...f, productoId: String(p.ProductoId) })); setConsumoSearch(p.NombreProducto) }}
+                              style={{ display: 'block', width: '100%', padding: '10px 14px', background: consumoForm.productoId === String(p.ProductoId) ? '#eff6ff' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px' }}>
+                              <span style={{ fontWeight: 600 }}>{p.NombreProducto}</span>
+                              <span style={{ color: '#6b7280', marginLeft: '8px' }}>Stock: {p.CantidadReal} {p.UnidadMedida}</span>
+                            </button>
+                          ))
+                        }
+                      </div>
+                    )}
+                    {consumoForm.productoId && (
+                      <p style={{ fontSize: '12px', color: '#2563eb', margin: '4px 0 0', fontWeight: 500 }}>
+                        ✓ {inventario.find(p => String(p.ProductoId) === consumoForm.productoId)?.NombreProducto}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Área */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>Área de destino</label>
+                    <select
+                      value={consumoForm.areaConsumoId}
+                      onChange={e => setConsumoForm(f => ({ ...f, areaConsumoId: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box' }}>
+                      <option value="">Seleccionar área</option>
+                      {areasConsumo.map(a => <option key={a.AreaConsumoId} value={a.AreaConsumoId}>{a.Nombre}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Cantidad */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>Cantidad</label>
+                    <input
+                      type="number" min="0.01" step="0.01"
+                      value={consumoForm.cantidad}
+                      onChange={e => setConsumoForm(f => ({ ...f, cantidad: e.target.value }))}
+                      placeholder="0"
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  {/* Observaciones */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>Observaciones (opcional)</label>
+                    <textarea
+                      value={consumoForm.observaciones}
+                      onChange={e => setConsumoForm(f => ({ ...f, observaciones: e.target.value }))}
+                      rows={2}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  {consumoError && (
+                    <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', color: '#b91c1c', fontSize: '13px' }}>{consumoError}</div>
+                  )}
+
+                  <button type="submit" disabled={savingConsumo} style={{ padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', opacity: savingConsumo ? 0.7 : 1 }}>
+                    {savingConsumo ? 'Registrando...' : '✓ Registrar consumo'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Historial */}
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>
+                  Historial de movimientos
+                  {loadingConsumos && <span style={{ fontSize: '12px', fontWeight: 400, color: '#9ca3af', marginLeft: '8px' }}>Cargando...</span>}
+                </h3>
+                {consumos.length === 0 && !loadingConsumos
+                  ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>Sin movimientos registrados.</p>
+                  : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
+                      {consumos.map(c => (
+                        <div key={c.ConsumoId} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px', background: '#fafafa', display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'start', gap: '8px' }}>
+                          <div>
+                            <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: '#111827' }}>{c.NombreProducto}</p>
+                            <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#6b7280' }}>
+                              {c.Usuario} · {c.Area || 'Sin área'} {c.Observaciones ? `· ${c.Observaciones}` : ''}
+                            </p>
+                            <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af' }}>
+                              {new Date(c.Fecha).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626', whiteSpace: 'nowrap' }}>
+                            -{c.Cantidad} {c.UnidadMedida}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                }
+              </div>
+            </div>
+          )
+        })()}
       </section>
     </div>
   )

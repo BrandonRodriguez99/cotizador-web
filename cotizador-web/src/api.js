@@ -425,6 +425,36 @@ export async function downloadOrdenCompraPdf(id) {
   return response.blob();
 }
 
+// ─── Recepción OC ────────────────────────────────────────────────────────────
+export async function registrarRecepcionOC(id, lineas, recibidoPor) {
+  return fetchJson(`ordenescompra/${id}/recepcion`, {
+    method: 'POST', headers: authHeaders(),
+    body: JSON.stringify({ lineas, recibidoPor }),
+  });
+}
+
+// ─── Áreas de Consumo ─────────────────────────────────────────────────────────
+export async function getAreasConsumo() {
+  return fetchJson('areas-consumo', { headers: authHeaders() });
+}
+export async function createAreaConsumo(data) {
+  return fetchJson('areas-consumo', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
+}
+export async function updateAreaConsumo(id, data) {
+  return fetchJson(`areas-consumo/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) });
+}
+export async function deleteAreaConsumo(id) {
+  return fetchJson(`areas-consumo/${id}`, { method: 'DELETE', headers: authHeaders() });
+}
+
+// ─── Consumos de Limpieza ─────────────────────────────────────────────────────
+export async function getConsumos() {
+  return fetchJson('consumos', { headers: authHeaders() });
+}
+export async function registrarConsumo(data) {
+  return fetchJson('consumos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
+}
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 export async function getMe(token) {

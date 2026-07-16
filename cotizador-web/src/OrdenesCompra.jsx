@@ -7,6 +7,7 @@ import {
   getEvaluacionProveedor, saveEvaluacionProveedor,
   deleteOrdenCompra,
   getInventario,
+  registrarRecepcionOC,
 } from './api'
 
 function formatMoney(value) {
@@ -1111,6 +1112,95 @@ function emptyOrderForm(folioValue) {
 }
 
 // ── Componente principal ───────────────────────────────────────────────────────
+// ── Modal de Recepción de OC ──────────────────────────────────────────────────
+function RecepcionModal({ orden, currentUser, onClose, onSuccess }) {
+  const lineas = orden.lineas || orden.LineItems || []
+  const [cantidades, setCantidades] = useState(
+    Object.fromEntries(lineas.map((l, i) => [i, String(l.Cantidad ?? l.cantidad ?? '')]))
+  )
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError(null)
+    setSaving(true)
+    try {
+      const payload = lineas.map((l, i) => ({
+        ordenCompraLineaId: l.OrdenCompraLineaId ?? l.id ?? null,
+        productoId:         l.ProductoId ?? l.productoId ?? null,
+        cantidadRecibida:   Number(cantidades[i]) || 0,
+      }))
+      await registrarRecepcionOC(orden.OrdenCompraId, payload, currentUser)
+      onSuccess('Recepción registrada. El stock fue actualizado con las cantidades confirmadas.')
+    } catch (err) {
+      setError(err?.message || 'Error al registrar recepción')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
+      <div style={{ background:'#fff', borderRadius:'16px', padding:'28px', width:'100%', maxWidth:'620px', maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px' }}>
+          <div>
+            <h2 style={{ margin:0, fontSize:'18px', fontWeight:700, color:'#111827' }}>Registrar Recepción</h2>
+            <p style={{ margin:'4px 0 0', fontSize:'13px', color:'#6b7280' }}>OC {orden.Folio} — Confirma las cantidades que llegaron del proveedor</p>
+          </div>
+          <button type="button" onClick={onClose} style={{ background:'none', border:'none', fontSize:'20px', cursor:'pointer', color:'#6b7280', lineHeight:1 }}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ border:'1px solid #e5e7eb', borderRadius:'10px', overflow:'hidden', marginBottom:'20px' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
+              <thead>
+                <tr style={{ background:'#f9fafb' }}>
+                  <th style={{ padding:'10px 14px', textAlign:'left', fontWeight:600, color:'#374151', borderBottom:'1px solid #e5e7eb' }}>Producto / Descripción</th>
+                  <th style={{ padding:'10px 14px', textAlign:'center', fontWeight:600, color:'#374151', borderBottom:'1px solid #e5e7eb', whiteSpace:'nowrap' }}>Cant. pedida</th>
+                  <th style={{ padding:'10px 14px', textAlign:'center', fontWeight:600, color:'#374151', borderBottom:'1px solid #e5e7eb', whiteSpace:'nowrap' }}>Cant. recibida</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineas.map((l, i) => (
+                  <tr key={i} style={{ borderBottom: i < lineas.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                    <td style={{ padding:'10px 14px', color:'#111827' }}>
+                      {l.NombreProducto || l.Descripcion || l.descripcion || `Línea ${i+1}`}
+                      {l.UnidadMedida && <span style={{ color:'#9ca3af', marginLeft:'4px', fontSize:'11px' }}>{l.UnidadMedida}</span>}
+                    </td>
+                    <td style={{ padding:'10px 14px', textAlign:'center', color:'#6b7280', fontWeight:600 }}>
+                      {l.Cantidad ?? l.cantidad ?? '-'}
+                    </td>
+                    <td style={{ padding:'8px 14px', textAlign:'center' }}>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={cantidades[i]}
+                        onChange={e => setCantidades(c => ({ ...c, [i]: e.target.value }))}
+                        style={{ width:'80px', padding:'6px 8px', border:'1px solid #d1d5db', borderRadius:'6px', fontSize:'13px', textAlign:'center' }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {error && (
+            <div style={{ background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:'8px', padding:'10px 14px', color:'#b91c1c', fontSize:'13px', marginBottom:'16px' }}>{error}</div>
+          )}
+
+          <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding:'10px 20px', borderRadius:'8px', border:'1px solid #d1d5db', background:'#fff', cursor:'pointer', fontSize:'14px' }}>Cancelar</button>
+            <button type="submit" disabled={saving} style={{ padding:'10px 20px', borderRadius:'8px', border:'none', background:'#16a34a', color:'#fff', cursor:'pointer', fontSize:'14px', fontWeight:700, opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Guardando...' : '✓ Confirmar recepción'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function OrdenesCompra({
   proveedores = [], unidadesNegocio = [], folio, ordenes = [],
   currentUser, currentUserRol, onCreateOrden, onApproveOrden, onRejectOrden, onDeleteOrden,
@@ -1257,6 +1347,7 @@ export default function OrdenesCompra({
 
   const isAdmin = currentUserRol === 'admin'
   const isAutorizador = currentUserRol === 'autorizador1' || currentUserRol === 'autorizador2'
+  const puedeRecepcionar = ['admin', 'jefe_mantenimiento', 'mantenimiento'].includes(currentUserRol)
 
   const [filtros, setFiltros] = useState({ texto:'', unidadNegocio:'', estado:'', tipo:'', fechaDesde:'', fechaHasta:'' })
   const hasFiltros = Object.values(filtros).some(Boolean)
@@ -1621,6 +1712,16 @@ export default function OrdenesCompra({
                                   </button>
                                 </>
                               )}
+                              {isAprobada && !order.Recepcionada && puedeRecepcionar && (
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '11px', padding: '4px 10px', color: '#16a34a', borderColor: '#bbf7d0', fontWeight: 700 }}
+                                  onClick={() => openModal('recepcion', order)}>
+                                  Recepción
+                                </button>
+                              )}
+                              {order.Recepcionada && (
+                                <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, padding: '4px 0' }}>✓ Recibida</span>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1878,6 +1979,16 @@ export default function OrdenesCompra({
                                 </button>
                               </>
                             )}
+                            {isAprobada && !order.Recepcionada && puedeRecepcionar && (
+                              <button type="button" className="ghost-button"
+                                style={{ fontSize:'11px', padding:'3px 8px', color:'#16a34a', borderColor:'#bbf7d0', fontWeight:700 }}
+                                onClick={() => openModal('recepcion', order)}>
+                                Recepción
+                              </button>
+                            )}
+                            {order.Recepcionada && (
+                              <span style={{ fontSize:'11px', color:'#16a34a', fontWeight:600, padding:'3px 0' }}>✓ Recibida</span>
+                            )}
                             {(isAdmin || isAutorizador) && (
                               <button type="button" className="ghost-button"
                                 style={{ fontSize:'11px', padding:'3px 8px', color:'#dc2626', borderColor:'#fecaca' }}
@@ -1910,6 +2021,9 @@ export default function OrdenesCompra({
       )}
       {modal?.type === 'evaluacion-servicios' && (
         <EvaluacionModal orden={modal.orden} tipoForzado="servicios" isAdmin={modal.isAdmin} isAutorizador={modal.isAutorizador} onClose={closeModal} onSuccess={handleModalSuccess} />
+      )}
+      {modal?.type === 'recepcion' && (
+        <RecepcionModal orden={modal.orden} currentUser={currentUser} onClose={closeModal} onSuccess={handleModalSuccess} />
       )}
     </div>
   )
