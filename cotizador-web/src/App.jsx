@@ -758,6 +758,7 @@ function App() {
                 <button type="button" className={`nav-link${activeView === 'clientes' ? ' active' : ''}`} onClick={() => handleNavClick('clientes')}>Empresas</button>
                 <button type="button" className={`nav-link${activeView === 'proveedores' ? ' active' : ''}`} onClick={() => handleNavClick('proveedores')}>Proveedores</button>
                 <button type="button" className={`nav-link${activeView === 'unidadesNegocio' ? ' active' : ''}`} onClick={() => handleNavClick('unidadesNegocio')}>Unidad de Negocio</button>
+                <button type="button" className={`nav-link${activeView === 'areasConsumo' ? ' active' : ''}`} onClick={() => handleNavClick('areasConsumo')}>Áreas de Consumo</button>
               </div>}
               {usuario?.rol === 'admin' && (
                 <div className="nav-section">
