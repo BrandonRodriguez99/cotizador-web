@@ -9,6 +9,8 @@ import {
   getAreasConsumo,
   getConsumos,
   registrarConsumo,
+  getOCsPendientesRecepcion,
+  registrarRecepcionOC,
 } from './api'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -390,6 +392,14 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   const [savingConsumo, setSavingConsumo] = useState(false)
   const [consumoError, setConsumoError] = useState(null)
 
+  // Recepción de OC
+  const [ocsPendientes, setOcsPendientes]       = useState([])
+  const [loadingOCs, setLoadingOCs]             = useState(false)
+  const [ocActiva, setOcActiva]                 = useState(null)   // OC seleccionada para checklist
+  const [recepcionCants, setRecepcionCants]     = useState({})     // { lineaId: cantidadRecibida }
+  const [savingRecepcion, setSavingRecepcion]   = useState(false)
+  const [recepcionError, setRecepcionError]     = useState(null)
+
   async function loadOrdenes() {
     setLoading(true)
     try { setOrdenes(await getOrdenesMantenimiento()) }
@@ -402,6 +412,41 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     catch {} finally { setLoadingConsumos(false) }
   }
 
+  async function loadOCsPendientes() {
+    setLoadingOCs(true)
+    try { setOcsPendientes(await getOCsPendientesRecepcion()) }
+    catch {} finally { setLoadingOCs(false) }
+  }
+
+  function seleccionarOC(oc) {
+    setOcActiva(oc)
+    setRecepcionError(null)
+    const cants = {}
+    for (const l of oc.Lineas) cants[l.OrdenCompraLineaId] = String(l.Cantidad ?? '')
+    setRecepcionCants(cants)
+  }
+
+  async function handleConfirmarRecepcion(e) {
+    e.preventDefault()
+    setRecepcionError(null)
+    setSavingRecepcion(true)
+    try {
+      const lineas = ocActiva.Lineas.map(l => ({
+        lineaId:          l.OrdenCompraLineaId,
+        productoId:       l.ProductoId || null,
+        cantidadRecibida: Number(recepcionCants[l.OrdenCompraLineaId]) || 0,
+      }))
+      await registrarRecepcionOC(ocActiva.OrdenCompraId, lineas, currentUser)
+      setOcActiva(null)
+      showSuccess(`Recepción de ${ocActiva.Folio} confirmada. Stock actualizado.`)
+      await loadOCsPendientes()
+    } catch (err) {
+      setRecepcionError(err?.message || 'Error al registrar recepción')
+    } finally {
+      setSavingRecepcion(false)
+    }
+  }
+
   useEffect(() => {
     getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
     getAreasConsumo().then(setAreasConsumo).catch(() => {})
@@ -410,6 +455,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   useEffect(() => {
     if (activeTab !== 'nueva') loadOrdenes()
     if (activeTab === 'consumos' || activeTab === 'historial_consumos') loadConsumos()
+    if (activeTab === 'recepcion_oc') loadOCsPendientes()
   }, [activeTab])
 
   function showSuccess(msg) {
@@ -464,6 +510,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     ...(puedeVerConsumos ? [
       { key: 'consumos',           label: 'Consumos' },
       { key: 'historial_consumos', label: 'Historial' },
+      { key: 'recepcion_oc',       label: 'Recepción OC' },
     ] : []),
   ]
 
@@ -964,6 +1011,95 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
                 </div>
               )
             }
+          </div>
+        )}
+
+        {/* ── RECEPCIÓN DE ÓRDENES DE COMPRA ── */}
+        {activeTab === 'recepcion_oc' && puedeVerConsumos && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: 0 }}>Órdenes pendientes de recepción</h3>
+              {loadingOCs && <span style={{ fontSize: '12px', color: '#9ca3af' }}>Cargando...</span>}
+            </div>
+
+            {!ocActiva ? (
+              ocsPendientes.length === 0 && !loadingOCs
+                ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>No hay órdenes aprobadas pendientes de recepción.</p>
+                : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {ocsPendientes.map(oc => (
+                      <div key={oc.OrdenCompraId} style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px 20px', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                        <div>
+                          <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: '14px', color: '#111827' }}>{oc.Folio}</p>
+                          <p style={{ margin: '0 0 2px', fontSize: '13px', color: '#6b7280' }}>{oc.Proveedor}</p>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>
+                            {String(oc.Fecha || '').slice(0,10)} · {oc.Lineas?.length || 0} artículo{oc.Lineas?.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <button type="button"
+                          onClick={() => seleccionarOC(oc)}
+                          style={{ padding: '10px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          Verificar llegada
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+            ) : (
+              <div style={{ maxWidth: '600px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                  <button type="button" onClick={() => { setOcActiva(null); setRecepcionError(null) }}
+                    style={{ background: 'none', border: '1px solid #d1d5db', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                    ← Volver
+                  </button>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '15px', color: '#111827' }}>{ocActiva.Folio} — {ocActiva.Proveedor}</p>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Confirma las cantidades que llegaron</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleConfirmarRecepcion}>
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: '#f9fafb' }}>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Artículo</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Pedido</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Recibido</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ocActiva.Lineas.map((l, i) => (
+                          <tr key={l.OrdenCompraLineaId} style={{ borderBottom: i < ocActiva.Lineas.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                            <td style={{ padding: '10px 14px', color: '#111827' }}>
+                              {l.NombreProducto || l.Descripcion || `Línea ${i+1}`}
+                              {l.UnidadMedida && <span style={{ color: '#9ca3af', marginLeft: '4px', fontSize: '11px' }}>{l.UnidadMedida}</span>}
+                            </td>
+                            <td style={{ padding: '10px 14px', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>{l.Cantidad}</td>
+                            <td style={{ padding: '8px 14px', textAlign: 'center' }}>
+                              <input type="number" min="0" step="0.01"
+                                value={recepcionCants[l.OrdenCompraLineaId] ?? ''}
+                                onChange={e => setRecepcionCants(c => ({ ...c, [l.OrdenCompraLineaId]: e.target.value }))}
+                                style={{ width: '80px', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', textAlign: 'center' }}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {recepcionError && (
+                    <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', color: '#b91c1c', fontSize: '13px', marginBottom: '14px' }}>{recepcionError}</div>
+                  )}
+
+                  <button type="submit" disabled={savingRecepcion}
+                    style={{ width: '100%', padding: '14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', opacity: savingRecepcion ? 0.7 : 1 }}>
+                    {savingRecepcion ? 'Confirmando...' : '✓ Confirmar recepción y actualizar inventario'}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         )}
       </section>

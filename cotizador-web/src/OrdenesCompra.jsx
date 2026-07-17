@@ -1347,7 +1347,7 @@ export default function OrdenesCompra({
 
   const isAdmin = currentUserRol === 'admin'
   const isAutorizador = currentUserRol === 'autorizador1' || currentUserRol === 'autorizador2'
-  const puedeRecepcionar = ['admin', 'jefe_mantenimiento', 'mantenimiento'].includes(currentUserRol)
+  const puedeRecepcionar = currentUserRol === 'admin'
 
   const [filtros, setFiltros] = useState({ texto:'', unidadNegocio:'', estado:'', tipo:'', fechaDesde:'', fechaHasta:'' })
   const hasFiltros = Object.values(filtros).some(Boolean)

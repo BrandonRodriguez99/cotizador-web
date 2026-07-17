@@ -432,6 +432,9 @@ export async function registrarRecepcionOC(id, lineas, recibidoPor) {
     body: JSON.stringify({ lineas, recibidoPor }),
   });
 }
+export async function getOCsPendientesRecepcion() {
+  return fetchJson('ordenescompra/pendientes-recepcion', { headers: authHeaders() });
+}
 
 // ─── Áreas de Consumo ─────────────────────────────────────────────────────────
 export async function getAreasConsumo() {
