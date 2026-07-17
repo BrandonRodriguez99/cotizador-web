@@ -1559,7 +1559,7 @@ export default function OrdenesCompra({
                 <tbody>
                   {form.LineItems.map((line) => (
                     <tr key={line.id}>
-                      <td><input className="form-control" type="number" min="0" step="0.01" value={line.Cantidad} onChange={(e) => updateLine(line.id, 'Cantidad', e.target.value)} /></td>
+                      <td><input className="form-control" type="number" min="0" step="any" value={line.Cantidad} onChange={(e) => updateLine(line.id, 'Cantidad', e.target.value)} /></td>
                       <td>
                         <DescripcionCell
                           line={line}
@@ -1577,7 +1577,7 @@ export default function OrdenesCompra({
                         />
                       </td>
                       <td><input className="form-control" type="text" value={line.UnidadMedida} onChange={(e) => updateLine(line.id, 'UnidadMedida', e.target.value)} placeholder="Ej. hrs, pza" readOnly={!!line.ProductoId} style={line.ProductoId ? { background: '#f0f0f0', cursor: 'not-allowed' } : {}} /></td>
-                      <td><input className="form-control" type="number" min="0" step="0.01" value={line.PrecioUnitario} onChange={(e) => updateLine(line.id, 'PrecioUnitario', e.target.value)} /></td>
+                      <td><input className="form-control" type="number" min="0" step="any" value={line.PrecioUnitario} onChange={(e) => updateLine(line.id, 'PrecioUnitario', e.target.value)} /></td>
                       <td>{formatMoney((Number(line.Cantidad) || 0) * (Number(line.PrecioUnitario) || 0))}</td>
                       <td><button className="ghost-button" type="button" onClick={() => removeLine(line.id)}>Eliminar</button></td>
                     </tr>
