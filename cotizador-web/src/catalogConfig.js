@@ -248,8 +248,6 @@ export const CATALOG_DEFINITIONS = {
       { name: 'Area', label: 'Área' },
     ],
   },
-}
-
   areasConsumo: {
     title: 'Áreas de Consumo',
     subtitle: 'Catálogo de áreas de destino para consumos de material de limpieza',
