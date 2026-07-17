@@ -27,6 +27,10 @@ import {
   createUnidadNegocio,
   updateUnidadNegocio,
   deleteUnidadNegocio,
+  getAreasConsumo,
+  createAreaConsumo,
+  updateAreaConsumo,
+  deleteAreaConsumo,
 } from './api'
 
 export const CATALOG_DEFINITIONS = {
@@ -242,6 +246,26 @@ export const CATALOG_DEFINITIONS = {
       { name: 'Nombre', label: 'Nombre de la unidad de negocio', required: true },
       { name: 'Responsable', label: 'Responsable' },
       { name: 'Area', label: 'Área' },
+    ],
+  },
+}
+
+  areasConsumo: {
+    title: 'Áreas de Consumo',
+    subtitle: 'Catálogo de áreas de destino para consumos de material de limpieza',
+    idField: 'AreaConsumoId',
+    fetch: getAreasConsumo,
+    create: createAreaConsumo,
+    update: updateAreaConsumo,
+    delete: deleteAreaConsumo,
+    columns: [
+      { header: 'ID', accessor: 'AreaConsumoId' },
+      { header: 'Nombre del área', accessor: 'Nombre' },
+      { header: 'Descripción', accessor: 'Descripcion' },
+    ],
+    fields: [
+      { name: 'Nombre', label: 'Nombre del área', required: true },
+      { name: 'Descripcion', label: 'Descripción', type: 'text' },
     ],
   },
 }
