@@ -1559,7 +1559,7 @@ export default function OrdenesCompra({
                 <tbody>
                   {form.LineItems.map((line) => (
                     <tr key={line.id}>
-                      <td><input className="form-control" type="number" min="0" value={line.Cantidad} onChange={(e) => updateLine(line.id, 'Cantidad', e.target.value)} /></td>
+                      <td><input className="form-control" type="number" min="0" step="0.01" value={line.Cantidad} onChange={(e) => updateLine(line.id, 'Cantidad', e.target.value)} /></td>
                       <td>
                         <DescripcionCell
                           line={line}
