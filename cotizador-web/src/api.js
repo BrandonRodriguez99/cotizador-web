@@ -313,6 +313,12 @@ export async function getOrdenesCompra() {
 export async function deleteOrdenCompra(id) {
   return fetchJson(`ordenescompra/${id}`, { method: 'DELETE', headers: authHeaders() });
 }
+export async function getOrdenCompraById(id) {
+  return fetchJson(`ordenescompra/${id}`, { headers: authHeaders() });
+}
+export async function updateOrdenCompra(id, data) {
+  return fetchJson(`ordenescompra/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) });
+}
 
 export async function createOrdenCompra(data) {
   return postJson('ordenescompra', data);

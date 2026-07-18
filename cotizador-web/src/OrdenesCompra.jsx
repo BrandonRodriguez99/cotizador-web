@@ -5,7 +5,7 @@ import {
   uploadFacturaArchivo, downloadFacturaArchivo,
   getSolicitudFondos, createSolicitudFondos, approveSolicitudFondos, getSolicitudesFondosPendientes,
   getEvaluacionProveedor, saveEvaluacionProveedor,
-  deleteOrdenCompra,
+  deleteOrdenCompra, getOrdenCompraById, updateOrdenCompra,
   getInventario,
   registrarRecepcionOC,
 } from './api'
@@ -1218,6 +1218,7 @@ export default function OrdenesCompra({
   const [sfPendientes, setSfPendientes] = useState([])
   const [sfActionError, setSfActionError] = useState(null)
   const [inventario, setInventario] = useState([])
+  const [editandoOCId, setEditandoOCId] = useState(null) // null = crear, number = editar
 
   useEffect(() => {
     getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
@@ -1299,9 +1300,18 @@ export default function OrdenesCompra({
     }
     try {
       setSaving(true)
-      await onCreateOrden(orderPayload)
-      setForm(emptyOrderForm(folio))
-      setActiveSection('misOrdenes')
+      if (editandoOCId) {
+        await updateOrdenCompra(editandoOCId, orderPayload)
+        setEditandoOCId(null)
+        setForm(emptyOrderForm(folio))
+        setSuccessMsg(`Orden ${orderPayload.Folio} actualizada. Volvió a flujo de autorización.`)
+        setTimeout(() => setSuccessMsg(null), 7000)
+        setActiveSection('historial')
+      } else {
+        await onCreateOrden(orderPayload)
+        setForm(emptyOrderForm(folio))
+        setActiveSection('misOrdenes')
+      }
     } catch (err) { setFormError(err?.message || 'No se pudo guardar la orden.') }
     finally { setSaving(false) }
   }
@@ -1383,6 +1393,35 @@ export default function OrdenesCompra({
     setModal(null)
     setSuccessMsg(msg)
     setTimeout(() => setSuccessMsg(null), 6000)
+  }
+
+  async function handleEditarOC(order) {
+    try {
+      const full = await getOrdenCompraById(order.OrdenCompraId)
+      setForm({
+        Folio: full.Folio || '',
+        UnidadNegocioId: String(full.UnidadNegocioId || ''),
+        ProveedorId: String(full.ProveedorId || ''),
+        Fecha: String(full.Fecha || '').slice(0, 10),
+        Tipo: full.Tipo || 'compras',
+        Destino: full.Destino || '',
+        Observaciones: full.Observaciones || '',
+        ConIva: Boolean(full.ConIva),
+        LineItems: (full.Lineas || []).map(l => ({
+          id: Math.random().toString(36).slice(2),
+          Descripcion: l.Descripcion || '',
+          Cantidad: l.Cantidad ?? '',
+          UnidadMedida: l.UnidadMedida || '',
+          PrecioUnitario: l.PrecioUnitario ?? '',
+          ProductoId: l.ProductoId || null,
+        })),
+      })
+      setEditandoOCId(full.OrdenCompraId)
+      setActiveSection('crear')
+      setFormError(null)
+    } catch (err) {
+      alert('No se pudo cargar la orden: ' + err.message)
+    }
   }
 
   async function handleDeleteOrden(order) {
@@ -1497,6 +1536,11 @@ export default function OrdenesCompra({
         {/* ── CREAR ── */}
         {activeSection === 'crear' && (
           <form onSubmit={handleSaveOrden} className="datos-generales-form">
+            {editandoOCId && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', color: '#92400e', fontSize: '13px', fontWeight: 500 }}>
+                ✏️ Modo edición — al guardar, las aprobaciones se reiniciarán y la orden volverá al flujo de autorización.
+              </div>
+            )}
             <div className="form-row form-row-4">
               <div className="form-field">
                 <span className="form-field-label">Folio automático</span>
@@ -1617,9 +1661,14 @@ export default function OrdenesCompra({
             </div>
 
             {formError && <div className="notification error">{formError}</div>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+              {editandoOCId && (
+                <button type="button" className="ghost-button" onClick={() => { setEditandoOCId(null); setForm(emptyOrderForm(folio)); setActiveSection('historial') }}>
+                  Cancelar edición
+                </button>
+              )}
               <button className="primary-button" type="submit" disabled={saving || saveDisabled}>
-                {saving ? 'Guardando...' : 'Guardar orden'}
+                {saving ? 'Guardando...' : editandoOCId ? '✓ Guardar cambios y re-autorizar' : 'Guardar orden'}
               </button>
             </div>
           </form>
@@ -1978,6 +2027,13 @@ export default function OrdenesCompra({
                                   Eval. Servicios
                                 </button>
                               </>
+                            )}
+                            {isAdmin && (
+                              <button type="button" className="ghost-button"
+                                style={{ fontSize:'11px', padding:'3px 8px', color:'#d97706', borderColor:'#fde68a', fontWeight:600 }}
+                                onClick={() => handleEditarOC(order)}>
+                                Editar
+                              </button>
                             )}
                             {isAprobada && !order.Recepcionada && puedeRecepcionar && (
                               <button type="button" className="ghost-button"
