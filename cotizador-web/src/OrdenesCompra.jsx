@@ -1761,6 +1761,13 @@ export default function OrdenesCompra({
                                   </button>
                                 </>
                               )}
+                              {(isAdmin || currentUserRol === 'jefe_mantenimiento') && (
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '11px', padding: '4px 10px', color: '#d97706', borderColor: '#fde68a', fontWeight: 600 }}
+                                  onClick={() => handleEditarOC(order)}>
+                                  Editar
+                                </button>
+                              )}
                               {isAprobada && !order.Recepcionada && puedeRecepcionar && (
                                 <button type="button" className="ghost-button"
                                   style={{ fontSize: '11px', padding: '4px 10px', color: '#16a34a', borderColor: '#bbf7d0', fontWeight: 700 }}
