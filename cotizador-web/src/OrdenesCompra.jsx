@@ -2028,7 +2028,7 @@ export default function OrdenesCompra({
                                 </button>
                               </>
                             )}
-                            {isAdmin && (
+                            {(isAdmin || currentUserRol === 'jefe_mantenimiento') && (
                               <button type="button" className="ghost-button"
                                 style={{ fontSize:'11px', padding:'3px 8px', color:'#d97706', borderColor:'#fde68a', fontWeight:600 }}
                                 onClick={() => handleEditarOC(order)}>
