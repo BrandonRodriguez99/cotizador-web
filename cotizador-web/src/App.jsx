@@ -306,6 +306,10 @@ function App() {
     await loadOrdenes()
   }
 
+  async function handleUpdateOrden() {
+    await loadOrdenes()
+  }
+
   async function handleDeleteOrden(id) {
     await deleteOrdenCompra(id)
     await loadOrdenes()
@@ -908,6 +912,7 @@ function App() {
             currentUserRol={usuario?.rol}
             folio={orderFolio}
             onCreateOrden={handleCreateOrden}
+            onUpdateOrden={handleUpdateOrden}
             onApproveOrden={handleApproveOrden}
             onRejectOrden={handleRejectOrden}
             onDeleteOrden={handleDeleteOrden}

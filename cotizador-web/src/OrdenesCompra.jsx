@@ -1203,7 +1203,7 @@ function RecepcionModal({ orden, currentUser, onClose, onSuccess }) {
 
 export default function OrdenesCompra({
   proveedores = [], unidadesNegocio = [], folio, ordenes = [],
-  currentUser, currentUserRol, onCreateOrden, onApproveOrden, onRejectOrden, onDeleteOrden,
+  currentUser, currentUserRol, onCreateOrden, onUpdateOrden, onApproveOrden, onRejectOrden, onDeleteOrden,
 }) {
   const rolApprover = ROLE_TO_APPROVER[currentUserRol] || null
   const [activeSection, setActiveSection] = useState('crear')
@@ -1306,6 +1306,7 @@ export default function OrdenesCompra({
         setForm(emptyOrderForm(folio))
         setSuccessMsg(`Orden ${orderPayload.Folio} actualizada. Volvió a flujo de autorización.`)
         setTimeout(() => setSuccessMsg(null), 7000)
+        if (onUpdateOrden) await onUpdateOrden()
         setActiveSection('historial')
       } else {
         await onCreateOrden(orderPayload)
