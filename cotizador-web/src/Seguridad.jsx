@@ -220,20 +220,16 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   }
 
   async function registrarSalida(id) {
-    console.log('[registrarSalida] id recibido:', id, '| tipo:', typeof id)
     try {
-      const res = await registrarSalidaVisita(id, {})
-      console.log('[registrarSalida] respuesta backend:', res)
+      await registrarSalidaVisita(id, {})
       const ahora = new Date().toISOString()
-      setVisitas(prev => {
-        const updated = prev.map(v => {
-          console.log('  comparando v.VisitaId:', v.VisitaId, '(', typeof v.VisitaId, ') === id:', id, '->', v.VisitaId === id)
-          return v.VisitaId === id ? { ...v, HoraSalida: ahora } : v
-        })
-        return updated
-      })
+      // Usar Number() para evitar mismatch string/número
+      setVisitas(prev => prev.map(v =>
+        Number(v.VisitaId) === Number(id) ? { ...v, HoraSalida: ahora } : v
+      ))
+      // Recargar desde servidor como respaldo
+      loadVisitas()
     } catch (e) {
-      console.error('[registrarSalida] error:', e)
       alert('Error al registrar salida: ' + e.message)
     }
   }
