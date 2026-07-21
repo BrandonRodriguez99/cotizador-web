@@ -73,8 +73,11 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
 
   // ─── DASHBOARD ─────────────────────────────────────────────────────────────
   const [dash, setDash] = useState(null)
+  const [dashError, setDashError] = useState(null)
   const loadDash = useCallback(async () => {
-    try { setDash(await getDashboardSeguridad()) } catch { /* ignore */ }
+    setDashError(null)
+    try { setDash(await getDashboardSeguridad()) }
+    catch (e) { setDashError(e?.message || 'Error al cargar el resumen') }
   }, [])
   useEffect(() => { if (tab === 'dashboard') loadDash() }, [tab, loadDash])
 
@@ -467,6 +470,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   </div>
                 ))}
               </div>
+            ) : dashError ? (
+              <p style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px' }}>
+                Error: {dashError}
+              </p>
             ) : (
               <p style={{ color: '#6b7280' }}>Cargando datos...</p>
             )}
@@ -1014,7 +1021,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             {/* Ver fotos si hay alguna */}
                             {(o.FotoSalidaFrontal || o.FotoLlegadaFrontal) && (
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }}
-                                onClick={() => setFotoModal(o)}>📷 Fotos</button>
+                                onClick={() => setFotoModal(o)}>Evidencia</button>
                             )}
                           </div>
                         </td>
