@@ -38,6 +38,7 @@ import OrdenesMantenimiento from './OrdenesMantenimiento'
 import Inventario from './Inventario'
 import Seguridad from './Seguridad'
 import SolicitudVehiculoPublica from './SolicitudVehiculoPublica'
+import RegistroVisitaPublica from './RegistroVisitaPublica'
 
 function App() {
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -668,6 +669,9 @@ function App() {
 
   if (window.location.pathname === '/solicitud-vehiculo') {
     return <SolicitudVehiculoPublica />
+  }
+  if (window.location.pathname === '/registrar-visita') {
+    return <RegistroVisitaPublica />
   }
 
   if (checkingAuth) {
