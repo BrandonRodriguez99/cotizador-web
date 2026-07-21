@@ -192,12 +192,13 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   }
 
   // ─── VISITAS ───────────────────────────────────────────────────────────────
-  const [visitas, setVisitas]       = useState([])
-  const [loadingV, setLoadingV]     = useState(false)
-  const [errorV, setErrorV]         = useState('')
-  const [visitaForm, setVisitaForm] = useState({})
-  const [nuevaVisita, setNuevaVisita] = useState(false)
+  const [visitas, setVisitas]           = useState([])
+  const [loadingV, setLoadingV]         = useState(false)
+  const [errorV, setErrorV]             = useState('')
+  const [visitaForm, setVisitaForm]     = useState({})
+  const [nuevaVisita, setNuevaVisita]   = useState(false)
   const [fechaVisitas, setFechaVisitas] = useState(new Date().toISOString().substring(0, 10))
+  const [confirmSalida, setConfirmSalida] = useState(null) // VisitaId pendiente de confirmar salida
 
   const loadVisitas = useCallback(async () => {
     setLoadingV(true); setErrorV('')
@@ -899,13 +900,24 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           {v.HoraSalida ? fmt(v.HoraSalida) : '● Adentro'}
                         </td>
                         <td>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            {!v.HoraSalida && (
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {!v.HoraSalida && confirmSalida === v.VisitaId ? (
+                              <>
+                                <button className="primary-button" style={{ padding: '4px 10px', fontSize: '12px', background: '#16a34a', borderColor: '#16a34a' }}
+                                  onClick={() => { registrarSalida(v.VisitaId); setConfirmSalida(null) }}>
+                                  Confirmar salida
+                                </button>
+                                <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
+                                  onClick={() => setConfirmSalida(null)}>
+                                  Cancelar
+                                </button>
+                              </>
+                            ) : !v.HoraSalida ? (
                               <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
-                                onClick={() => { if (window.confirm(`Registrar salida de ${v.NombreVisitante}?`)) registrarSalida(v.VisitaId) }}>
+                                onClick={() => setConfirmSalida(v.VisitaId)}>
                                 Registrar salida
                               </button>
-                            )}
+                            ) : null}
                             {(esAdmin || esJefeSeg) && (
                               <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
                                 onClick={() => eliminarVisita(v.VisitaId)}>Eliminar</button>
