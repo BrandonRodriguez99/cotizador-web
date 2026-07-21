@@ -221,8 +221,13 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   async function registrarSalida(id) {
     try {
       await registrarSalidaVisita(id, {})
-      await loadVisitas()
-    } catch (e) { alert('Error: ' + e.message) }
+      // Actualizar estado local inmediatamente para reflejar la salida
+      const ahora = new Date().toISOString()
+      setVisitas(prev => prev.map(v => v.VisitaId === id ? { ...v, HoraSalida: ahora } : v))
+    } catch (e) {
+      console.error('registrarSalida error:', e)
+      alert('Error al registrar salida: ' + e.message)
+    }
   }
 
   // ─── VEHÍCULOS ─────────────────────────────────────────────────────────────
@@ -349,8 +354,13 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
 
   async function eliminarVisita(id) {
     if (!window.confirm('¿Eliminar este registro de visita?')) return
-    try { await deleteVisita(id); await loadVisitas() }
-    catch (e) { alert('Error: ' + e.message) }
+    try {
+      await deleteVisita(id)
+      setVisitas(prev => prev.filter(v => v.VisitaId !== id))
+    } catch (e) {
+      console.error('eliminarVisita error:', e)
+      alert('Error al eliminar visita: ' + e.message)
+    }
   }
 
   async function eliminarOrdenV(id) {
