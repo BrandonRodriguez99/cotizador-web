@@ -5,6 +5,8 @@ import {
   getOrdenMantenimientoById,
   createOrdenMantenimiento,
   updateOrdenMantenimiento,
+  editOrdenMantenimiento,
+  deleteOrdenMantenimiento,
   getInventario,
   getAreasConsumo,
   getConsumos,
@@ -383,6 +385,17 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [pdfLoading, setPdfLoading]       = useState(null)
 
+  // Tab "todas" — búsqueda, filtros, paginación, editar, eliminar
+  const [todasSearch, setTodasSearch]         = useState('')
+  const [todasEstado, setTodasEstado]         = useState('')
+  const [todasPage, setTodasPage]             = useState(1)
+  const [editOrden, setEditOrden]             = useState(null)
+  const [editForm, setEditForm]               = useState({})
+  const [savingEdit, setSavingEdit]           = useState(false)
+  const [editError, setEditError]             = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deletingId, setDeletingId]           = useState(null)
+
   // Consumos de limpieza
   const [areasConsumo, setAreasConsumo] = useState([])
   const [consumos, setConsumos]         = useState([])
@@ -729,6 +742,50 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     finally { setPdfLoading(null) }
   }
 
+  function abrirEditarOrden(o) {
+    setEditOrden(o)
+    setEditForm({
+      Departamento:     o.Departamento     || '',
+      FechaReporte:     o.FechaReporte     ? String(o.FechaReporte).slice(0, 10) : '',
+      NombreSolicita:   o.NombreSolicita   || '',
+      Puesto:           o.Puesto           || '',
+      Equipo:           o.Equipo           || '',
+      Codigo:           o.Codigo           || '',
+      RazonOrden:       o.RazonOrden       || '',
+      DescripcionFalla: o.DescripcionFalla || '',
+      Estado:           o.Estado           || 'Pendiente',
+      TecnicoResponsable: o.TecnicoResponsable || '',
+    })
+    setEditError(null)
+  }
+
+  async function handleGuardarEdicion(e) {
+    e.preventDefault()
+    setSavingEdit(true)
+    setEditError(null)
+    try {
+      await editOrdenMantenimiento(editOrden.OrdenMantenimientoId, editForm)
+      setOrdenes(prev => prev.map(o =>
+        o.OrdenMantenimientoId === editOrden.OrdenMantenimientoId ? { ...o, ...editForm } : o
+      ))
+      setEditOrden(null)
+      showSuccess(`Orden ${editOrden.Folio} actualizada.`)
+    } catch (err) { setEditError(err.message) }
+    finally { setSavingEdit(false) }
+  }
+
+  async function handleDeleteOrden(id) {
+    setDeletingId(id)
+    try {
+      await deleteOrdenMantenimiento(id)
+      setOrdenes(prev => prev.filter(o => o.OrdenMantenimientoId !== id))
+      setConfirmDeleteId(null)
+      showSuccess('Orden eliminada correctamente.')
+    } catch (e) {
+      alert('Error al eliminar: ' + e.message)
+    } finally { setDeletingId(null) }
+  }
+
   // ── Tabla de órdenes ──────────────────────────────────────────────────────
   function OrdenTable({ lista }) {
     if (lista.length === 0) return (
@@ -891,11 +948,223 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
         )}
 
         {/* ── TODAS (ADMIN) ── */}
-        {activeTab === 'todas' && isAdmin && (
-          loading
-            ? <p style={{ color: '#9ca3af', padding: '24px 0' }}>Cargando...</p>
-            : <OrdenTable lista={ordenes} />
-        )}
+        {activeTab === 'todas' && isAdmin && (() => {
+          if (loading) return <p style={{ color: '#9ca3af', padding: '24px 0' }}>Cargando...</p>
+
+          const PAGE_SIZE = 10
+          const filtradas = ordenes.filter(o => {
+            const q = todasSearch.toLowerCase()
+            const matchSearch = !q ||
+              (o.Folio || '').toLowerCase().includes(q) ||
+              (o.Equipo || '').toLowerCase().includes(q) ||
+              (o.NombreSolicita || '').toLowerCase().includes(q) ||
+              (o.Departamento || '').toLowerCase().includes(q)
+            const matchEstado = !todasEstado || o.Estado === todasEstado
+            return matchSearch && matchEstado
+          })
+          const totalPages = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE))
+          const pagina = Math.min(todasPage, totalPages)
+          const paginadas = filtradas.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
+          const mInp = { width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: '#fff' }
+          const mLbl = { display: 'block', fontSize: '12px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }
+
+          return (
+            <div>
+              {/* Modal editar */}
+              {editOrden && (
+                <div
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+                  onClick={e => { if (e.target === e.currentTarget) setEditOrden(null) }}
+                >
+                  <div style={{ background: '#fff', borderRadius: '14px', padding: '24px', maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#111827' }}>Editar Orden</h3>
+                        <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#2563eb', fontWeight: 600 }}>{editOrden.Folio}</p>
+                      </div>
+                      <button type="button" onClick={() => setEditOrden(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#9ca3af', lineHeight: 1, padding: '4px' }}>×</button>
+                    </div>
+                    <form onSubmit={handleGuardarEdicion} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={mLbl}>Departamento</label>
+                          <input style={mInp} value={editForm.Departamento} onChange={e => setEditForm(f => ({ ...f, Departamento: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Fecha de Reporte</label>
+                          <input type="date" style={mInp} value={editForm.FechaReporte} onChange={e => setEditForm(f => ({ ...f, FechaReporte: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Quien solicita</label>
+                          <input style={mInp} value={editForm.NombreSolicita} onChange={e => setEditForm(f => ({ ...f, NombreSolicita: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Puesto</label>
+                          <input style={mInp} value={editForm.Puesto} onChange={e => setEditForm(f => ({ ...f, Puesto: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Equipo</label>
+                          <input style={mInp} value={editForm.Equipo} onChange={e => setEditForm(f => ({ ...f, Equipo: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Código</label>
+                          <input style={mInp} value={editForm.Codigo} onChange={e => setEditForm(f => ({ ...f, Codigo: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={mLbl}>Estado</label>
+                          <select style={mInp} value={editForm.Estado} onChange={e => setEditForm(f => ({ ...f, Estado: e.target.value }))}>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En proceso">En proceso</option>
+                            <option value="Completada">Completada</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={mLbl}>Razón de la Orden</label>
+                          <select style={mInp} value={editForm.RazonOrden} onChange={e => setEditForm(f => ({ ...f, RazonOrden: e.target.value }))}>
+                            <option value="">Seleccionar...</option>
+                            {RAZONES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={mLbl}>Descripción de la Falla</label>
+                        <textarea style={{ ...mInp, resize: 'vertical', minHeight: '80px' }} value={editForm.DescripcionFalla} onChange={e => setEditForm(f => ({ ...f, DescripcionFalla: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label style={mLbl}>Técnico Responsable</label>
+                        <input style={mInp} value={editForm.TecnicoResponsable} onChange={e => setEditForm(f => ({ ...f, TecnicoResponsable: e.target.value }))} />
+                      </div>
+                      {editError && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', color: '#b91c1c', fontSize: '13px' }}>{editError}</div>}
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid #f3f4f6' }}>
+                        <button type="button" onClick={() => setEditOrden(null)} style={{ padding: '10px 20px', background: '#f9fafb', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>Cancelar</button>
+                        <button type="submit" disabled={savingEdit} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, opacity: savingEdit ? 0.7 : 1 }}>
+                          {savingEdit ? 'Guardando...' : 'Guardar cambios'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Filtros */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  placeholder="Buscar por folio, equipo, solicitante, departamento..."
+                  value={todasSearch}
+                  onChange={e => { setTodasSearch(e.target.value); setTodasPage(1) }}
+                  style={{ flex: '1', minWidth: '200px', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px' }}
+                />
+                <select
+                  value={todasEstado}
+                  onChange={e => { setTodasEstado(e.target.value); setTodasPage(1) }}
+                  style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', background: '#fff' }}
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="En proceso">En proceso</option>
+                  <option value="Completada">Completada</option>
+                </select>
+                <span style={{ fontSize: '13px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                  {filtradas.length} resultado{filtradas.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {/* Tabla */}
+              {filtradas.length === 0 ? (
+                <p style={{ color: '#9ca3af', padding: '24px 0', textAlign: 'center' }}>Sin órdenes que coincidan.</p>
+              ) : (
+                <>
+                  <div className="table-wrap">
+                    <table className="participants-table">
+                      <thead>
+                        <tr>
+                          <th>Folio</th><th>Equipo</th><th>Razón</th>
+                          <th>Solicitante</th><th>Fecha</th><th>Estado</th><th>Técnico</th><th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginadas.map(o => (
+                          <tr key={o.OrdenMantenimientoId}>
+                            <td><strong style={{ color: '#2563eb' }}>{o.Folio}</strong></td>
+                            <td>{o.Equipo || '-'}</td>
+                            <td style={{ textTransform: 'capitalize' }}>{o.RazonOrden || '-'}</td>
+                            <td>{o.NombreSolicita || '-'}</td>
+                            <td>{fmtFecha(o.FechaReporte)}</td>
+                            <td><EstadoBadge estado={o.Estado} /></td>
+                            <td>{o.TecnicoResponsable || '-'}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '5px', flexWrap: 'nowrap' }}>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '12px', padding: '4px 8px' }}
+                                  onClick={() => generarPDFOrden(o.OrdenMantenimientoId)}
+                                  disabled={pdfLoading === o.OrdenMantenimientoId}>
+                                  {pdfLoading === o.OrdenMantenimientoId ? '...' : '📄'}
+                                </button>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '12px', padding: '4px 8px', color: '#2563eb', borderColor: '#bfdbfe' }}
+                                  onClick={() => abrirEditarOrden(o)}>
+                                  ✏️
+                                </button>
+                                {confirmDeleteId === o.OrdenMantenimientoId ? (
+                                  <>
+                                    <button type="button"
+                                      style={{ fontSize: '11px', padding: '4px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                      onClick={() => handleDeleteOrden(o.OrdenMantenimientoId)}
+                                      disabled={deletingId === o.OrdenMantenimientoId}>
+                                      {deletingId === o.OrdenMantenimientoId ? '...' : '¿Sí?'}
+                                    </button>
+                                    <button type="button" className="ghost-button"
+                                      style={{ fontSize: '12px', padding: '4px 8px' }}
+                                      onClick={() => setConfirmDeleteId(null)}>
+                                      ✕
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button type="button" className="ghost-button"
+                                    style={{ fontSize: '12px', padding: '4px 8px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                    onClick={() => setConfirmDeleteId(o.OrdenMantenimientoId)}>
+                                    🗑
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPages > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
+                      <button type="button" onClick={() => setTodasPage(1)} disabled={pagina === 1}
+                        style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: pagina === 1 ? 'default' : 'pointer', color: pagina === 1 ? '#9ca3af' : '#374151', fontSize: '12px' }}>
+                        «
+                      </button>
+                      <button type="button" onClick={() => setTodasPage(p => Math.max(1, p - 1))} disabled={pagina === 1}
+                        style={{ padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: pagina === 1 ? 'default' : 'pointer', color: pagina === 1 ? '#9ca3af' : '#374151', fontSize: '13px' }}>
+                        ← Anterior
+                      </button>
+                      <span style={{ fontSize: '13px', color: '#374151' }}>
+                        Pág. {pagina} / {totalPages}
+                      </span>
+                      <button type="button" onClick={() => setTodasPage(p => Math.min(totalPages, p + 1))} disabled={pagina === totalPages}
+                        style={{ padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: pagina === totalPages ? 'default' : 'pointer', color: pagina === totalPages ? '#9ca3af' : '#374151', fontSize: '13px' }}>
+                        Siguiente →
+                      </button>
+                      <button type="button" onClick={() => setTodasPage(totalPages)} disabled={pagina === totalPages}
+                        style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: pagina === totalPages ? 'default' : 'pointer', color: pagina === totalPages ? '#9ca3af' : '#374151', fontSize: '12px' }}>
+                        »
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        })()}
 
         {/* ── CONSUMOS DE LIMPIEZA ── */}
         {activeTab === 'consumos' && puedeVerConsumos && (() => {

@@ -568,6 +568,8 @@ export function getOrdenesMantenimiento() { return fetchJson('ordenes-mantenimie
 export function getOrdenMantenimientoById(id) { return fetchJson(`ordenes-mantenimiento/${id}`, { headers: authHeaders() }) }
 export function createOrdenMantenimiento(data) { return fetchJson('ordenes-mantenimiento', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function updateOrdenMantenimiento(id, data) { return fetchJson(`ordenes-mantenimiento/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function editOrdenMantenimiento(id, data) { return fetchJson(`ordenes-mantenimiento/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteOrdenMantenimiento(id) { return fetchJson(`ordenes-mantenimiento/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 
 // ── Inventario ────────────────────────────────────────────────────────────────
 export function getInventario() { return fetchJson('inventario', { headers: authHeaders() }) }
