@@ -510,6 +510,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   }
 
   const isAdmin = currentUserRol === 'admin'
+  const isJefe  = currentUserRol === 'jefe_mantenimiento'
   const misOrdenes = ordenes.filter(o => o.CreadoPor === currentUser)
   const pendientes = ordenes.filter(o => o.Estado !== 'Completada')
 
@@ -519,7 +520,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     { key: 'nueva',     label: 'Nueva Solicitud' },
     { key: 'mis',       label: `Mis Solicitudes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
     { key: 'completar', label: `Por Atender${pendientes.length ? ` (${pendientes.length})` : ''}` },
-    ...(isAdmin ? [{ key: 'todas', label: 'Todas las Órdenes' }] : []),
+    ...((isAdmin || isJefe) ? [{ key: 'todas', label: 'Todas las Órdenes' }] : []),
     ...(puedeVerConsumos ? [
       { key: 'consumos',           label: 'Consumos' },
       { key: 'historial_consumos', label: 'Historial' },
@@ -948,7 +949,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
         )}
 
         {/* ── TODAS (ADMIN) ── */}
-        {activeTab === 'todas' && isAdmin && (() => {
+        {activeTab === 'todas' && (isAdmin || isJefe) && (() => {
           if (loading) return <p style={{ color: '#9ca3af', padding: '24px 0' }}>Cargando...</p>
 
           const PAGE_SIZE = 10
@@ -1107,7 +1108,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
                                   onClick={() => abrirEditarOrden(o)}>
                                   ✏️
                                 </button>
-                                {confirmDeleteId === o.OrdenMantenimientoId ? (
+                                {isAdmin && (confirmDeleteId === o.OrdenMantenimientoId ? (
                                   <>
                                     <button type="button"
                                       style={{ fontSize: '11px', padding: '4px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
@@ -1127,7 +1128,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
                                     onClick={() => setConfirmDeleteId(o.OrdenMantenimientoId)}>
                                     🗑
                                   </button>
-                                )}
+                                ))}
                               </div>
                             </td>
                           </tr>
