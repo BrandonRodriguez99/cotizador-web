@@ -739,17 +739,13 @@ textarea.form-control {
   }
 }
 
-@media (max-width: 1140px) {
+/* ── Tablet grande y escritorio mediano (sidebar aún visible) ── */
+@media (max-width: 1140px) and (min-width: 1025px) {
   .main-view {
     padding: 24px 20px;
-    margin-left: var(--sidebar-width);
-    width: calc(100% - var(--sidebar-width));
   }
 
-  .form-row-4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+  .form-row-4,
   .form-row-5 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -765,7 +761,8 @@ textarea.form-control {
   }
 }
 
-@media (max-width: 768px) {
+/* ── Tablet (≤1024px): sidebar se oculta y puede abrirse con toggle ── */
+@media (max-width: 1024px) {
   .sidebar {
     transform: translateX(calc(-1 * var(--sidebar-width)));
   }
@@ -781,12 +778,39 @@ textarea.form-control {
   .main-view {
     margin-left: 0;
     width: 100%;
-    padding: 16px 16px 24px;
+    padding: 20px 20px 28px;
   }
 
   .page-header {
     align-items: center;
     gap: 10px;
+  }
+
+  .form-row-4,
+  .form-row-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .layout-grid,
+  .cotizacion-middle {
+    grid-template-columns: 1fr;
+  }
+
+  .participants-header-actions {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .summary-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+/* ── Móvil (≤640px): columna única, padding ajustado ── */
+@media (max-width: 640px) {
+  .main-view {
+    padding: 14px 14px 22px;
   }
 
   h1 {
@@ -796,11 +820,6 @@ textarea.form-control {
   .form-row-4,
   .form-row-5 {
     grid-template-columns: 1fr;
-  }
-
-  .summary-row {
-    flex-wrap: wrap;
-    gap: 6px;
   }
 
   .inline-input .form-control {
