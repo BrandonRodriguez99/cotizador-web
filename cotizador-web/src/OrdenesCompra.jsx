@@ -140,12 +140,16 @@ function FacturaModal({ orden, onClose, onSuccess }) {
     fechaFactura: new Date().toISOString().slice(0, 10),
     monto: orden.Total || '', observaciones: '',
   })
-  const [selectedFile, setSelectedFile] = useState(null)   // { name, base64, size }
-  const [uploadingFile, setUploadingFile] = useState(false)
+  // índice 0=slot1, 1=slot2, 2=slot3
+  const [selectedFiles, setSelectedFiles] = useState([null, null, null])
+  const [uploadingSlot, setUploadingSlot] = useState(null)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState(null)
-  const [fileError, setFileError] = useState(null)
-  const fileRef = useRef(null)
+  const [fileErrors, setFileErrors] = useState([null, null, null])
+  const fileRef1 = useRef(null)
+  const fileRef2 = useRef(null)
+  const fileRef3 = useRef(null)
+  const fileRefs = [fileRef1, fileRef2, fileRef3]
 
   useEffect(() => {
     getFacturaOrden(orden.OrdenCompraId)
@@ -163,62 +167,59 @@ function FacturaModal({ orden, onClose, onSuccess }) {
       .finally(() => setLoading(false))
   }, [orden.OrdenCompraId])
 
-  function handleFileChange(e) {
-    setFileError(null)
-    setSelectedFile(null)
+  function handleFileChange(idx, e) {
+    const newErrors = [...fileErrors]; newErrors[idx] = null; setFileErrors(newErrors)
+    const newFiles = [...selectedFiles]; newFiles[idx] = null; setSelectedFiles(newFiles)
     const file = e.target.files?.[0]
     if (!file) return
-
     const extOk = ALLOWED_EXT.some(ext => file.name.toLowerCase().endsWith(ext))
     if (!extOk) {
-      setFileError('Formato no permitido. Usa PDF, XML, JPG o PNG.')
-      e.target.value = ''
-      return
+      const errs = [...fileErrors]; errs[idx] = 'Formato no permitido. Usa PDF, XML, JPG o PNG.'; setFileErrors(errs)
+      e.target.value = ''; return
     }
     if (file.size > 20 * 1024 * 1024) {
-      setFileError('El archivo supera el límite de 20 MB.')
-      e.target.value = ''
-      return
+      const errs = [...fileErrors]; errs[idx] = 'El archivo supera el límite de 20 MB.'; setFileErrors(errs)
+      e.target.value = ''; return
     }
-
     const reader = new FileReader()
-    reader.onload = () => setSelectedFile({ name: file.name, base64: reader.result, size: file.size })
+    reader.onload = () => {
+      setSelectedFiles(prev => { const n = [...prev]; n[idx] = { name: file.name, base64: reader.result, size: file.size }; return n })
+    }
     reader.readAsDataURL(file)
+  }
+
+  function clearFile(idx) {
+    setSelectedFiles(prev => { const n = [...prev]; n[idx] = null; return n })
+    if (fileRefs[idx].current) fileRefs[idx].current.value = ''
   }
 
   async function handleSave(e) {
     e.preventDefault()
     setError(null)
-
     try {
       setSaving(true)
       await saveFacturaOrden(orden.OrdenCompraId, form)
-
-      if (selectedFile) {
-        setUploadingFile(true)
-        await uploadFacturaArchivo(orden.OrdenCompraId, selectedFile.base64, selectedFile.name)
-        setUploadingFile(false)
+      for (let i = 0; i < 3; i++) {
+        if (selectedFiles[i]) {
+          setUploadingSlot(i + 1)
+          await uploadFacturaArchivo(orden.OrdenCompraId, selectedFiles[i].base64, selectedFiles[i].name, i + 1)
+        }
       }
-
-      onSuccess(
-        selectedFile
-          ? `Factura y archivo "${selectedFile.name}" guardados correctamente.`
-          : 'Factura guardada correctamente.'
-      )
+      setUploadingSlot(null)
+      onSuccess('Factura guardada correctamente.')
     } catch (err) {
-      setUploadingFile(false)
+      setUploadingSlot(null)
       setError(err.message)
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleDownload() {
-    setFileError(null)
+  async function handleDownload(slot, nombre) {
     try {
-      await downloadFacturaArchivo(orden.OrdenCompraId, existing?.ArchivoNombre)
+      await downloadFacturaArchivo(orden.OrdenCompraId, nombre, slot)
     } catch (err) {
-      setFileError(err.message)
+      setError(err.message)
     }
   }
 
@@ -228,19 +229,21 @@ function FacturaModal({ orden, onClose, onSuccess }) {
     </Modal>
   )
 
-  const savingLabel = uploadingFile ? 'Subiendo archivo...' : saving ? 'Guardando...' : existing ? 'Actualizar factura' : 'Guardar factura'
+  const existingNames = [existing?.ArchivoNombre, existing?.Archivo2Nombre, existing?.Archivo3Nombre]
+  const savingLabel = uploadingSlot
+    ? `Subiendo archivo ${uploadingSlot}...`
+    : saving ? 'Guardando...' : existing ? 'Actualizar factura' : 'Guardar factura'
 
   return (
-    <Modal title={`Factura — ${orden.Folio}`} onClose={onClose} width={560}>
+    <Modal title={`Factura — ${orden.Folio}`} onClose={onClose} width={580}>
       {existing && (
         <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: '#1d4ed8' }}>
-          Factura ya registrada. Puedes actualizar los datos o reemplazar el archivo.
+          Factura ya registrada. Puedes actualizar los datos o reemplazar los archivos.
         </div>
       )}
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-        {/* Datos de la factura */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>Número de factura</label>
@@ -272,86 +275,72 @@ function FacturaModal({ orden, onClose, onSuccess }) {
             placeholder="Notas sobre la factura" />
         </div>
 
-        {/* ── Archivo adjunto ── */}
-        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '14px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
-            Archivo de factura <span style={{ color: '#9ca3af', fontWeight: 400 }}>(PDF, XML, JPG, PNG · máx. 20 MB)</span>
-          </label>
-
-          {/* Archivo actual en BD */}
-          {existing?.ArchivoNombre && !selectedFile && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              background: '#f0fdf4', border: '1px solid #bbf7d0',
-              borderRadius: '10px', padding: '10px 14px', marginBottom: '10px',
-            }}>
-              <span style={{ fontSize: '20px' }}>{fileIcon(existing.ArchivoNombre)}</span>
-              <span style={{ flex: 1, fontSize: '13px', color: '#15803d', fontWeight: 500, wordBreak: 'break-all' }}>
-                {existing.ArchivoNombre}
-              </span>
-              <button type="button" onClick={handleDownload}
-                style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '8px', background: '#16a34a', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                Descargar
-              </button>
-            </div>
-          )}
-
-          {/* Archivo recién seleccionado */}
-          {selectedFile && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              background: '#eff6ff', border: '1px solid #bfdbfe',
-              borderRadius: '10px', padding: '10px 14px', marginBottom: '10px',
-            }}>
-              <span style={{ fontSize: '20px' }}>{fileIcon(selectedFile.name)}</span>
-              <span style={{ flex: 1, fontSize: '13px', color: '#1d4ed8', fontWeight: 500, wordBreak: 'break-all' }}>
-                {selectedFile.name}
-              </span>
-              <span style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap' }}>
-                {(selectedFile.size / 1024).toFixed(0)} KB
-              </span>
-              <button type="button" onClick={() => { setSelectedFile(null); if (fileRef.current) fileRef.current.value = '' }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '16px', lineHeight: 1 }}>
-                ×
-              </button>
-            </div>
-          )}
-
-          {/* Input de archivo */}
-          <div style={{ position: 'relative' }}>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".pdf,.xml,.jpg,.jpeg,.png"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-              id="factura-file-input"
-            />
-            <label htmlFor="factura-file-input" style={{
-              display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-              padding: '10px 16px', border: '1.5px dashed #d1d5db', borderRadius: '10px',
-              background: '#fafafa', fontSize: '13px', color: '#6b7280', transition: 'border-color 0.2s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}
-            >
-              <span style={{ fontSize: '18px' }}>📎</span>
-              {existing?.ArchivoNombre
-                ? 'Seleccionar nuevo archivo para reemplazar'
-                : 'Seleccionar archivo de factura'}
-            </label>
+        {/* ── Archivos (3 slots) ── */}
+        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>
+            Archivos de factura <span style={{ color: '#9ca3af', fontWeight: 400 }}>(PDF, XML, JPG, PNG · máx. 20 MB c/u)</span>
           </div>
+          {[0, 1, 2].map(idx => {
+            const slot = idx + 1
+            const existNombre = existingNames[idx]
+            const selFile = selectedFiles[idx]
+            const inputId = `factura-file-input-${slot}`
+            return (
+              <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', background: '#fafafa' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Archivo {slot}
+                </div>
 
-          {fileError && (
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#b91c1c' }}>{fileError}</p>
-          )}
+                {/* Archivo guardado en BD */}
+                {existNombre && !selFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '8px 10px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>{fileIcon(existNombre)}</span>
+                    <span style={{ flex: 1, fontSize: '12px', color: '#15803d', fontWeight: 500, wordBreak: 'break-all' }}>{existNombre}</span>
+                    <button type="button" onClick={() => handleDownload(slot, existNombre)}
+                      style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '6px', background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Descargar
+                    </button>
+                  </div>
+                )}
+
+                {/* Archivo recién seleccionado */}
+                {selFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>{fileIcon(selFile.name)}</span>
+                    <span style={{ flex: 1, fontSize: '12px', color: '#1d4ed8', fontWeight: 500, wordBreak: 'break-all' }}>{selFile.name}</span>
+                    <span style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap' }}>{(selFile.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" onClick={() => clearFile(idx)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '16px', lineHeight: 1 }}>×</button>
+                  </div>
+                )}
+
+                {/* Input de archivo */}
+                <input ref={fileRefs[idx]} type="file" accept=".pdf,.xml,.jpg,.jpeg,.png"
+                  onChange={e => handleFileChange(idx, e)} style={{ display: 'none' }} id={inputId} />
+                <label htmlFor={inputId} style={{
+                  display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
+                  padding: '7px 12px', border: '1.5px dashed #d1d5db', borderRadius: '8px',
+                  background: '#fff', fontSize: '12px', color: '#6b7280',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}>
+                  <span>📎</span>
+                  {existNombre ? 'Reemplazar archivo' : 'Seleccionar archivo'}
+                </label>
+
+                {fileErrors[idx] && (
+                  <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#b91c1c' }}>{fileErrors[idx]}</p>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {error && <div className="notification error">{error}</div>}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <button type="button" className="secondary-button" onClick={onClose}>Cancelar</button>
-          <button type="submit" className="primary-button" disabled={saving || uploadingFile}>
+          <button type="submit" className="primary-button" disabled={saving || uploadingSlot !== null}>
             {savingLabel}
           </button>
         </div>
@@ -1767,7 +1756,7 @@ export default function OrdenesCompra({
                                   </button>
                                 </>
                               )}
-                              {(isAdmin || (currentUserRol === 'jefe_mantenimiento' && !aprobadaPorAdministracion(order))) && (
+                              {isAdmin && (
                                 <button type="button" className="ghost-button"
                                   style={{ fontSize: '11px', padding: '4px 10px', color: '#d97706', borderColor: '#fde68a', fontWeight: 600 }}
                                   onClick={() => handleEditarOC(order)}>
@@ -2041,7 +2030,7 @@ export default function OrdenesCompra({
                                 </button>
                               </>
                             )}
-                            {(isAdmin || currentUserRol === 'jefe_mantenimiento') && (
+                            {isAdmin && (
                               <button type="button" className="ghost-button"
                                 style={{ fontSize:'11px', padding:'3px 8px', color:'#d97706', borderColor:'#fde68a', fontWeight:600 }}
                                 onClick={() => handleEditarOC(order)}>

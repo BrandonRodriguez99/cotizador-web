@@ -351,17 +351,17 @@ export async function saveFacturaOrden(id, data) {
   });
 }
 
-export async function uploadFacturaArchivo(id, archivoBase64, archivoNombre) {
-  return fetchJson(`ordenescompra/${id}/factura/archivo`, {
+export async function uploadFacturaArchivo(id, archivoBase64, archivoNombre, slot = 1) {
+  return fetchJson(`ordenescompra/${id}/factura/archivo?slot=${slot}`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ archivoBase64, archivoNombre }),
   });
 }
 
-export async function downloadFacturaArchivo(id, nombreOriginal) {
+export async function downloadFacturaArchivo(id, nombreOriginal, slot = 1) {
   const token = getToken();
-  const response = await fetch(`${API_BASE_URL}/ordenescompra/${id}/factura/archivo`, {
+  const response = await fetch(`${API_BASE_URL}/ordenescompra/${id}/factura/archivo?slot=${slot}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!response.ok) throw new Error('No se pudo descargar el archivo');
