@@ -49,6 +49,11 @@ function StatusBadge({ status }) {
 const APPROVER_OPTIONS = ['Administración', 'Secretaría Académica']
 const ROLE_TO_APPROVER = { autorizador1: 'Administración', autorizador2: 'Secretaría Académica' }
 
+function aprobadaPorAdministracion(order) {
+  const aprobaciones = order.aprobaciones || order.Aprobaciones || []
+  return aprobaciones.some(a => (a.step ?? a.Paso) === 1 && Boolean(a.aprobado ?? a.Aprobado))
+}
+
 // ── Criterios de evaluación ────────────────────────────────────────────────────
 const EVAL_CRITERIOS = {
   compras: [
@@ -1762,7 +1767,7 @@ export default function OrdenesCompra({
                                   </button>
                                 </>
                               )}
-                              {(isAdmin || currentUserRol === 'jefe_mantenimiento') && (
+                              {(isAdmin || (currentUserRol === 'jefe_mantenimiento' && !aprobadaPorAdministracion(order))) && (
                                 <button type="button" className="ghost-button"
                                   style={{ fontSize: '11px', padding: '4px 10px', color: '#d97706', borderColor: '#fde68a', fontWeight: 600 }}
                                   onClick={() => handleEditarOC(order)}>
