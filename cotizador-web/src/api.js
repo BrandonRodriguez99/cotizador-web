@@ -682,3 +682,6 @@ export async function descargarDocumentoProveedor(solicitudId, docId, nombre) {
 export function eliminarDocumentoProveedor(solicitudId, docId) {
   return fetchJson(`solicitudes-proveedor/${solicitudId}/documentos/${docId}`, { method:'DELETE', headers:authHeaders() })
 }
+export function eliminarSolicitudProveedor(id) {
+  return fetchJson(`solicitudes-proveedor/${id}`, { method:'DELETE', headers:authHeaders() })
+}
