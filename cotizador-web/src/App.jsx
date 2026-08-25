@@ -37,6 +37,7 @@ import Inicio from './Inicio'
 import OrdenesMantenimiento from './OrdenesMantenimiento'
 import Inventario from './Inventario'
 import Seguridad from './Seguridad'
+import RegistroProveedores from './RegistroProveedores'
 import SolicitudVehiculoPublica from './SolicitudVehiculoPublica'
 import RegistroVisitaPublica from './RegistroVisitaPublica'
 
@@ -642,7 +643,9 @@ function App() {
                       ? 'Módulo de Seguridad'
                       : activeView === 'vehiculos'
                         ? 'Vehículos'
-                        : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                        : activeView === 'registroProveedores'
+                          ? 'Registro de Proveedores'
+                          : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -745,6 +748,9 @@ function App() {
                   </button>
                   <button type="button" className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`} onClick={() => handleNavClick('ordenesCompra')}>
                     Ordenes de Compra
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'registroProveedores' ? ' active' : ''}`} onClick={() => handleNavClick('registroProveedores')}>
+                    Registro de Proveedores
                   </button>
                   <button type="button" className={`nav-link${activeView === 'cotizacion' ? ' active' : ''}`} onClick={() => handleNavClick('cotizacion')}>
                     Nueva Cotización
@@ -949,6 +955,8 @@ function App() {
             </div>
             <Inventario isAdmin={usuario?.rol === 'admin'} />
           </section>
+        ) : activeView === 'registroProveedores' ? (
+          <RegistroProveedores currentUser={usuario?.nombre} currentUserRol={usuario?.rol} />
         ) : activeView === 'seguridad' ? (
           <Seguridad usuario={usuario} />
         ) : activeView === 'vehiculos' ? (

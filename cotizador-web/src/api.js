@@ -656,3 +656,29 @@ function buildReporteUrl(tipo, { desde, hasta } = {}) {
 export function getReporteOC(filtros)     { return fetchJson(buildReporteUrl('ordenes-compra', filtros),     { headers: authHeaders() }) }
 export function getReporteSF(filtros)     { return fetchJson(buildReporteUrl('solicitudes-fondos', filtros), { headers: authHeaders() }) }
 export function getReporteEval(filtros)   { return fetchJson(buildReporteUrl('evaluaciones', filtros),       { headers: authHeaders() }) }
+
+// ─── Registro de Proveedores ──────────────────────────────────────────────────
+export function getSolicitudesProveedor()          { return fetchJson('solicitudes-proveedor', { headers: authHeaders() }) }
+export function getSolicitudProveedorById(id)      { return fetchJson(`solicitudes-proveedor/${id}`, { headers: authHeaders() }) }
+export function createSolicitudProveedor(data)     { return fetchJson('solicitudes-proveedor', { method:'POST', headers:authHeaders(), body:JSON.stringify(data) }) }
+export function updateSolicitudProveedor(id, data) { return fetchJson(`solicitudes-proveedor/${id}`, { method:'PUT', headers:authHeaders(), body:JSON.stringify(data) }) }
+export function enviarSolicitudProveedor(id)       { return fetchJson(`solicitudes-proveedor/${id}/enviar`, { method:'POST', headers:authHeaders() }) }
+export function aprobarSolicitudProveedor(id)      { return fetchJson(`solicitudes-proveedor/${id}/aprobar`, { method:'POST', headers:authHeaders() }) }
+export function rechazarSolicitudProveedor(id, motivo) { return fetchJson(`solicitudes-proveedor/${id}/rechazar`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ motivo }) }) }
+export function subirDocumentoProveedor(id, tipoDocumento, archivoBase64, archivoNombre) {
+  return fetchJson(`solicitudes-proveedor/${id}/documentos`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ tipoDocumento, archivoBase64, archivoNombre }) })
+}
+export async function descargarDocumentoProveedor(solicitudId, docId, nombre) {
+  const token = getToken();
+  const response = await fetch(`${API_BASE_URL}/solicitudes-proveedor/${solicitudId}/documentos/${docId}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) throw new Error('No se pudo descargar');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = nombre || 'documento';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+export function eliminarDocumentoProveedor(solicitudId, docId) {
+  return fetchJson(`solicitudes-proveedor/${solicitudId}/documentos/${docId}`, { method:'DELETE', headers:authHeaders() })
+}
