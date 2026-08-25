@@ -854,9 +854,11 @@ function App() {
                 <h2>{activeCatalogDefinition.title}</h2>
                 <p style={{ margin: '8px 0 0', color: '#6b7280' }}>{activeCatalogDefinition.subtitle}</p>
               </div>
-              <button className="ghost-button" type="button" onClick={() => openCatalogModal()}>
-                Nuevo registro
-              </button>
+              {(activeView !== 'proveedores' || usuario?.rol === 'admin') && (
+                <button className="ghost-button" type="button" onClick={() => openCatalogModal()}>
+                  Nuevo registro
+                </button>
+              )}
             </div>
             <div className="table-wrap">
               <table className="participants-table">
@@ -885,7 +887,7 @@ function App() {
                         ))}
                         {hasCatalogActions && (
                           <td>
-                            {activeCatalogDefinition.update && (
+                            {activeCatalogDefinition.update && (activeView !== 'proveedores' || usuario?.rol === 'admin') && (
                               <button
                                 type="button"
                                 className="ghost-button"
@@ -894,7 +896,7 @@ function App() {
                                 Editar
                               </button>
                             )}
-                            {activeCatalogDefinition.delete && (
+                            {activeCatalogDefinition.delete && (activeView !== 'proveedores' || usuario?.rol === 'admin') && (
                               <button
                                 type="button"
                                 className="secondary-button"
