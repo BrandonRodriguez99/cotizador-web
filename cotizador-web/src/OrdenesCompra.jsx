@@ -851,8 +851,8 @@ function EvaluacionModal({ orden, tipoForzado, isAdmin, isAutorizador = false, o
           <div style={{ borderLeft: '2px solid #d1d5db', padding: '8px 12px', fontSize: '11px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: '2px' }}>
               <span style={{ color: '#6b7280' }}>No.</span><span style={{ fontWeight: 700 }}>FGA02-01</span>
-              <span style={{ color: '#6b7280' }}>Rev.</span><span>2</span>
-              <span style={{ color: '#6b7280' }}>Fecha.</span><span>20-Mar-2020</span>
+              <span style={{ color: '#6b7280' }}>Rev.</span><span>5</span>
+              <span style={{ color: '#6b7280' }}>Fecha.</span><span>10-Ago-2026</span>
             </div>
           </div>
         </div>
