@@ -537,7 +537,7 @@ export default function RegistroProveedores({ currentUser, currentUserRol }) {
                               Rechazar
                             </button>
                           </>)}
-                          {currentUserRol === 'admin' && sol.Estado === 'borrador' && (
+                          {currentUserRol === 'admin' && (
                             <button type="button" onClick={() => handleEliminar(sol.SolicitudId)}
                               style={{ fontSize:'11px', padding:'3px 10px', borderRadius:'6px', background:'#fee2e2', color:'#b91c1c', border:'1px solid #fca5a5', cursor:'pointer', fontWeight:600 }}>
                               Eliminar
