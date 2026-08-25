@@ -644,3 +644,15 @@ export function deleteOrdenVehiculo(id) { return fetchJson(`seguridad/ordenes-ve
 export function getDashboardSeguridad() { return fetchJson('seguridad/dashboard', { headers: authHeaders() }) }
 
 export function uploadFotoRondin(base64) { return uploadToCloudinary(base64, 'rondines') }
+
+// ─── Reportes ─────────────────────────────────────────────────────────────────
+function buildReporteUrl(tipo, { desde, hasta } = {}) {
+  const q = new URLSearchParams()
+  if (desde) q.set('desde', desde)
+  if (hasta) q.set('hasta', hasta)
+  const qs = q.toString()
+  return `reportes/${tipo}${qs ? '?' + qs : ''}`
+}
+export function getReporteOC(filtros)     { return fetchJson(buildReporteUrl('ordenes-compra', filtros),     { headers: authHeaders() }) }
+export function getReporteSF(filtros)     { return fetchJson(buildReporteUrl('solicitudes-fondos', filtros), { headers: authHeaders() }) }
+export function getReporteEval(filtros)   { return fetchJson(buildReporteUrl('evaluaciones', filtros),       { headers: authHeaders() }) }

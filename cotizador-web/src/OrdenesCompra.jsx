@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import {
   downloadOrdenCompraPdf, downloadSolicitudFondosPdf,
   getFacturaOrden, saveFacturaOrden,
@@ -8,6 +9,7 @@ import {
   deleteOrdenCompra, getOrdenCompraById, updateOrdenCompra,
   getInventario,
   registrarRecepcionOC,
+  getReporteOC, getReporteSF, getReporteEval,
 } from './api'
 
 function formatMoney(value) {
@@ -1195,6 +1197,183 @@ function RecepcionModal({ orden, currentUser, onClose, onSuccess }) {
   )
 }
 
+// ── Reportes ──────────────────────────────────────────────────────────────────
+const REPORTE_TIPOS = [
+  { key: 'ordenes-compra',      label: 'Órdenes de Compra' },
+  { key: 'solicitudes-fondos',  label: 'Solicitudes de Fondos' },
+  { key: 'evaluaciones',        label: 'Evaluaciones a Proveedores' },
+]
+
+const REPORTE_COLS = {
+  'ordenes-compra': [
+    { field: 'Folio',          header: 'Folio' },
+    { field: 'Proveedor',      header: 'Proveedor' },
+    { field: 'Tipo',           header: 'Tipo' },
+    { field: 'UnidadNegocio',  header: 'Unidad de Negocio' },
+    { field: 'Destino',        header: 'Destino' },
+    { field: 'Creador',        header: 'Creado por' },
+    { field: 'Fecha',          header: 'Fecha' },
+    { field: 'Subtotal',       header: 'Subtotal' },
+    { field: 'Iva',            header: 'IVA' },
+    { field: 'Total',          header: 'Total' },
+    { field: 'Estado',         header: 'Estado' },
+    { field: 'Observaciones',  header: 'Observaciones' },
+  ],
+  'solicitudes-fondos': [
+    { field: 'Folio',             header: 'Folio SF' },
+    { field: 'FolioOC',           header: 'Folio OC' },
+    { field: 'Proveedor',         header: 'Proveedor' },
+    { field: 'Monto',             header: 'Monto' },
+    { field: 'Concepto',          header: 'Concepto' },
+    { field: 'FormaPago',         header: 'Forma de pago' },
+    { field: 'Moneda',            header: 'Moneda' },
+    { field: 'EntregarA',         header: 'Entregar a' },
+    { field: 'CreadoPor',         header: 'Creado por' },
+    { field: 'FechaCreacion',     header: 'Fecha creación' },
+    { field: 'Estado',            header: 'Estado' },
+    { field: 'AprobadoPor1',      header: 'Aprobado por (Admin)' },
+    { field: 'FechaAprobacion1',  header: 'Fecha aprobación' },
+  ],
+  'evaluaciones': [
+    { field: 'FolioOC',          header: 'Folio OC' },
+    { field: 'Proveedor',        header: 'Proveedor' },
+    { field: 'Tipo',             header: 'Tipo' },
+    { field: 'Departamento',     header: 'Departamento' },
+    { field: 'PuntajeCalidad',   header: 'Calidad' },
+    { field: 'PuntajeTiempos',   header: 'Tiempos' },
+    { field: 'PuntajeCantidad',  header: 'Cantidad' },
+    { field: 'PuntajePosventa',  header: 'Posventa' },
+    { field: 'PuntajeTotal',     header: 'Puntaje Total' },
+    { field: 'Evaluador',        header: 'Evaluador' },
+    { field: 'FechaEvaluacion',  header: 'Fecha' },
+    { field: 'Observaciones',    header: 'Observaciones' },
+  ],
+}
+
+function ReportesPanel() {
+  const [tipo, setTipo]           = useState('ordenes-compra')
+  const [desde, setDesde]         = useState('')
+  const [hasta, setHasta]         = useState('')
+  const [datos, setDatos]         = useState([])
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState(null)
+  const [buscado, setBuscado]     = useState(false)
+
+  const cols = REPORTE_COLS[tipo] || []
+
+  async function consultar() {
+    setError(null)
+    setLoading(true)
+    setBuscado(false)
+    try {
+      const filtros = { desde: desde || undefined, hasta: hasta || undefined }
+      let data
+      if (tipo === 'ordenes-compra')     data = await getReporteOC(filtros)
+      else if (tipo === 'solicitudes-fondos') data = await getReporteSF(filtros)
+      else                               data = await getReporteEval(filtros)
+      setDatos(data || [])
+      setBuscado(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function exportarExcel() {
+    if (!datos.length) return
+    const tipoLabel = REPORTE_TIPOS.find(t => t.key === tipo)?.label || tipo
+    const ws = XLSX.utils.json_to_sheet(
+      datos.map(row => {
+        const obj = {}
+        cols.forEach(c => { obj[c.header] = row[c.field] ?? '' })
+        return obj
+      })
+    )
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, tipoLabel.slice(0, 31))
+    const fecha = new Date().toISOString().slice(0, 10)
+    XLSX.writeFile(wb, `Reporte_${tipoLabel.replace(/\s+/g, '_')}_${fecha}.xlsx`)
+  }
+
+  return (
+    <div style={{ padding: '4px 0' }}>
+      {/* Filtros */}
+      <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end', marginBottom: '16px' }}>
+        <div style={{ flex: '2 1 180px' }}>
+          <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Módulo</span>
+          <select className="form-control" value={tipo} onChange={e => { setTipo(e.target.value); setDatos([]); setBuscado(false) }} style={{ fontSize: '13px' }}>
+            {REPORTE_TIPOS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: '1 1 130px' }}>
+          <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Desde</span>
+          <input className="form-control" type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ fontSize: '13px' }} />
+        </div>
+        <div style={{ flex: '1 1 130px' }}>
+          <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Hasta</span>
+          <input className="form-control" type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={{ fontSize: '13px' }} />
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+          <button type="button" className="primary-button" onClick={consultar} disabled={loading} style={{ fontSize: '13px', padding: '8px 18px' }}>
+            {loading ? 'Consultando...' : 'Consultar'}
+          </button>
+          {buscado && datos.length > 0 && (
+            <button type="button" className="ghost-button" onClick={exportarExcel} style={{ fontSize: '13px', padding: '8px 14px', color: '#15803d', borderColor: '#bbf7d0' }}>
+              Exportar Excel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', color: '#b91c1c', fontSize: '13px', marginBottom: '12px' }}>{error}</div>}
+
+      {/* Tabla */}
+      {buscado && (
+        datos.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#9ca3af', padding: '40px 0', fontSize: '14px' }}>Sin registros para los filtros seleccionados.</div>
+        ) : (
+          <div>
+            <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
+              {datos.length} {datos.length === 1 ? 'registro' : 'registros'}
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    {cols.map(c => (
+                      <th key={c.field} style={{ background: '#1e3a8a', color: '#fff', padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                        {c.header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {datos.map((row, i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                      {cols.map(c => (
+                        <td key={c.field} style={{ padding: '7px 10px', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {row[c.field] ?? '—'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      )}
+
+      {!buscado && !loading && (
+        <div style={{ textAlign: 'center', color: '#9ca3af', padding: '48px 0', fontSize: '14px' }}>
+          Selecciona un módulo y presiona <strong>Consultar</strong> para ver el reporte.
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OrdenesCompra({
   proveedores = [], unidadesNegocio = [], folio, ordenes = [],
   currentUser, currentUserRol, onCreateOrden, onUpdateOrden, onApproveOrden, onRejectOrden, onDeleteOrden,
@@ -1454,6 +1633,7 @@ export default function OrdenesCompra({
     { key: 'misOrdenes', label: `Mis órdenes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
     { key: 'historial', label: 'Órdenes de Compra' },
     { key: 'autorizar', label: 'Autorizar' },
+    ...(['admin','autorizador1','autorizador2'].includes(currentUserRol) ? [{ key: 'reportes', label: 'Reportes' }] : []),
   ]
 
   return (
@@ -1483,8 +1663,8 @@ export default function OrdenesCompra({
           </div>
         )}
 
-        {/* ── BUSCADOR / FILTROS ── solo en vistas de listado, no en crear */}
-        {activeSection !== 'crear' && <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'12px', padding:'12px 14px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'flex-end', marginBottom:'4px' }}>
+        {/* ── BUSCADOR / FILTROS ── solo en vistas de listado, no en crear ni reportes */}
+        {activeSection !== 'crear' && activeSection !== 'reportes' && <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'12px', padding:'12px 14px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'flex-end', marginBottom:'4px' }}>
           <div style={{ flex:'2 1 180px' }}>
             <span style={{ display:'block', fontSize:'11px', fontWeight:600, color:'#6b7280', marginBottom:'4px' }}>Buscar</span>
             <input className="form-control" type="text" value={filtros.texto} onChange={setF('texto')}
@@ -2063,6 +2243,11 @@ export default function OrdenesCompra({
               </table>
             </div>
           </div>
+        )}
+
+        {/* ── REPORTES ── */}
+        {activeSection === 'reportes' && (
+          <ReportesPanel />
         )}
 
       </div>
