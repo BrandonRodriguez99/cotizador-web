@@ -5,7 +5,14 @@ import {
   getOrdenMantenimientoById,
   createOrdenMantenimiento,
   updateOrdenMantenimiento,
+  editOrdenMantenimiento,
+  deleteOrdenMantenimiento,
   getInventario,
+  getAreasConsumo,
+  getConsumos,
+  registrarConsumo,
+  getOCsPendientesRecepcion,
+  registrarRecepcionOC,
 } from './api'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -374,9 +381,37 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   const [inventario, setInventario] = useState([])
 
   // Para completar una orden (técnico)
-  const [selectedOrden, setSelectedOrden] = useState(null)   // { orden, materiales }
+  const [selectedOrden, setSelectedOrden] = useState(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [pdfLoading, setPdfLoading]       = useState(null)
+
+  // Tab "todas" — búsqueda, filtros, paginación, editar, eliminar
+  const [todasSearch, setTodasSearch]         = useState('')
+  const [todasEstado, setTodasEstado]         = useState('')
+  const [todasPage, setTodasPage]             = useState(1)
+  const [editOrden, setEditOrden]             = useState(null)
+  const [editForm, setEditForm]               = useState({})
+  const [savingEdit, setSavingEdit]           = useState(false)
+  const [editError, setEditError]             = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deletingId, setDeletingId]           = useState(null)
+
+  // Consumos de limpieza
+  const [areasConsumo, setAreasConsumo] = useState([])
+  const [consumos, setConsumos]         = useState([])
+  const [loadingConsumos, setLoadingConsumos] = useState(false)
+  const [consumoForm, setConsumoForm]   = useState({ productoId: '', areaConsumoId: '', cantidad: '', observaciones: '' })
+  const [consumoSearch, setConsumoSearch] = useState('')
+  const [savingConsumo, setSavingConsumo] = useState(false)
+  const [consumoError, setConsumoError] = useState(null)
+
+  // Recepción de OC
+  const [ocsPendientes, setOcsPendientes]       = useState([])
+  const [loadingOCs, setLoadingOCs]             = useState(false)
+  const [ocActiva, setOcActiva]                 = useState(null)   // OC seleccionada para checklist
+  const [recepcionCants, setRecepcionCants]     = useState({})     // { lineaId: cantidadRecibida }
+  const [savingRecepcion, setSavingRecepcion]   = useState(false)
+  const [recepcionError, setRecepcionError]     = useState(null)
 
   async function loadOrdenes() {
     setLoading(true)
@@ -384,13 +419,56 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     catch {} finally { setLoading(false) }
   }
 
+  async function loadConsumos() {
+    setLoadingConsumos(true)
+    try { setConsumos(await getConsumos()) }
+    catch {} finally { setLoadingConsumos(false) }
+  }
+
+  async function loadOCsPendientes() {
+    setLoadingOCs(true)
+    try { setOcsPendientes(await getOCsPendientesRecepcion()) }
+    catch {} finally { setLoadingOCs(false) }
+  }
+
+  function seleccionarOC(oc) {
+    setOcActiva(oc)
+    setRecepcionError(null)
+    const cants = {}
+    for (const l of oc.Lineas) cants[l.OrdenCompraLineaId] = String(l.Cantidad ?? '')
+    setRecepcionCants(cants)
+  }
+
+  async function handleConfirmarRecepcion(e) {
+    e.preventDefault()
+    setRecepcionError(null)
+    setSavingRecepcion(true)
+    try {
+      const lineas = ocActiva.Lineas.map(l => ({
+        lineaId:          l.OrdenCompraLineaId,
+        productoId:       l.ProductoId || null,
+        cantidadRecibida: Number(recepcionCants[l.OrdenCompraLineaId]) || 0,
+      }))
+      await registrarRecepcionOC(ocActiva.OrdenCompraId, lineas, currentUser)
+      setOcActiva(null)
+      showSuccess(`Recepción de ${ocActiva.Folio} confirmada. Stock actualizado.`)
+      await loadOCsPendientes()
+    } catch (err) {
+      setRecepcionError(err?.message || 'Error al registrar recepción')
+    } finally {
+      setSavingRecepcion(false)
+    }
+  }
+
   useEffect(() => {
-    // Cargar inventario activo para el selector de materiales
     getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
+    getAreasConsumo().then(setAreasConsumo).catch(() => {})
   }, [])
 
   useEffect(() => {
     if (activeTab !== 'nueva') loadOrdenes()
+    if (activeTab === 'consumos' || activeTab === 'historial_consumos') loadConsumos()
+    if (activeTab === 'recepcion_oc') loadOCsPendientes()
   }, [activeTab])
 
   function showSuccess(msg) {
@@ -406,15 +484,48 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     } catch {} finally { setLoadingDetail(false) }
   }
 
+  async function handleRegistrarConsumo(e) {
+    e.preventDefault()
+    setConsumoError(null)
+    if (!consumoForm.productoId) { setConsumoError('Selecciona un material'); return }
+    if (!consumoForm.cantidad || Number(consumoForm.cantidad) <= 0) { setConsumoError('Ingresa una cantidad válida'); return }
+    setSavingConsumo(true)
+    try {
+      const r = await registrarConsumo({
+        productoId:    Number(consumoForm.productoId),
+        areaConsumoId: consumoForm.areaConsumoId ? Number(consumoForm.areaConsumoId) : null,
+        cantidad:      Number(consumoForm.cantidad),
+        observaciones: consumoForm.observaciones || null,
+      })
+      setConsumoForm({ productoId: '', areaConsumoId: '', cantidad: '', observaciones: '' })
+      await loadConsumos()
+      // Refrescar inventario para mostrar stock actualizado
+      getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
+      showSuccess(`Consumo registrado correctamente. Stock nuevo: ${r.stockNuevo}`)
+    } catch (err) {
+      setConsumoError(err?.message || 'Error al registrar consumo')
+    } finally {
+      setSavingConsumo(false)
+    }
+  }
+
   const isAdmin = currentUserRol === 'admin'
+  const isJefe  = currentUserRol === 'jefe_mantenimiento'
   const misOrdenes = ordenes.filter(o => o.CreadoPor === currentUser)
   const pendientes = ordenes.filter(o => o.Estado !== 'Completada')
+
+  const puedeVerConsumos = ['mantenimiento', 'jefe_mantenimiento', 'admin'].includes(currentUserRol)
 
   const TABS = [
     { key: 'nueva',     label: 'Nueva Solicitud' },
     { key: 'mis',       label: `Mis Solicitudes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
     { key: 'completar', label: `Por Atender${pendientes.length ? ` (${pendientes.length})` : ''}` },
-    ...(isAdmin ? [{ key: 'todas', label: 'Todas las Órdenes' }] : []),
+    ...((isAdmin || isJefe) ? [{ key: 'todas', label: 'Todas las Órdenes' }] : []),
+    ...(puedeVerConsumos ? [
+      { key: 'consumos',           label: 'Consumos' },
+      { key: 'historial_consumos', label: 'Historial' },
+      { key: 'recepcion_oc',       label: 'Recepción OC' },
+    ] : []),
   ]
 
   const tabBtnStyle = (key) => ({
@@ -632,6 +743,50 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     finally { setPdfLoading(null) }
   }
 
+  function abrirEditarOrden(o) {
+    setEditOrden(o)
+    setEditForm({
+      Departamento:     o.Departamento     || '',
+      FechaReporte:     o.FechaReporte     ? String(o.FechaReporte).slice(0, 10) : '',
+      NombreSolicita:   o.NombreSolicita   || '',
+      Puesto:           o.Puesto           || '',
+      Equipo:           o.Equipo           || '',
+      Codigo:           o.Codigo           || '',
+      RazonOrden:       o.RazonOrden       || '',
+      DescripcionFalla: o.DescripcionFalla || '',
+      Estado:           o.Estado           || 'Pendiente',
+      TecnicoResponsable: o.TecnicoResponsable || '',
+    })
+    setEditError(null)
+  }
+
+  async function handleGuardarEdicion(e) {
+    e.preventDefault()
+    setSavingEdit(true)
+    setEditError(null)
+    try {
+      await editOrdenMantenimiento(editOrden.OrdenMantenimientoId, editForm)
+      setOrdenes(prev => prev.map(o =>
+        o.OrdenMantenimientoId === editOrden.OrdenMantenimientoId ? { ...o, ...editForm } : o
+      ))
+      setEditOrden(null)
+      showSuccess(`Orden ${editOrden.Folio} actualizada.`)
+    } catch (err) { setEditError(err.message) }
+    finally { setSavingEdit(false) }
+  }
+
+  async function handleDeleteOrden(id) {
+    setDeletingId(id)
+    try {
+      await deleteOrdenMantenimiento(id)
+      setOrdenes(prev => prev.filter(o => o.OrdenMantenimientoId !== id))
+      setConfirmDeleteId(null)
+      showSuccess('Orden eliminada correctamente.')
+    } catch (e) {
+      alert('Error al eliminar: ' + e.message)
+    } finally { setDeletingId(null) }
+  }
+
   // ── Tabla de órdenes ──────────────────────────────────────────────────────
   function OrdenTable({ lista }) {
     if (lista.length === 0) return (
@@ -747,7 +902,6 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
       <section className="panel card">
         <div className="panel-header space-between" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h2>Órdenes de Mantenimiento</h2>
             <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
               Solicita y gestiona órdenes de trabajo de mantenimiento
             </p>
@@ -794,10 +948,428 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
         )}
 
         {/* ── TODAS (ADMIN) ── */}
-        {activeTab === 'todas' && isAdmin && (
-          loading
-            ? <p style={{ color: '#9ca3af', padding: '24px 0' }}>Cargando...</p>
-            : <OrdenTable lista={ordenes} />
+        {activeTab === 'todas' && (isAdmin || isJefe) && (() => {
+          if (loading) return <p style={{ color: '#9ca3af', padding: '24px 0' }}>Cargando...</p>
+
+          const PAGE_SIZE = 10
+          const filtradas = ordenes.filter(o => {
+            const q = todasSearch.toLowerCase()
+            const matchSearch = !q ||
+              (o.Folio || '').toLowerCase().includes(q) ||
+              (o.Equipo || '').toLowerCase().includes(q) ||
+              (o.NombreSolicita || '').toLowerCase().includes(q) ||
+              (o.Departamento || '').toLowerCase().includes(q)
+            const matchEstado = !todasEstado || o.Estado === todasEstado
+            return matchSearch && matchEstado
+          })
+          const totalPages = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE))
+          const pagina = Math.min(todasPage, totalPages)
+          const paginadas = filtradas.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
+          const mInp = { width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: '#fff' }
+          const mLbl = { display: 'block', fontSize: '12px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }
+
+          return (
+            <div>
+              {/* Modal editar */}
+              {editOrden && (
+                <div
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+                  onClick={e => { if (e.target === e.currentTarget) setEditOrden(null) }}
+                >
+                  <div style={{ background: '#fff', borderRadius: '14px', padding: '24px', maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#111827' }}>Editar Orden</h3>
+                        <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#2563eb', fontWeight: 600 }}>{editOrden.Folio}</p>
+                      </div>
+                      <button type="button" onClick={() => setEditOrden(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#9ca3af', lineHeight: 1, padding: '4px' }}>×</button>
+                    </div>
+                    <form onSubmit={handleGuardarEdicion} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={mLbl}>Departamento</label>
+                          <input style={mInp} value={editForm.Departamento} onChange={e => setEditForm(f => ({ ...f, Departamento: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Fecha de Reporte</label>
+                          <input type="date" style={mInp} value={editForm.FechaReporte} onChange={e => setEditForm(f => ({ ...f, FechaReporte: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Quien solicita</label>
+                          <input style={mInp} value={editForm.NombreSolicita} onChange={e => setEditForm(f => ({ ...f, NombreSolicita: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Puesto</label>
+                          <input style={mInp} value={editForm.Puesto} onChange={e => setEditForm(f => ({ ...f, Puesto: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Equipo</label>
+                          <input style={mInp} value={editForm.Equipo} onChange={e => setEditForm(f => ({ ...f, Equipo: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={mLbl}>Código</label>
+                          <input style={mInp} value={editForm.Codigo} onChange={e => setEditForm(f => ({ ...f, Codigo: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={mLbl}>Estado</label>
+                          <select style={mInp} value={editForm.Estado} onChange={e => setEditForm(f => ({ ...f, Estado: e.target.value }))}>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En proceso">En proceso</option>
+                            <option value="Completada">Completada</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={mLbl}>Razón de la Orden</label>
+                          <select style={mInp} value={editForm.RazonOrden} onChange={e => setEditForm(f => ({ ...f, RazonOrden: e.target.value }))}>
+                            <option value="">Seleccionar...</option>
+                            {RAZONES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={mLbl}>Descripción de la Falla</label>
+                        <textarea style={{ ...mInp, resize: 'vertical', minHeight: '80px' }} value={editForm.DescripcionFalla} onChange={e => setEditForm(f => ({ ...f, DescripcionFalla: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label style={mLbl}>Técnico Responsable</label>
+                        <input style={mInp} value={editForm.TecnicoResponsable} onChange={e => setEditForm(f => ({ ...f, TecnicoResponsable: e.target.value }))} />
+                      </div>
+                      {editError && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', color: '#b91c1c', fontSize: '13px' }}>{editError}</div>}
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid #f3f4f6' }}>
+                        <button type="button" onClick={() => setEditOrden(null)} style={{ padding: '10px 20px', background: '#f9fafb', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>Cancelar</button>
+                        <button type="submit" disabled={savingEdit} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, opacity: savingEdit ? 0.7 : 1 }}>
+                          {savingEdit ? 'Guardando...' : 'Guardar cambios'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Filtros */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  placeholder="Buscar por folio, equipo, solicitante, departamento..."
+                  value={todasSearch}
+                  onChange={e => { setTodasSearch(e.target.value); setTodasPage(1) }}
+                  style={{ flex: '1', minWidth: '200px', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px' }}
+                />
+                <select
+                  value={todasEstado}
+                  onChange={e => { setTodasEstado(e.target.value); setTodasPage(1) }}
+                  style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', background: '#fff' }}
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="En proceso">En proceso</option>
+                  <option value="Completada">Completada</option>
+                </select>
+                <span style={{ fontSize: '13px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                  {filtradas.length} resultado{filtradas.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {/* Tabla */}
+              {filtradas.length === 0 ? (
+                <p style={{ color: '#9ca3af', padding: '24px 0', textAlign: 'center' }}>Sin órdenes que coincidan.</p>
+              ) : (
+                <>
+                  <div className="table-wrap">
+                    <table className="participants-table">
+                      <thead>
+                        <tr>
+                          <th>Folio</th><th>Equipo</th><th>Razón</th>
+                          <th>Solicitante</th><th>Fecha</th><th>Estado</th><th>Técnico</th><th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginadas.map(o => (
+                          <tr key={o.OrdenMantenimientoId}>
+                            <td><strong style={{ color: '#2563eb' }}>{o.Folio}</strong></td>
+                            <td>{o.Equipo || '-'}</td>
+                            <td style={{ textTransform: 'capitalize' }}>{o.RazonOrden || '-'}</td>
+                            <td>{o.NombreSolicita || '-'}</td>
+                            <td>{fmtFecha(o.FechaReporte)}</td>
+                            <td><EstadoBadge estado={o.Estado} /></td>
+                            <td>{o.TecnicoResponsable || '-'}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '5px', flexWrap: 'nowrap' }}>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '12px', padding: '4px 8px' }}
+                                  onClick={() => generarPDFOrden(o.OrdenMantenimientoId)}
+                                  disabled={pdfLoading === o.OrdenMantenimientoId}>
+                                  {pdfLoading === o.OrdenMantenimientoId ? '...' : '📄'}
+                                </button>
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '12px', padding: '4px 8px', color: '#2563eb', borderColor: '#bfdbfe' }}
+                                  onClick={() => abrirEditarOrden(o)}>
+                                  ✏️
+                                </button>
+                                {isAdmin && (confirmDeleteId === o.OrdenMantenimientoId ? (
+                                  <>
+                                    <button type="button"
+                                      style={{ fontSize: '11px', padding: '4px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                      onClick={() => handleDeleteOrden(o.OrdenMantenimientoId)}
+                                      disabled={deletingId === o.OrdenMantenimientoId}>
+                                      {deletingId === o.OrdenMantenimientoId ? '...' : '¿Sí?'}
+                                    </button>
+                                    <button type="button" className="ghost-button"
+                                      style={{ fontSize: '12px', padding: '4px 8px' }}
+                                      onClick={() => setConfirmDeleteId(null)}>
+                                      ✕
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button type="button" className="ghost-button"
+                                    style={{ fontSize: '12px', padding: '4px 8px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                    onClick={() => setConfirmDeleteId(o.OrdenMantenimientoId)}>
+                                    🗑
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPages > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
+                      <button type="button" onClick={() => setTodasPage(1)} disabled={pagina === 1}
+                        style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: pagina === 1 ? 'default' : 'pointer', color: pagina === 1 ? '#9ca3af' : '#374151', fontSize: '12px' }}>
+                        «
+                      </button>
+                      <button type="button" onClick={() => setTodasPage(p => Math.max(1, p - 1))} disabled={pagina === 1}
+                        style={{ padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: pagina === 1 ? 'default' : 'pointer', color: pagina === 1 ? '#9ca3af' : '#374151', fontSize: '13px' }}>
+                        ← Anterior
+                      </button>
+                      <span style={{ fontSize: '13px', color: '#374151' }}>
+                        Pág. {pagina} / {totalPages}
+                      </span>
+                      <button type="button" onClick={() => setTodasPage(p => Math.min(totalPages, p + 1))} disabled={pagina === totalPages}
+                        style={{ padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: pagina === totalPages ? 'default' : 'pointer', color: pagina === totalPages ? '#9ca3af' : '#374151', fontSize: '13px' }}>
+                        Siguiente →
+                      </button>
+                      <button type="button" onClick={() => setTodasPage(totalPages)} disabled={pagina === totalPages}
+                        style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: pagina === totalPages ? 'default' : 'pointer', color: pagina === totalPages ? '#9ca3af' : '#374151', fontSize: '12px' }}>
+                        »
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* ── CONSUMOS DE LIMPIEZA ── */}
+        {activeTab === 'consumos' && puedeVerConsumos && (() => {
+          const inventarioFiltrado = consumoSearch.trim()
+            ? inventario.filter(p => p.NombreProducto.toLowerCase().includes(consumoSearch.toLowerCase()))
+            : inventario
+
+          return (
+            <div style={{ maxWidth: '480px' }}>
+              <form onSubmit={handleRegistrarConsumo} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>Material</label>
+                  <input
+                    placeholder="Buscar material..."
+                    value={consumoSearch}
+                    onChange={e => { setConsumoSearch(e.target.value); setConsumoForm(f => ({ ...f, productoId: '' })) }}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box' }}
+                  />
+                  {consumoSearch && (
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', maxHeight: '180px', overflowY: 'auto', background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                      {inventarioFiltrado.length === 0
+                        ? <p style={{ padding: '12px', margin: 0, fontSize: '13px', color: '#9ca3af' }}>Sin resultados</p>
+                        : inventarioFiltrado.map(p => (
+                          <button key={p.ProductoId} type="button"
+                            onClick={() => { setConsumoForm(f => ({ ...f, productoId: String(p.ProductoId) })); setConsumoSearch(p.NombreProducto) }}
+                            style={{ display: 'block', width: '100%', padding: '10px 14px', background: consumoForm.productoId === String(p.ProductoId) ? '#eff6ff' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px' }}>
+                            <span style={{ fontWeight: 600 }}>{p.NombreProducto}</span>
+                            <span style={{ color: '#6b7280', marginLeft: '8px' }}>Stock: {p.CantidadReal} {p.UnidadMedida}</span>
+                          </button>
+                        ))
+                      }
+                    </div>
+                  )}
+                  {consumoForm.productoId && (
+                    <p style={{ fontSize: '12px', color: '#2563eb', margin: '4px 0 0', fontWeight: 500 }}>
+                      ✓ {inventario.find(p => String(p.ProductoId) === consumoForm.productoId)?.NombreProducto}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>Área de destino</label>
+                  <select
+                    value={consumoForm.areaConsumoId}
+                    onChange={e => setConsumoForm(f => ({ ...f, areaConsumoId: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box' }}>
+                    <option value="">Seleccionar área</option>
+                    {areasConsumo.map(a => <option key={a.AreaConsumoId} value={a.AreaConsumoId}>{a.Nombre}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>Cantidad</label>
+                  <input
+                    type="number" min="0.01" step="0.01"
+                    value={consumoForm.cantidad}
+                    onChange={e => setConsumoForm(f => ({ ...f, cantidad: e.target.value }))}
+                    placeholder="0"
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>Observaciones (opcional)</label>
+                  <textarea
+                    value={consumoForm.observaciones}
+                    onChange={e => setConsumoForm(f => ({ ...f, observaciones: e.target.value }))}
+                    rows={2}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                {consumoError && (
+                  <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', color: '#b91c1c', fontSize: '13px' }}>{consumoError}</div>
+                )}
+
+                <button type="submit" disabled={savingConsumo} style={{ padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', opacity: savingConsumo ? 0.7 : 1 }}>
+                  {savingConsumo ? 'Registrando...' : '✓ Registrar consumo'}
+                </button>
+              </form>
+            </div>
+          )
+        })()}
+
+        {/* ── HISTORIAL DE CONSUMOS ── */}
+        {activeTab === 'historial_consumos' && puedeVerConsumos && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: 0 }}>Historial de movimientos</h3>
+              {loadingConsumos && <span style={{ fontSize: '12px', color: '#9ca3af' }}>Cargando...</span>}
+            </div>
+            {consumos.length === 0 && !loadingConsumos
+              ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>Sin movimientos registrados.</p>
+              : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {consumos.map(c => (
+                    <div key={c.ConsumoId} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px', background: '#fafafa', display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'start', gap: '8px' }}>
+                      <div>
+                        <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: '#111827' }}>{c.NombreProducto}</p>
+                        <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#6b7280' }}>
+                          {c.Usuario} · {c.Area || 'Sin área'}{c.Observaciones ? ` · ${c.Observaciones}` : ''}
+                        </p>
+                        <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af' }}>
+                          {new Date(c.Fecha).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626', whiteSpace: 'nowrap' }}>
+                        -{c.Cantidad} {c.UnidadMedida}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+          </div>
+        )}
+
+        {/* ── RECEPCIÓN DE ÓRDENES DE COMPRA ── */}
+        {activeTab === 'recepcion_oc' && puedeVerConsumos && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: 0 }}>Órdenes pendientes de recepción</h3>
+              {loadingOCs && <span style={{ fontSize: '12px', color: '#9ca3af' }}>Cargando...</span>}
+            </div>
+
+            {!ocActiva ? (
+              ocsPendientes.length === 0 && !loadingOCs
+                ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>No hay órdenes aprobadas pendientes de recepción.</p>
+                : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {ocsPendientes.map(oc => (
+                      <div key={oc.OrdenCompraId} style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px 20px', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                        <div>
+                          <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: '14px', color: '#111827' }}>{oc.Folio}</p>
+                          <p style={{ margin: '0 0 2px', fontSize: '13px', color: '#6b7280' }}>{oc.Proveedor}</p>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>
+                            {String(oc.Fecha || '').slice(0,10)} · {oc.Lineas?.length || 0} artículo{oc.Lineas?.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <button type="button"
+                          onClick={() => seleccionarOC(oc)}
+                          style={{ padding: '10px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          Verificar llegada
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+            ) : (
+              <div style={{ maxWidth: '600px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                  <button type="button" onClick={() => { setOcActiva(null); setRecepcionError(null) }}
+                    style={{ background: 'none', border: '1px solid #d1d5db', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                    ← Volver
+                  </button>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '15px', color: '#111827' }}>{ocActiva.Folio} — {ocActiva.Proveedor}</p>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Confirma las cantidades que llegaron</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleConfirmarRecepcion}>
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: '#f9fafb' }}>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Artículo</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Pedido</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Recibido</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ocActiva.Lineas.map((l, i) => (
+                          <tr key={l.OrdenCompraLineaId} style={{ borderBottom: i < ocActiva.Lineas.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                            <td style={{ padding: '10px 14px', color: '#111827' }}>
+                              {l.NombreProducto || l.Descripcion || `Línea ${i+1}`}
+                              {l.UnidadMedida && <span style={{ color: '#9ca3af', marginLeft: '4px', fontSize: '11px' }}>{l.UnidadMedida}</span>}
+                            </td>
+                            <td style={{ padding: '10px 14px', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>{l.Cantidad}</td>
+                            <td style={{ padding: '8px 14px', textAlign: 'center' }}>
+                              <input type="number" min="0" step="0.01"
+                                value={recepcionCants[l.OrdenCompraLineaId] ?? ''}
+                                onChange={e => setRecepcionCants(c => ({ ...c, [l.OrdenCompraLineaId]: e.target.value }))}
+                                style={{ width: '80px', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', textAlign: 'center' }}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {recepcionError && (
+                    <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', color: '#b91c1c', fontSize: '13px', marginBottom: '14px' }}>{recepcionError}</div>
+                  )}
+
+                  <button type="submit" disabled={savingRecepcion}
+                    style={{ width: '100%', padding: '14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', opacity: savingRecepcion ? 0.7 : 1 }}>
+                    {savingRecepcion ? 'Confirmando...' : '✓ Confirmar recepción y actualizar inventario'}
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
         )}
       </section>
     </div>

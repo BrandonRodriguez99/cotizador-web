@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import {
   downloadOrdenCompraPdf, downloadSolicitudFondosPdf,
   getFacturaOrden, saveFacturaOrden,
   uploadFacturaArchivo, downloadFacturaArchivo,
   getSolicitudFondos, createSolicitudFondos, approveSolicitudFondos, getSolicitudesFondosPendientes,
   getEvaluacionProveedor, saveEvaluacionProveedor,
-  deleteOrdenCompra,
+  deleteOrdenCompra, getOrdenCompraById, updateOrdenCompra,
   getInventario,
+  registrarRecepcionOC,
+  getReporteOC, getReporteSF, getReporteEval,
 } from './api'
 
 function formatMoney(value) {
@@ -47,6 +50,11 @@ function StatusBadge({ status }) {
 
 const APPROVER_OPTIONS = ['Administración', 'Secretaría Académica']
 const ROLE_TO_APPROVER = { autorizador1: 'Administración', autorizador2: 'Secretaría Académica' }
+
+function aprobadaPorAdministracion(order) {
+  const aprobaciones = order.aprobaciones || order.Aprobaciones || []
+  return aprobaciones.some(a => (a.step ?? a.Paso) === 1 && Boolean(a.aprobado ?? a.Aprobado))
+}
 
 // ── Criterios de evaluación ────────────────────────────────────────────────────
 const EVAL_CRITERIOS = {
@@ -134,12 +142,16 @@ function FacturaModal({ orden, onClose, onSuccess }) {
     fechaFactura: new Date().toISOString().slice(0, 10),
     monto: orden.Total || '', observaciones: '',
   })
-  const [selectedFile, setSelectedFile] = useState(null)   // { name, base64, size }
-  const [uploadingFile, setUploadingFile] = useState(false)
+  // índice 0=slot1, 1=slot2, 2=slot3
+  const [selectedFiles, setSelectedFiles] = useState([null, null, null])
+  const [uploadingSlot, setUploadingSlot] = useState(null)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState(null)
-  const [fileError, setFileError] = useState(null)
-  const fileRef = useRef(null)
+  const [fileErrors, setFileErrors] = useState([null, null, null])
+  const fileRef1 = useRef(null)
+  const fileRef2 = useRef(null)
+  const fileRef3 = useRef(null)
+  const fileRefs = [fileRef1, fileRef2, fileRef3]
 
   useEffect(() => {
     getFacturaOrden(orden.OrdenCompraId)
@@ -157,62 +169,59 @@ function FacturaModal({ orden, onClose, onSuccess }) {
       .finally(() => setLoading(false))
   }, [orden.OrdenCompraId])
 
-  function handleFileChange(e) {
-    setFileError(null)
-    setSelectedFile(null)
+  function handleFileChange(idx, e) {
+    const newErrors = [...fileErrors]; newErrors[idx] = null; setFileErrors(newErrors)
+    const newFiles = [...selectedFiles]; newFiles[idx] = null; setSelectedFiles(newFiles)
     const file = e.target.files?.[0]
     if (!file) return
-
     const extOk = ALLOWED_EXT.some(ext => file.name.toLowerCase().endsWith(ext))
     if (!extOk) {
-      setFileError('Formato no permitido. Usa PDF, XML, JPG o PNG.')
-      e.target.value = ''
-      return
+      const errs = [...fileErrors]; errs[idx] = 'Formato no permitido. Usa PDF, XML, JPG o PNG.'; setFileErrors(errs)
+      e.target.value = ''; return
     }
     if (file.size > 20 * 1024 * 1024) {
-      setFileError('El archivo supera el límite de 20 MB.')
-      e.target.value = ''
-      return
+      const errs = [...fileErrors]; errs[idx] = 'El archivo supera el límite de 20 MB.'; setFileErrors(errs)
+      e.target.value = ''; return
     }
-
     const reader = new FileReader()
-    reader.onload = () => setSelectedFile({ name: file.name, base64: reader.result, size: file.size })
+    reader.onload = () => {
+      setSelectedFiles(prev => { const n = [...prev]; n[idx] = { name: file.name, base64: reader.result, size: file.size }; return n })
+    }
     reader.readAsDataURL(file)
+  }
+
+  function clearFile(idx) {
+    setSelectedFiles(prev => { const n = [...prev]; n[idx] = null; return n })
+    if (fileRefs[idx].current) fileRefs[idx].current.value = ''
   }
 
   async function handleSave(e) {
     e.preventDefault()
     setError(null)
-
     try {
       setSaving(true)
       await saveFacturaOrden(orden.OrdenCompraId, form)
-
-      if (selectedFile) {
-        setUploadingFile(true)
-        await uploadFacturaArchivo(orden.OrdenCompraId, selectedFile.base64, selectedFile.name)
-        setUploadingFile(false)
+      for (let i = 0; i < 3; i++) {
+        if (selectedFiles[i]) {
+          setUploadingSlot(i + 1)
+          await uploadFacturaArchivo(orden.OrdenCompraId, selectedFiles[i].base64, selectedFiles[i].name, i + 1)
+        }
       }
-
-      onSuccess(
-        selectedFile
-          ? `Factura y archivo "${selectedFile.name}" guardados correctamente.`
-          : 'Factura guardada correctamente.'
-      )
+      setUploadingSlot(null)
+      onSuccess('Factura guardada correctamente.')
     } catch (err) {
-      setUploadingFile(false)
+      setUploadingSlot(null)
       setError(err.message)
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleDownload() {
-    setFileError(null)
+  async function handleDownload(slot, nombre) {
     try {
-      await downloadFacturaArchivo(orden.OrdenCompraId, existing?.ArchivoNombre)
+      await downloadFacturaArchivo(orden.OrdenCompraId, nombre, slot)
     } catch (err) {
-      setFileError(err.message)
+      setError(err.message)
     }
   }
 
@@ -222,19 +231,21 @@ function FacturaModal({ orden, onClose, onSuccess }) {
     </Modal>
   )
 
-  const savingLabel = uploadingFile ? 'Subiendo archivo...' : saving ? 'Guardando...' : existing ? 'Actualizar factura' : 'Guardar factura'
+  const existingNames = [existing?.ArchivoNombre, existing?.Archivo2Nombre, existing?.Archivo3Nombre]
+  const savingLabel = uploadingSlot
+    ? `Subiendo archivo ${uploadingSlot}...`
+    : saving ? 'Guardando...' : existing ? 'Actualizar factura' : 'Guardar factura'
 
   return (
-    <Modal title={`Factura — ${orden.Folio}`} onClose={onClose} width={560}>
+    <Modal title={`Factura — ${orden.Folio}`} onClose={onClose} width={580}>
       {existing && (
         <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: '#1d4ed8' }}>
-          Factura ya registrada. Puedes actualizar los datos o reemplazar el archivo.
+          Factura ya registrada. Puedes actualizar los datos o reemplazar los archivos.
         </div>
       )}
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-        {/* Datos de la factura */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '5px' }}>Número de factura</label>
@@ -266,86 +277,71 @@ function FacturaModal({ orden, onClose, onSuccess }) {
             placeholder="Notas sobre la factura" />
         </div>
 
-        {/* ── Archivo adjunto ── */}
-        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '14px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
-            Archivo de factura <span style={{ color: '#9ca3af', fontWeight: 400 }}>(PDF, XML, JPG, PNG · máx. 20 MB)</span>
-          </label>
-
-          {/* Archivo actual en BD */}
-          {existing?.ArchivoNombre && !selectedFile && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              background: '#f0fdf4', border: '1px solid #bbf7d0',
-              borderRadius: '10px', padding: '10px 14px', marginBottom: '10px',
-            }}>
-              <span style={{ fontSize: '20px' }}>{fileIcon(existing.ArchivoNombre)}</span>
-              <span style={{ flex: 1, fontSize: '13px', color: '#15803d', fontWeight: 500, wordBreak: 'break-all' }}>
-                {existing.ArchivoNombre}
-              </span>
-              <button type="button" onClick={handleDownload}
-                style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '8px', background: '#16a34a', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                Descargar
-              </button>
-            </div>
-          )}
-
-          {/* Archivo recién seleccionado */}
-          {selectedFile && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              background: '#eff6ff', border: '1px solid #bfdbfe',
-              borderRadius: '10px', padding: '10px 14px', marginBottom: '10px',
-            }}>
-              <span style={{ fontSize: '20px' }}>{fileIcon(selectedFile.name)}</span>
-              <span style={{ flex: 1, fontSize: '13px', color: '#1d4ed8', fontWeight: 500, wordBreak: 'break-all' }}>
-                {selectedFile.name}
-              </span>
-              <span style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap' }}>
-                {(selectedFile.size / 1024).toFixed(0)} KB
-              </span>
-              <button type="button" onClick={() => { setSelectedFile(null); if (fileRef.current) fileRef.current.value = '' }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '16px', lineHeight: 1 }}>
-                ×
-              </button>
-            </div>
-          )}
-
-          {/* Input de archivo */}
-          <div style={{ position: 'relative' }}>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".pdf,.xml,.jpg,.jpeg,.png"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-              id="factura-file-input"
-            />
-            <label htmlFor="factura-file-input" style={{
-              display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-              padding: '10px 16px', border: '1.5px dashed #d1d5db', borderRadius: '10px',
-              background: '#fafafa', fontSize: '13px', color: '#6b7280', transition: 'border-color 0.2s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}
-            >
-              <span style={{ fontSize: '18px' }}>📎</span>
-              {existing?.ArchivoNombre
-                ? 'Seleccionar nuevo archivo para reemplazar'
-                : 'Seleccionar archivo de factura'}
-            </label>
+        {/* ── Archivos (3 slots) ── */}
+        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>
+            Archivos de factura <span style={{ color: '#9ca3af', fontWeight: 400 }}>(PDF, XML, JPG, PNG · máx. 20 MB c/u)</span>
           </div>
+          {[0, 1, 2].map(idx => {
+            const slot = idx + 1
+            const existNombre = existingNames[idx]
+            const selFile = selectedFiles[idx]
+            const inputId = `factura-file-input-${slot}`
+            return (
+              <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', background: '#fafafa' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Archivo {slot}
+                </div>
 
-          {fileError && (
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#b91c1c' }}>{fileError}</p>
-          )}
+                {/* Archivo guardado en BD */}
+                {existNombre && !selFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '8px 10px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>{fileIcon(existNombre)}</span>
+                    <span style={{ flex: 1, fontSize: '12px', color: '#15803d', fontWeight: 500, wordBreak: 'break-all' }}>{existNombre}</span>
+                    <button type="button" onClick={() => handleDownload(slot, existNombre)}
+                      style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '6px', background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Descargar
+                    </button>
+                  </div>
+                )}
+
+                {/* Archivo recién seleccionado */}
+                {selFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>{fileIcon(selFile.name)}</span>
+                    <span style={{ flex: 1, fontSize: '12px', color: '#1d4ed8', fontWeight: 500, wordBreak: 'break-all' }}>{selFile.name}</span>
+                    <span style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap' }}>{(selFile.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" onClick={() => clearFile(idx)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '16px', lineHeight: 1 }}>×</button>
+                  </div>
+                )}
+
+                {/* Input de archivo */}
+                <input ref={fileRefs[idx]} type="file" accept=".pdf,.xml,.jpg,.jpeg,.png"
+                  onChange={e => handleFileChange(idx, e)} style={{ display: 'none' }} id={inputId} />
+                <label htmlFor={inputId} style={{
+                  display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
+                  padding: '7px 12px', border: '1.5px dashed #d1d5db', borderRadius: '8px',
+                  background: '#fff', fontSize: '12px', color: '#6b7280',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}>
+                  {existNombre ? 'Reemplazar archivo' : 'Seleccionar archivo'}
+                </label>
+
+                {fileErrors[idx] && (
+                  <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#b91c1c' }}>{fileErrors[idx]}</p>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {error && <div className="notification error">{error}</div>}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <button type="button" className="secondary-button" onClick={onClose}>Cancelar</button>
-          <button type="submit" className="primary-button" disabled={saving || uploadingFile}>
+          <button type="submit" className="primary-button" disabled={saving || uploadingSlot !== null}>
             {savingLabel}
           </button>
         </div>
@@ -522,7 +518,7 @@ function SolicitudFondosModal({ orden, onClose, onSuccess, currentUserRol, readO
     <Modal title={`Solicitud de Fondos — ${orden.Folio}${sfReadOnly ? ' (solo lectura)' : ''}`} onClose={onClose} width={720}>
       {sfReadOnly && (
         <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'10px', padding:'10px 16px', marginBottom:'4px', fontSize:'12px', color:'#92400e', display:'flex', alignItems:'center', gap:'8px' }}>
-          <span>🔒</span><span>Modo visualización — solo los datos registrados son visibles, no puedes editar.</span>
+          <span>Modo visualización — solo los datos registrados son visibles, no puedes editar.</span>
         </div>
       )}
       <form onSubmit={handleSave} style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
@@ -854,8 +850,8 @@ function EvaluacionModal({ orden, tipoForzado, isAdmin, isAutorizador = false, o
           <div style={{ borderLeft: '2px solid #d1d5db', padding: '8px 12px', fontSize: '11px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: '2px' }}>
               <span style={{ color: '#6b7280' }}>No.</span><span style={{ fontWeight: 700 }}>FGA02-01</span>
-              <span style={{ color: '#6b7280' }}>Rev.</span><span>2</span>
-              <span style={{ color: '#6b7280' }}>Fecha.</span><span>20-Mar-2020</span>
+              <span style={{ color: '#6b7280' }}>Rev.</span><span>5</span>
+              <span style={{ color: '#6b7280' }}>Fecha.</span><span>10-Ago-2026</span>
             </div>
           </div>
         </div>
@@ -873,7 +869,6 @@ function EvaluacionModal({ orden, tipoForzado, isAdmin, isAutorizador = false, o
         {/* Banner solo lectura */}
         {readOnly && (
           <div style={{ background: '#fffbeb', borderTop: '1px solid #fde68a', padding: '10px 16px', fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🔒</span>
             <span>Esta evaluación ya fue registrada y no puede modificarse. Solo el administrador puede editarla.</span>
           </div>
         )}
@@ -1105,14 +1100,281 @@ function emptyOrderForm(folioValue) {
     Folio: folioValue || '', UnidadNegocioId: '', ProveedorId: '',
     Fecha: new Date().toISOString().slice(0, 10),
     Tipo: 'compras', Destino: '', Observaciones: '',
+    ConIva: true,
     LineItems: [createEmptyLine()],
   }
 }
 
 // ── Componente principal ───────────────────────────────────────────────────────
+// ── Modal de Recepción de OC ──────────────────────────────────────────────────
+function RecepcionModal({ orden, currentUser, onClose, onSuccess }) {
+  const lineas = orden.lineas || orden.LineItems || []
+  const [cantidades, setCantidades] = useState(
+    Object.fromEntries(lineas.map((l, i) => [i, String(l.Cantidad ?? l.cantidad ?? '')]))
+  )
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError(null)
+    setSaving(true)
+    try {
+      const payload = lineas.map((l, i) => ({
+        ordenCompraLineaId: l.OrdenCompraLineaId ?? l.id ?? null,
+        productoId:         l.ProductoId ?? l.productoId ?? null,
+        cantidadRecibida:   Number(cantidades[i]) || 0,
+      }))
+      await registrarRecepcionOC(orden.OrdenCompraId, payload, currentUser)
+      onSuccess('Recepción registrada. El stock fue actualizado con las cantidades confirmadas.')
+    } catch (err) {
+      setError(err?.message || 'Error al registrar recepción')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
+      <div style={{ background:'#fff', borderRadius:'16px', padding:'28px', width:'100%', maxWidth:'620px', maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px' }}>
+          <div>
+            <h2 style={{ margin:0, fontSize:'18px', fontWeight:700, color:'#111827' }}>Registrar Recepción</h2>
+            <p style={{ margin:'4px 0 0', fontSize:'13px', color:'#6b7280' }}>OC {orden.Folio} — Confirma las cantidades que llegaron del proveedor</p>
+          </div>
+          <button type="button" onClick={onClose} style={{ background:'none', border:'none', fontSize:'20px', cursor:'pointer', color:'#6b7280', lineHeight:1 }}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ border:'1px solid #e5e7eb', borderRadius:'10px', overflow:'hidden', marginBottom:'20px' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
+              <thead>
+                <tr style={{ background:'#f9fafb' }}>
+                  <th style={{ padding:'10px 14px', textAlign:'left', fontWeight:600, color:'#374151', borderBottom:'1px solid #e5e7eb' }}>Producto / Descripción</th>
+                  <th style={{ padding:'10px 14px', textAlign:'center', fontWeight:600, color:'#374151', borderBottom:'1px solid #e5e7eb', whiteSpace:'nowrap' }}>Cant. pedida</th>
+                  <th style={{ padding:'10px 14px', textAlign:'center', fontWeight:600, color:'#374151', borderBottom:'1px solid #e5e7eb', whiteSpace:'nowrap' }}>Cant. recibida</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineas.map((l, i) => (
+                  <tr key={i} style={{ borderBottom: i < lineas.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                    <td style={{ padding:'10px 14px', color:'#111827' }}>
+                      {l.NombreProducto || l.Descripcion || l.descripcion || `Línea ${i+1}`}
+                      {l.UnidadMedida && <span style={{ color:'#9ca3af', marginLeft:'4px', fontSize:'11px' }}>{l.UnidadMedida}</span>}
+                    </td>
+                    <td style={{ padding:'10px 14px', textAlign:'center', color:'#6b7280', fontWeight:600 }}>
+                      {l.Cantidad ?? l.cantidad ?? '-'}
+                    </td>
+                    <td style={{ padding:'8px 14px', textAlign:'center' }}>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={cantidades[i]}
+                        onChange={e => setCantidades(c => ({ ...c, [i]: e.target.value }))}
+                        style={{ width:'80px', padding:'6px 8px', border:'1px solid #d1d5db', borderRadius:'6px', fontSize:'13px', textAlign:'center' }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {error && (
+            <div style={{ background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:'8px', padding:'10px 14px', color:'#b91c1c', fontSize:'13px', marginBottom:'16px' }}>{error}</div>
+          )}
+
+          <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding:'10px 20px', borderRadius:'8px', border:'1px solid #d1d5db', background:'#fff', cursor:'pointer', fontSize:'14px' }}>Cancelar</button>
+            <button type="submit" disabled={saving} style={{ padding:'10px 20px', borderRadius:'8px', border:'none', background:'#16a34a', color:'#fff', cursor:'pointer', fontSize:'14px', fontWeight:700, opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Guardando...' : '✓ Confirmar recepción'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ── Reportes ──────────────────────────────────────────────────────────────────
+const REPORTE_TIPOS = [
+  { key: 'ordenes-compra',      label: 'Órdenes de Compra' },
+  { key: 'solicitudes-fondos',  label: 'Solicitudes de Fondos' },
+  { key: 'evaluaciones',        label: 'Evaluaciones a Proveedores' },
+]
+
+const REPORTE_COLS = {
+  'ordenes-compra': [
+    { field: 'Folio',          header: 'Folio' },
+    { field: 'Proveedor',      header: 'Proveedor' },
+    { field: 'Tipo',           header: 'Tipo' },
+    { field: 'UnidadNegocio',  header: 'Unidad de Negocio' },
+    { field: 'Destino',        header: 'Destino' },
+    { field: 'Creador',        header: 'Creado por' },
+    { field: 'Fecha',          header: 'Fecha' },
+    { field: 'Subtotal',       header: 'Subtotal' },
+    { field: 'Iva',            header: 'IVA' },
+    { field: 'Total',          header: 'Total' },
+    { field: 'Estado',         header: 'Estado' },
+    { field: 'Observaciones',  header: 'Observaciones' },
+  ],
+  'solicitudes-fondos': [
+    { field: 'Folio',             header: 'Folio SF' },
+    { field: 'FolioOC',           header: 'Folio OC' },
+    { field: 'Proveedor',         header: 'Proveedor' },
+    { field: 'Monto',             header: 'Monto' },
+    { field: 'Concepto',          header: 'Concepto' },
+    { field: 'FormaPago',         header: 'Forma de pago' },
+    { field: 'Moneda',            header: 'Moneda' },
+    { field: 'EntregarA',         header: 'Entregar a' },
+    { field: 'CreadoPor',         header: 'Creado por' },
+    { field: 'FechaCreacion',     header: 'Fecha creación' },
+    { field: 'Estado',            header: 'Estado' },
+    { field: 'AprobadoPor1',      header: 'Aprobado por (Admin)' },
+    { field: 'FechaAprobacion1',  header: 'Fecha aprobación' },
+  ],
+  'evaluaciones': [
+    { field: 'FolioOC',          header: 'Folio OC' },
+    { field: 'Proveedor',        header: 'Proveedor' },
+    { field: 'Tipo',             header: 'Tipo' },
+    { field: 'Departamento',     header: 'Departamento' },
+    { field: 'PuntajeCalidad',   header: 'Calidad' },
+    { field: 'PuntajeTiempos',   header: 'Tiempos' },
+    { field: 'PuntajeCantidad',  header: 'Cantidad' },
+    { field: 'PuntajePosventa',  header: 'Posventa' },
+    { field: 'PuntajeTotal',     header: 'Puntaje Total' },
+    { field: 'Evaluador',        header: 'Evaluador' },
+    { field: 'FechaEvaluacion',  header: 'Fecha' },
+    { field: 'Observaciones',    header: 'Observaciones' },
+  ],
+}
+
+function ReportesPanel() {
+  const [tipo, setTipo]           = useState('ordenes-compra')
+  const [desde, setDesde]         = useState('')
+  const [hasta, setHasta]         = useState('')
+  const [datos, setDatos]         = useState([])
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState(null)
+  const [buscado, setBuscado]     = useState(false)
+
+  const cols = REPORTE_COLS[tipo] || []
+
+  async function consultar() {
+    setError(null)
+    setLoading(true)
+    setBuscado(false)
+    try {
+      const filtros = { desde: desde || undefined, hasta: hasta || undefined }
+      let data
+      if (tipo === 'ordenes-compra')     data = await getReporteOC(filtros)
+      else if (tipo === 'solicitudes-fondos') data = await getReporteSF(filtros)
+      else                               data = await getReporteEval(filtros)
+      setDatos(data || [])
+      setBuscado(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function exportarExcel() {
+    if (!datos.length) return
+    const tipoLabel = REPORTE_TIPOS.find(t => t.key === tipo)?.label || tipo
+    const ws = XLSX.utils.json_to_sheet(
+      datos.map(row => {
+        const obj = {}
+        cols.forEach(c => { obj[c.header] = row[c.field] ?? '' })
+        return obj
+      })
+    )
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, tipoLabel.slice(0, 31))
+    const fecha = new Date().toISOString().slice(0, 10)
+    XLSX.writeFile(wb, `Reporte_${tipoLabel.replace(/\s+/g, '_')}_${fecha}.xlsx`)
+  }
+
+  return (
+    <div style={{ padding: '4px 0' }}>
+      {/* Filtros */}
+      <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end', marginBottom: '16px' }}>
+        <div style={{ flex: '2 1 180px' }}>
+          <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Módulo</span>
+          <select className="form-control" value={tipo} onChange={e => { setTipo(e.target.value); setDatos([]); setBuscado(false) }} style={{ fontSize: '13px' }}>
+            {REPORTE_TIPOS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: '1 1 130px' }}>
+          <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Desde</span>
+          <input className="form-control" type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ fontSize: '13px' }} />
+        </div>
+        <div style={{ flex: '1 1 130px' }}>
+          <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Hasta</span>
+          <input className="form-control" type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={{ fontSize: '13px' }} />
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+          <button type="button" className="primary-button" onClick={consultar} disabled={loading} style={{ fontSize: '13px', padding: '8px 18px' }}>
+            {loading ? 'Consultando...' : 'Consultar'}
+          </button>
+          {buscado && datos.length > 0 && (
+            <button type="button" className="ghost-button" onClick={exportarExcel} style={{ fontSize: '13px', padding: '8px 14px', color: '#15803d', borderColor: '#bbf7d0' }}>
+              Exportar Excel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', color: '#b91c1c', fontSize: '13px', marginBottom: '12px' }}>{error}</div>}
+
+      {/* Tabla */}
+      {buscado && (
+        datos.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#9ca3af', padding: '40px 0', fontSize: '14px' }}>Sin registros para los filtros seleccionados.</div>
+        ) : (
+          <div>
+            <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
+              {datos.length} {datos.length === 1 ? 'registro' : 'registros'}
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    {cols.map(c => (
+                      <th key={c.field} style={{ background: '#1e3a8a', color: '#fff', padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                        {c.header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {datos.map((row, i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                      {cols.map(c => (
+                        <td key={c.field} style={{ padding: '7px 10px', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {row[c.field] ?? '—'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      )}
+
+      {!buscado && !loading && (
+        <div style={{ textAlign: 'center', color: '#9ca3af', padding: '48px 0', fontSize: '14px' }}>
+          Selecciona un módulo y presiona <strong>Consultar</strong> para ver el reporte.
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OrdenesCompra({
   proveedores = [], unidadesNegocio = [], folio, ordenes = [],
-  currentUser, currentUserRol, onCreateOrden, onApproveOrden, onRejectOrden, onDeleteOrden,
+  currentUser, currentUserRol, onCreateOrden, onUpdateOrden, onApproveOrden, onRejectOrden, onDeleteOrden,
 }) {
   const rolApprover = ROLE_TO_APPROVER[currentUserRol] || null
   const [activeSection, setActiveSection] = useState('crear')
@@ -1127,6 +1389,7 @@ export default function OrdenesCompra({
   const [sfPendientes, setSfPendientes] = useState([])
   const [sfActionError, setSfActionError] = useState(null)
   const [inventario, setInventario] = useState([])
+  const [editandoOCId, setEditandoOCId] = useState(null) // null = crear, number = editar
 
   useEffect(() => {
     getInventario().then(data => setInventario(data.filter(p => p.Activo))).catch(() => {})
@@ -1162,10 +1425,10 @@ export default function OrdenesCompra({
 
   const summary = useMemo(() => {
     const subtotal = computedLines.reduce((sum, line) => sum + line.subtotal, 0)
-    const iva = Number((subtotal * 0.16).toFixed(2))
+    const iva = form.ConIva ? Number((subtotal * 0.16).toFixed(2)) : 0
     const total = Number((subtotal + iva).toFixed(2))
     return { subtotal, iva, total }
-  }, [computedLines])
+  }, [computedLines, form.ConIva])
 
   function updateField(name, value) { setForm((prev) => ({ ...prev, [name]: value })) }
   function updateLine(id, name, value) {
@@ -1208,9 +1471,19 @@ export default function OrdenesCompra({
     }
     try {
       setSaving(true)
-      await onCreateOrden(orderPayload)
-      setForm(emptyOrderForm(folio))
-      setActiveSection('misOrdenes')
+      if (editandoOCId) {
+        await updateOrdenCompra(editandoOCId, orderPayload)
+        setEditandoOCId(null)
+        setForm(emptyOrderForm(folio))
+        setSuccessMsg(`Orden ${orderPayload.Folio} actualizada. Volvió a flujo de autorización.`)
+        setTimeout(() => setSuccessMsg(null), 7000)
+        if (onUpdateOrden) await onUpdateOrden()
+        setActiveSection('historial')
+      } else {
+        await onCreateOrden(orderPayload)
+        setForm(emptyOrderForm(folio))
+        setActiveSection('misOrdenes')
+      }
     } catch (err) { setFormError(err?.message || 'No se pudo guardar la orden.') }
     finally { setSaving(false) }
   }
@@ -1256,6 +1529,7 @@ export default function OrdenesCompra({
 
   const isAdmin = currentUserRol === 'admin'
   const isAutorizador = currentUserRol === 'autorizador1' || currentUserRol === 'autorizador2'
+  const puedeRecepcionar = currentUserRol === 'admin'
 
   const [filtros, setFiltros] = useState({ texto:'', unidadNegocio:'', estado:'', tipo:'', fechaDesde:'', fechaHasta:'' })
   const hasFiltros = Object.values(filtros).some(Boolean)
@@ -1293,6 +1567,35 @@ export default function OrdenesCompra({
     setTimeout(() => setSuccessMsg(null), 6000)
   }
 
+  async function handleEditarOC(order) {
+    try {
+      const full = await getOrdenCompraById(order.OrdenCompraId)
+      setForm({
+        Folio: full.Folio || '',
+        UnidadNegocioId: String(full.UnidadNegocioId || ''),
+        ProveedorId: String(full.ProveedorId || ''),
+        Fecha: String(full.Fecha || '').slice(0, 10),
+        Tipo: full.Tipo || 'compras',
+        Destino: full.Destino || '',
+        Observaciones: full.Observaciones || '',
+        ConIva: Boolean(full.ConIva),
+        LineItems: (full.Lineas || []).map(l => ({
+          id: Math.random().toString(36).slice(2),
+          Descripcion: l.Descripcion || '',
+          Cantidad: l.Cantidad ?? '',
+          UnidadMedida: l.UnidadMedida || '',
+          PrecioUnitario: l.PrecioUnitario ?? '',
+          ProductoId: l.ProductoId || null,
+        })),
+      })
+      setEditandoOCId(full.OrdenCompraId)
+      setActiveSection('crear')
+      setFormError(null)
+    } catch (err) {
+      alert('No se pudo cargar la orden: ' + err.message)
+    }
+  }
+
   async function handleDeleteOrden(order) {
     if (!window.confirm(`¿Eliminar la orden ${order.Folio}? Esta acción no se puede deshacer.`)) return
     try {
@@ -1328,6 +1631,7 @@ export default function OrdenesCompra({
     { key: 'misOrdenes', label: `Mis órdenes${misOrdenes.length ? ` (${misOrdenes.length})` : ''}` },
     { key: 'historial', label: 'Órdenes de Compra' },
     { key: 'autorizar', label: 'Autorizar' },
+    ...(['admin','autorizador1','autorizador2'].includes(currentUserRol) ? [{ key: 'reportes', label: 'Reportes' }] : []),
   ]
 
   return (
@@ -1335,7 +1639,6 @@ export default function OrdenesCompra({
       <div className="panel card">
         <div className="panel-header space-between" style={{ flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
           <div>
-            <h2>Órdenes de Compra</h2>
             <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
               Crea órdenes, consulta su estatus, autoriza y gestiona facturación y evaluación.
             </p>
@@ -1357,8 +1660,8 @@ export default function OrdenesCompra({
           </div>
         )}
 
-        {/* ── BUSCADOR / FILTROS ── solo en vistas de listado, no en crear */}
-        {activeSection !== 'crear' && <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'12px', padding:'12px 14px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'flex-end', marginBottom:'4px' }}>
+        {/* ── BUSCADOR / FILTROS ── solo en vistas de listado, no en crear ni reportes */}
+        {activeSection !== 'crear' && activeSection !== 'reportes' && <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'12px', padding:'12px 14px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'flex-end', marginBottom:'4px' }}>
           <div style={{ flex:'2 1 180px' }}>
             <span style={{ display:'block', fontSize:'11px', fontWeight:600, color:'#6b7280', marginBottom:'4px' }}>Buscar</span>
             <input className="form-control" type="text" value={filtros.texto} onChange={setF('texto')}
@@ -1405,6 +1708,11 @@ export default function OrdenesCompra({
         {/* ── CREAR ── */}
         {activeSection === 'crear' && (
           <form onSubmit={handleSaveOrden} className="datos-generales-form">
+            {editandoOCId && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', color: '#92400e', fontSize: '13px', fontWeight: 500 }}>
+                ✏️ Modo edición — al guardar, las aprobaciones se reiniciarán y la orden volverá al flujo de autorización.
+              </div>
+            )}
             <div className="form-row form-row-4">
               <div className="form-field">
                 <span className="form-field-label">Folio automático</span>
@@ -1467,7 +1775,7 @@ export default function OrdenesCompra({
                 <tbody>
                   {form.LineItems.map((line) => (
                     <tr key={line.id}>
-                      <td><input className="form-control" type="number" min="0" value={line.Cantidad} onChange={(e) => updateLine(line.id, 'Cantidad', e.target.value)} /></td>
+                      <td><input className="form-control" type="number" min="0" step="any" value={line.Cantidad} onChange={(e) => updateLine(line.id, 'Cantidad', e.target.value)} /></td>
                       <td>
                         <DescripcionCell
                           line={line}
@@ -1485,7 +1793,7 @@ export default function OrdenesCompra({
                         />
                       </td>
                       <td><input className="form-control" type="text" value={line.UnidadMedida} onChange={(e) => updateLine(line.id, 'UnidadMedida', e.target.value)} placeholder="Ej. hrs, pza" readOnly={!!line.ProductoId} style={line.ProductoId ? { background: '#f0f0f0', cursor: 'not-allowed' } : {}} /></td>
-                      <td><input className="form-control" type="number" min="0" step="0.01" value={line.PrecioUnitario} onChange={(e) => updateLine(line.id, 'PrecioUnitario', e.target.value)} /></td>
+                      <td><input className="form-control" type="number" min="0" step="any" value={line.PrecioUnitario} onChange={(e) => updateLine(line.id, 'PrecioUnitario', e.target.value)} /></td>
                       <td>{formatMoney((Number(line.Cantidad) || 0) * (Number(line.PrecioUnitario) || 0))}</td>
                       <td><button className="ghost-button" type="button" onClick={() => removeLine(line.id)}>Eliminar</button></td>
                     </tr>
@@ -1496,13 +1804,27 @@ export default function OrdenesCompra({
 
             <button type="button" className="ghost-button" onClick={addLine}>+ Agregar partida</button>
 
-            <div className="panel card cost-panel" style={{ marginTop: '16px', padding: '16px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+              <input
+                type="checkbox"
+                id="conIva"
+                checked={form.ConIva}
+                onChange={(e) => updateField('ConIva', e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <label htmlFor="conIva" style={{ margin: 0, cursor: 'pointer', fontWeight: 500 }}>
+                Aplicar IVA 16%
+              </label>
+            </div>
+
+            <div className="panel card cost-panel" style={{ marginTop: '12px', padding: '16px 20px' }}>
               <div className="summary-column" style={{ gap: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Subtotal</span><strong>{formatMoney(summary.subtotal)}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>IVA 16%</span><strong>{formatMoney(summary.iva)}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: form.ConIva ? 'inherit' : '#9ca3af' }}>
+                  <span>{form.ConIva ? 'IVA 16%' : 'Sin IVA'}</span>
+                  <strong>{form.ConIva ? formatMoney(summary.iva) : '—'}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
                   <span><strong>Total</strong></span><strong>{formatMoney(summary.total)}</strong>
@@ -1511,9 +1833,14 @@ export default function OrdenesCompra({
             </div>
 
             {formError && <div className="notification error">{formError}</div>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+              {editandoOCId && (
+                <button type="button" className="ghost-button" onClick={() => { setEditandoOCId(null); setForm(emptyOrderForm(folio)); setActiveSection('historial') }}>
+                  Cancelar edición
+                </button>
+              )}
               <button className="primary-button" type="submit" disabled={saving || saveDisabled}>
-                {saving ? 'Guardando...' : 'Guardar orden'}
+                {saving ? 'Guardando...' : editandoOCId ? '✓ Guardar cambios y re-autorizar' : 'Guardar orden'}
               </button>
             </div>
           </form>
@@ -1605,6 +1932,23 @@ export default function OrdenesCompra({
                                     Eval. Servicios
                                   </button>
                                 </>
+                              )}
+                              {isAdmin && (
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '11px', padding: '4px 10px', color: '#d97706', borderColor: '#fde68a', fontWeight: 600 }}
+                                  onClick={() => handleEditarOC(order)}>
+                                  Editar
+                                </button>
+                              )}
+                              {isAprobada && !order.Recepcionada && puedeRecepcionar && (
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '11px', padding: '4px 10px', color: '#16a34a', borderColor: '#bbf7d0', fontWeight: 700 }}
+                                  onClick={() => openModal('recepcion', order)}>
+                                  Recepción
+                                </button>
+                              )}
+                              {order.Recepcionada && (
+                                <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, padding: '4px 0' }}>✓ Recibida</span>
                               )}
                             </div>
                           </td>
@@ -1768,8 +2112,8 @@ export default function OrdenesCompra({
                               <td>{sf.Proveedor}</td>
                               <td>{sf.UnidadNegocio}</td>
                               <td><strong>{formatMoney(sf.Monto)}</strong></td>
-                              <td>{sf.Aprobado1 ? <span style={{ color:'#16a34a', fontWeight:700 }}>✓ {sf.AprobadoPor1}</span> : <span style={{ color:'#b45309' }}>⏳ Pendiente</span>}</td>
-                              <td>{sf.Aprobado1 ? (sf.Aprobado2 ? <span style={{ color:'#16a34a', fontWeight:700 }}>✓ {sf.AprobadoPor2}</span> : <span style={{ color:'#b45309' }}>⏳ Pendiente</span>) : <span style={{ color:'#d1d5db' }}>🔒</span>}</td>
+                              <td>{sf.Aprobado1 ? <span style={{ color:'#16a34a', fontWeight:700 }}>✓ {sf.AprobadoPor1}</span> : <span style={{ color:'#b45309' }}>Pendiente</span>}</td>
+                              <td>{sf.Aprobado1 ? (sf.Aprobado2 ? <span style={{ color:'#16a34a', fontWeight:700 }}>✓ {sf.AprobadoPor2}</span> : <span style={{ color:'#b45309' }}>Pendiente</span>) : <span style={{ color:'#d1d5db' }}>—</span>}</td>
                               <td>
                                 <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
                                   {canP1 && <button type="button" className="primary-button" style={{ padding:'6px 14px', fontSize:'13px' }} onClick={() => handleApproveSF(sf.OrdenCompraId, 1)}>Aprobar (Paso 1)</button>}
@@ -1863,6 +2207,23 @@ export default function OrdenesCompra({
                                 </button>
                               </>
                             )}
+                            {isAdmin && (
+                              <button type="button" className="ghost-button"
+                                style={{ fontSize:'11px', padding:'3px 8px', color:'#d97706', borderColor:'#fde68a', fontWeight:600 }}
+                                onClick={() => handleEditarOC(order)}>
+                                Editar
+                              </button>
+                            )}
+                            {isAprobada && !order.Recepcionada && puedeRecepcionar && (
+                              <button type="button" className="ghost-button"
+                                style={{ fontSize:'11px', padding:'3px 8px', color:'#16a34a', borderColor:'#bbf7d0', fontWeight:700 }}
+                                onClick={() => openModal('recepcion', order)}>
+                                Recepción
+                              </button>
+                            )}
+                            {order.Recepcionada && (
+                              <span style={{ fontSize:'11px', color:'#16a34a', fontWeight:600, padding:'3px 0' }}>✓ Recibida</span>
+                            )}
                             {(isAdmin || isAutorizador) && (
                               <button type="button" className="ghost-button"
                                 style={{ fontSize:'11px', padding:'3px 8px', color:'#dc2626', borderColor:'#fecaca' }}
@@ -1881,6 +2242,11 @@ export default function OrdenesCompra({
           </div>
         )}
 
+        {/* ── REPORTES ── */}
+        {activeSection === 'reportes' && (
+          <ReportesPanel />
+        )}
+
       </div>
 
       {/* ── Modales ── */}
@@ -1895,6 +2261,9 @@ export default function OrdenesCompra({
       )}
       {modal?.type === 'evaluacion-servicios' && (
         <EvaluacionModal orden={modal.orden} tipoForzado="servicios" isAdmin={modal.isAdmin} isAutorizador={modal.isAutorizador} onClose={closeModal} onSuccess={handleModalSuccess} />
+      )}
+      {modal?.type === 'recepcion' && (
+        <RecepcionModal orden={modal.orden} currentUser={currentUser} onClose={closeModal} onSuccess={handleModalSuccess} />
       )}
     </div>
   )

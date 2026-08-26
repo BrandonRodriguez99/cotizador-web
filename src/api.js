@@ -18,8 +18,8 @@ async function fetchJson(path, options = {}) {
   if (!response.ok) {
     if (response.status === 401) {
       localStorage.removeItem('cotizador-token');
-      localStorage.removeItem('cotizador-user');
-      window.location.reload();
+      localStorage.removeItem('cotizador-usuario');
+      window.location.replace('/login');
       throw new Error('Sesión expirada. Por favor inicia sesión nuevamente.');
     }
     const errorBody = await response.text();
@@ -313,17 +313,23 @@ export async function getOrdenesCompra() {
 export async function deleteOrdenCompra(id) {
   return fetchJson(`ordenescompra/${id}`, { method: 'DELETE', headers: authHeaders() });
 }
+export async function getOrdenCompraById(id) {
+  return fetchJson(`ordenescompra/${id}`, { headers: authHeaders() });
+}
+export async function updateOrdenCompra(id, data) {
+  return fetchJson(`ordenescompra/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) });
+}
 
 export async function createOrdenCompra(data) {
   return postJson('ordenescompra', data);
 }
 
-export async function approveOrdenCompra(id, aprobador) {
+export async function approveOrdenCompra(id, aprobador, nombre) {
   const paso = aprobador === "Administración" ? 1 : 2;
   return fetchJson(`ordenescompra/${id}/aprobar`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ paso, aprobador }),
+    body: JSON.stringify({ paso, aprobador: nombre || aprobador }),
   });
 }
 
@@ -345,17 +351,17 @@ export async function saveFacturaOrden(id, data) {
   });
 }
 
-export async function uploadFacturaArchivo(id, archivoBase64, archivoNombre) {
-  return fetchJson(`ordenescompra/${id}/factura/archivo`, {
+export async function uploadFacturaArchivo(id, archivoBase64, archivoNombre, slot = 1) {
+  return fetchJson(`ordenescompra/${id}/factura/archivo?slot=${slot}`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ archivoBase64, archivoNombre }),
   });
 }
 
-export async function downloadFacturaArchivo(id, nombreOriginal) {
+export async function downloadFacturaArchivo(id, nombreOriginal, slot = 1) {
   const token = getToken();
-  const response = await fetch(`${API_BASE_URL}/ordenescompra/${id}/factura/archivo`, {
+  const response = await fetch(`${API_BASE_URL}/ordenescompra/${id}/factura/archivo?slot=${slot}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!response.ok) throw new Error('No se pudo descargar el archivo');
@@ -423,6 +429,39 @@ export async function downloadOrdenCompraPdf(id) {
   });
   if (!response.ok) throw new Error("No se pudo generar el PDF");
   return response.blob();
+}
+
+// ─── Recepción OC ────────────────────────────────────────────────────────────
+export async function registrarRecepcionOC(id, lineas, recibidoPor) {
+  return fetchJson(`ordenescompra/${id}/recepcion`, {
+    method: 'POST', headers: authHeaders(),
+    body: JSON.stringify({ lineas, recibidoPor }),
+  });
+}
+export async function getOCsPendientesRecepcion() {
+  return fetchJson('ordenescompra/pendientes-recepcion', { headers: authHeaders() });
+}
+
+// ─── Áreas de Consumo ─────────────────────────────────────────────────────────
+export async function getAreasConsumo() {
+  return fetchJson('areas-consumo', { headers: authHeaders() });
+}
+export async function createAreaConsumo(data) {
+  return fetchJson('areas-consumo', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
+}
+export async function updateAreaConsumo(id, data) {
+  return fetchJson(`areas-consumo/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) });
+}
+export async function deleteAreaConsumo(id) {
+  return fetchJson(`areas-consumo/${id}`, { method: 'DELETE', headers: authHeaders() });
+}
+
+// ─── Consumos de Limpieza ─────────────────────────────────────────────────────
+export async function getConsumos() {
+  return fetchJson('consumos', { headers: authHeaders() });
+}
+export async function registrarConsumo(data) {
+  return fetchJson('consumos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -529,6 +568,8 @@ export function getOrdenesMantenimiento() { return fetchJson('ordenes-mantenimie
 export function getOrdenMantenimientoById(id) { return fetchJson(`ordenes-mantenimiento/${id}`, { headers: authHeaders() }) }
 export function createOrdenMantenimiento(data) { return fetchJson('ordenes-mantenimiento', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function updateOrdenMantenimiento(id, data) { return fetchJson(`ordenes-mantenimiento/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function editOrdenMantenimiento(id, data) { return fetchJson(`ordenes-mantenimiento/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteOrdenMantenimiento(id) { return fetchJson(`ordenes-mantenimiento/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 
 // ── Inventario ────────────────────────────────────────────────────────────────
 export function getInventario() { return fetchJson('inventario', { headers: authHeaders() }) }
@@ -581,9 +622,75 @@ export function autorizarOrdenVehiculo(id) { return fetchJson(`seguridad/ordenes
 export function rechazarOrdenVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/rechazar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function registrarSalidaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/salida`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function registrarLlegadaVehiculo(id, data) { return fetchJson(`seguridad/ordenes-vehiculo/${id}/llegada`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+async function uploadToCloudinary(base64, folder) {
+  const fd = new FormData()
+  fd.append('file', base64)
+  fd.append('upload_preset', 'douxyql6')
+  fd.append('folder', folder)
+  const r = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', { method: 'POST', body: fd })
+  const data = await r.json()
+  if (data.error) throw new Error(data.error.message)
+  return { url: data.secure_url }
+}
+
+export function uploadFotoVehiculo(base64) { return uploadToCloudinary(base64, 'vehiculos') }
+
+export function deleteVehiculo(id) { return fetchJson(`seguridad/vehiculos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function deleteExtintor(id) { return fetchJson(`seguridad/extintores/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function deleteVisita(id) { return fetchJson(`seguridad/visitas/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function deleteRondin(id) { return fetchJson(`seguridad/rondines/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function deleteOrdenVehiculo(id) { return fetchJson(`seguridad/ordenes-vehiculo/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 
 export function getDashboardSeguridad() { return fetchJson('seguridad/dashboard', { headers: authHeaders() }) }
 
-export function uploadFotoRondin(base64) {
-  return fetchJson('upload/foto-rondin', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) })
+export function uploadFotoRondin(base64) { return uploadToCloudinary(base64, 'rondines') }
+
+// ─── Reportes ─────────────────────────────────────────────────────────────────
+function buildReporteUrl(tipo, { desde, hasta } = {}) {
+  const q = new URLSearchParams()
+  if (desde) q.set('desde', desde)
+  if (hasta) q.set('hasta', hasta)
+  const qs = q.toString()
+  return `reportes/${tipo}${qs ? '?' + qs : ''}`
+}
+export function getReporteOC(filtros)     { return fetchJson(buildReporteUrl('ordenes-compra', filtros),     { headers: authHeaders() }) }
+export function getReporteSF(filtros)     { return fetchJson(buildReporteUrl('solicitudes-fondos', filtros), { headers: authHeaders() }) }
+export function getReporteEval(filtros)   { return fetchJson(buildReporteUrl('evaluaciones', filtros),       { headers: authHeaders() }) }
+
+// ─── Registro de Proveedores ──────────────────────────────────────────────────
+export function getSolicitudesProveedor()          { return fetchJson('solicitudes-proveedor', { headers: authHeaders() }) }
+export function getSolicitudProveedorById(id)      { return fetchJson(`solicitudes-proveedor/${id}`, { headers: authHeaders() }) }
+export function createSolicitudProveedor(data)     { return fetchJson('solicitudes-proveedor', { method:'POST', headers:authHeaders(), body:JSON.stringify(data) }) }
+export function updateSolicitudProveedor(id, data) { return fetchJson(`solicitudes-proveedor/${id}`, { method:'PUT', headers:authHeaders(), body:JSON.stringify(data) }) }
+export function enviarSolicitudProveedor(id)       { return fetchJson(`solicitudes-proveedor/${id}/enviar`, { method:'POST', headers:authHeaders() }) }
+export function aprobarSolicitudProveedor(id)      { return fetchJson(`solicitudes-proveedor/${id}/aprobar`, { method:'POST', headers:authHeaders() }) }
+export function rechazarSolicitudProveedor(id, motivo) { return fetchJson(`solicitudes-proveedor/${id}/rechazar`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ motivo }) }) }
+export function subirDocumentoProveedor(id, tipoDocumento, archivoBase64, archivoNombre) {
+  return fetchJson(`solicitudes-proveedor/${id}/documentos`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ tipoDocumento, archivoBase64, archivoNombre }) })
+}
+export async function descargarDocumentoProveedor(solicitudId, docId, nombre) {
+  const token = getToken();
+  const response = await fetch(`${API_BASE_URL}/solicitudes-proveedor/${solicitudId}/documentos/${docId}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) throw new Error('No se pudo descargar');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = nombre || 'documento';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+export function eliminarDocumentoProveedor(solicitudId, docId) {
+  return fetchJson(`solicitudes-proveedor/${solicitudId}/documentos/${docId}`, { method:'DELETE', headers:authHeaders() })
+}
+export function eliminarSolicitudProveedor(id) {
+  return fetchJson(`solicitudes-proveedor/${id}`, { method:'DELETE', headers:authHeaders() })
+}
+
+// ─── Acceso Alumnos (QR) ────────────────────────────────────────────────────
+export function getAccesoAlumnos(fecha) {
+  const q = fecha ? `?fecha=${fecha}` : ''
+  return fetchJson(`acceso-alumnos${q}`, { headers: authHeaders() })
+}
+export function registrarAcceso(matricula, tipoAcceso) {
+  return fetchJson('acceso-alumnos', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ matricula, tipoAcceso }) })
 }

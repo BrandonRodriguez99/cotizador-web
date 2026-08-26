@@ -150,7 +150,6 @@ export default function HistorialCotizaciones({ cotizaciones, loading, error, on
     <section className="panel card">
       <div className="panel-header space-between">
         <div>
-          <h2>Historial de Cotizaciones</h2>
           <p style={{ margin: '8px 0 0', color: '#6b7280' }}>Listado de cotizaciones guardadas</p>
         </div>
       </div>

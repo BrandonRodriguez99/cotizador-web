@@ -1,30 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
+import AccesoAlumnos from './AccesoAlumnos'
 import {
   getDashboardSeguridad,
-  getVehiculos, createVehiculo, updateVehiculo,
-  getExtintores, createExtintor, updateExtintor,
+  getVehiculos, createVehiculo, updateVehiculo, deleteVehiculo,
+  getExtintores, createExtintor, updateExtintor, deleteExtintor,
   getRevisionesExtintor, createRevisionExtintor,
   getPuntosRevision, createPuntoRevision, updatePuntoRevision,
   createAreaRevision, updateAreaRevision,
-  getRondines, getRondinById, createRondin, marcarRegistroRondin, finalizarRondin,
-  getVisitas, createVisita, registrarSalidaVisita,
+  getRondines, getRondinById, createRondin, marcarRegistroRondin, finalizarRondin, deleteRondin,
+  getVisitas, createVisita, registrarSalidaVisita, deleteVisita,
   getOrdenesVehiculo, createOrdenVehiculo,
   autorizarOrdenVehiculo, rechazarOrdenVehiculo,
-  registrarSalidaVehiculo, registrarLlegadaVehiculo,
+  registrarSalidaVehiculo, registrarLlegadaVehiculo, deleteOrdenVehiculo,
+  uploadFotoVehiculo,
+  uploadFotoRondin,
 } from './api'
-
-async function uploadToCloudinary(file) {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('upload_preset', 'douxyql6')
-  const r = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', {
-    method: 'POST',
-    body: formData,
-  })
-  const data = await r.json()
-  if (!r.ok) throw new Error(data.error?.message || 'Error al subir imagen')
-  return data.secure_url
-}
 
 const ESTADOS_VEHICULO = {
   pendiente:  { label: 'Pendiente',  color: '#d97706', bg: '#fef3c7' },
@@ -68,23 +58,28 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const esAdmin    = rol === 'admin'
   const esSeguridad = rol === 'seguridad'
   const esEncargado = rol === 'encargado_vehiculos'
+  const esJefeSeg  = rol === 'jefe_seguridad'
 
   const tabs = []
-  if (!soloVehiculos && (esAdmin || esSeguridad)) {
+  if (!soloVehiculos && (esAdmin || esSeguridad || esJefeSeg)) {
     tabs.push({ id: 'dashboard', label: 'Resumen' })
     tabs.push({ id: 'rondines',  label: 'Rondines' })
     tabs.push({ id: 'extintores',label: 'Extintores' })
     tabs.push({ id: 'visitas',   label: 'Visitas' })
+    tabs.push({ id: 'acceso',    label: 'Acceso QR' })
   }
   tabs.push({ id: 'vehiculos', label: 'Vehículos' })
-  if (esAdmin && !soloVehiculos) tabs.push({ id: 'catalogos', label: 'Catálogos' })
+  if ((esAdmin || esJefeSeg) && !soloVehiculos) tabs.push({ id: 'catalogos', label: 'Catálogos' })
 
   const [tab, setTab] = useState(tabs[0]?.id || 'vehiculos')
 
   // ─── DASHBOARD ─────────────────────────────────────────────────────────────
   const [dash, setDash] = useState(null)
+  const [dashError, setDashError] = useState(null)
   const loadDash = useCallback(async () => {
-    try { setDash(await getDashboardSeguridad()) } catch { /* ignore */ }
+    setDashError(null)
+    try { setDash(await getDashboardSeguridad()) }
+    catch (e) { setDashError(e?.message || 'Error al cargar el resumen') }
   }, [])
   useEffect(() => { if (tab === 'dashboard') loadDash() }, [tab, loadDash])
 
@@ -96,12 +91,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [iniciandoR, setIniciandoR]     = useState(false)
   const [incidenciaForm, setIncidenciaForm] = useState({})
   const [registroModal, setRegistroModal]   = useState(null)
+  const [fotoRondin, setFotoRondin]         = useState(null)
+  const [uploadingFotoR, setUploadingFotoR] = useState(false)
   const [finalizarObs, setFinalizarObs]     = useState('')
   const [finalizarModal, setFinalizarModal] = useState(false)
-  const [fotoPreview, setFotoPreview]   = useState(null)
-  const [fotoFile, setFotoFile]         = useState(null)
-  const [subiendoFoto, setSubiendoFoto] = useState(false)
-  const [omGenerada, setOmGenerada]     = useState(null)
 
   const loadRondines = useCallback(async () => {
     setLoadingR(true); setErrorR('')
@@ -127,34 +120,30 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     try { setRondinActivo(await getRondinById(id)) } catch (e) { alert(e.message) }
   }
 
-  function handleFotoChange(e) {
-    const file = e.target.files[0]
+  async function handleFotoRondinChange(file) {
     if (!file) return
-    setFotoFile(file)
-    setFotoPreview(URL.createObjectURL(file))
+    setUploadingFotoR(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        try {
+          const { url } = await uploadFotoRondin(ev.target.result)
+          setFotoRondin(url)
+        } catch (e) { alert('Error subiendo foto: ' + e.message) }
+        finally { setUploadingFotoR(false) }
+      }
+      reader.readAsDataURL(file)
+    } catch { setUploadingFotoR(false) }
   }
 
   async function marcarRegistro(registroId, datos) {
     try {
-      let fotoUrl = null
-      if (fotoFile) {
-        setSubiendoFoto(true)
-        try {
-          fotoUrl = await uploadToCloudinary(fotoFile)
-        } catch (e) {
-          alert('No se pudo subir la foto, se guardará sin imagen.')
-        } finally {
-          setSubiendoFoto(false)
-        }
-      }
-      const res = await marcarRegistroRondin(rondinActivo.RondinId, registroId, { ...datos, FotoUrl: fotoUrl })
-      if (res.omFolio) setOmGenerada(res.omFolio)
+      await marcarRegistroRondin(rondinActivo.RondinId, registroId, { ...datos, FotoUrl: fotoRondin })
       const detalle = await getRondinById(rondinActivo.RondinId)
       setRondinActivo(detalle)
       setRegistroModal(null)
       setIncidenciaForm({})
-      setFotoPreview(null)
-      setFotoFile(null)
+      setFotoRondin(null)
     } catch (e) { alert('Error: ' + e.message) }
   }
 
@@ -205,12 +194,13 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   }
 
   // ─── VISITAS ───────────────────────────────────────────────────────────────
-  const [visitas, setVisitas]       = useState([])
-  const [loadingV, setLoadingV]     = useState(false)
-  const [errorV, setErrorV]         = useState('')
-  const [visitaForm, setVisitaForm] = useState({})
-  const [nuevaVisita, setNuevaVisita] = useState(false)
+  const [visitas, setVisitas]           = useState([])
+  const [loadingV, setLoadingV]         = useState(false)
+  const [errorV, setErrorV]             = useState('')
+  const [visitaForm, setVisitaForm]     = useState({})
+  const [nuevaVisita, setNuevaVisita]   = useState(false)
   const [fechaVisitas, setFechaVisitas] = useState(new Date().toISOString().substring(0, 10))
+  const [confirmSalida, setConfirmSalida] = useState(null) // VisitaId pendiente de confirmar salida
 
   const loadVisitas = useCallback(async () => {
     setLoadingV(true); setErrorV('')
@@ -234,8 +224,16 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   async function registrarSalida(id) {
     try {
       await registrarSalidaVisita(id, {})
-      await loadVisitas()
-    } catch (e) { alert('Error: ' + e.message) }
+      const ahora = new Date().toISOString()
+      // Usar Number() para evitar mismatch string/número
+      setVisitas(prev => prev.map(v =>
+        Number(v.VisitaId) === Number(id) ? { ...v, HoraSalida: ahora } : v
+      ))
+      // Recargar desde servidor como respaldo
+      loadVisitas()
+    } catch (e) {
+      alert('Error al registrar salida: ' + e.message)
+    }
   }
 
   // ─── VEHÍCULOS ─────────────────────────────────────────────────────────────
@@ -252,17 +250,28 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [kmForm, setKmForm]               = useState('')
   const [obsForm, setObsForm]             = useState('')
   const [filtroEstado, setFiltroEstado]   = useState('')
+  const ANGULOS = [
+    { key: 'Frontal',    label: 'Frontal' },
+    { key: 'Trasero',    label: 'Trasero' },
+    { key: 'LateralIzq', label: 'Lat. Izquierdo' },
+    { key: 'LateralDer', label: 'Lat. Derecho' },
+  ]
+  const fotoVacía = { Frontal: null, Trasero: null, LateralIzq: null, LateralDer: null }
+  const [fotosSalida, setFotosSalida]     = useState(fotoVacía)
+  const [fotosLlegada, setFotosLlegada]   = useState(fotoVacía)
+  const [uploadingFoto, setUploadingFoto] = useState({})
+  const [fotoModal, setFotoModal]         = useState(null)
 
   const loadOrdenesV = useCallback(async () => {
     setLoadingOV(true); setErrorOV('')
     try {
       const params = {}
       if (filtroEstado) params.estado = filtroEstado
-      if (!esEncargado && !esAdmin && !esSeguridad) params.mine = '1'
+      if (!esEncargado && !esAdmin && !esSeguridad && !esJefeSeg) params.mine = '1'
       setOrdenesV(await getOrdenesVehiculo(params))
     } catch (e) { setErrorOV(e.message) }
     finally { setLoadingOV(false) }
-  }, [filtroEstado, esEncargado, esAdmin, esSeguridad])
+  }, [filtroEstado, esEncargado, esAdmin, esSeguridad, esJefeSeg])
 
   useEffect(() => {
     if (tab === 'vehiculos') {
@@ -297,20 +306,73 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     } catch (e) { alert('Error: ' + e.message) }
   }
 
+  async function handleFotoChange(angulo, tipo, file) {
+    if (!file) return
+    const key = `${tipo}_${angulo}`
+    setUploadingFoto(p => ({ ...p, [key]: true }))
+    try {
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        try {
+          const { url } = await uploadFotoVehiculo(ev.target.result)
+          if (tipo === 'salida') setFotosSalida(p => ({ ...p, [angulo]: url }))
+          else setFotosLlegada(p => ({ ...p, [angulo]: url }))
+        } catch (e) { alert('Error subiendo foto: ' + e.message) }
+        finally { setUploadingFoto(p => ({ ...p, [key]: false })) }
+      }
+      reader.readAsDataURL(file)
+    } catch { setUploadingFoto(p => ({ ...p, [key]: false })) }
+  }
+
   async function registrarSalida() {
     try {
-      await registrarSalidaVehiculo(salidaModal, { KmInicial: kmForm })
-      setSalidaModal(null); setKmForm('')
+      await registrarSalidaVehiculo(salidaModal, {
+        KmInicial: kmForm,
+        FotoSalidaFrontal:    fotosSalida.Frontal,
+        FotoSalidaTrasero:    fotosSalida.Trasero,
+        FotoSalidaLateralIzq: fotosSalida.LateralIzq,
+        FotoSalidaLateralDer: fotosSalida.LateralDer,
+      })
+      setSalidaModal(null); setKmForm(''); setFotosSalida(fotoVacía)
       await loadOrdenesV()
     } catch (e) { alert('Error: ' + e.message) }
   }
 
   async function registrarLlegada() {
     try {
-      await registrarLlegadaVehiculo(llegadaModal, { KmFinal: kmForm, Observaciones: obsForm })
-      setLlegadaModal(null); setKmForm(''); setObsForm('')
+      await registrarLlegadaVehiculo(llegadaModal, {
+        KmFinal: kmForm, Observaciones: obsForm,
+        FotoLlegadaFrontal:    fotosLlegada.Frontal,
+        FotoLlegadaTrasero:    fotosLlegada.Trasero,
+        FotoLlegadaLateralIzq: fotosLlegada.LateralIzq,
+        FotoLlegadaLateralDer: fotosLlegada.LateralDer,
+      })
+      setLlegadaModal(null); setKmForm(''); setObsForm(''); setFotosLlegada(fotoVacía)
       await loadOrdenesV()
     } catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarRondin(id) {
+    if (!window.confirm('¿Eliminar este rondín? Esta acción no se puede deshacer.')) return
+    try { await deleteRondin(id); await loadRondines() }
+    catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarVisita(id) {
+    if (!window.confirm('¿Eliminar este registro de visita?')) return
+    try {
+      await deleteVisita(id)
+      setVisitas(prev => prev.filter(v => v.VisitaId !== id))
+    } catch (e) {
+      console.error('eliminarVisita error:', e)
+      alert('Error al eliminar visita: ' + e.message)
+    }
+  }
+
+  async function eliminarOrdenV(id) {
+    if (!window.confirm('¿Eliminar esta solicitud? Solo se pueden eliminar solicitudes pendientes o rechazadas.')) return
+    try { await deleteOrdenVehiculo(id); await loadOrdenesV() }
+    catch (e) { alert('Error: ' + e.message) }
   }
 
   // ─── CATÁLOGOS (admin) ─────────────────────────────────────────────────────
@@ -357,6 +419,18 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
       setAreaModal(null); setAreaForm({ Nombre: '' })
       await loadCatalogos()
     } catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarCatVehiculo(id) {
+    if (!window.confirm('¿Desactivar este vehículo del catálogo?')) return
+    try { await deleteVehiculo(id); await loadCatalogos() }
+    catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarCatExtintor(id) {
+    if (!window.confirm('¿Desactivar este extintor?')) return
+    try { await deleteExtintor(id); await loadCatalogos() }
+    catch (e) { alert('Error: ' + e.message) }
   }
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
@@ -412,6 +486,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   </div>
                 ))}
               </div>
+            ) : dashError ? (
+              <p style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px' }}>
+                Error: {dashError}
+              </p>
             ) : (
               <p style={{ color: '#6b7280' }}>Cargando datos...</p>
             )}
@@ -477,6 +555,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           <th>Estado</th>
                           <th>Hora revisión</th>
                           <th>Incidencia</th>
+                          <th>Foto</th>
                           {rondinActivo.Estado === 'en_curso' && <th>Acción</th>}
                         </tr>
                       </thead>
@@ -491,27 +570,21 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             </td>
                             <td>{r.HoraRevision ? fmt(r.HoraRevision) : '-'}</td>
                             <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                {r.TieneIncidencia ? (
-                                  <Badge estado={r.NivelSeveridad} mapa={SEVERIDADES} />
-                                ) : r.Revisado ? (
-                                  <span style={{ color: '#16a34a', fontSize: '13px' }}>Sin incidencia</span>
-                                ) : '-'}
-                                {r.FotoUrl && (
-                                  <a href={r.FotoUrl} target="_blank" rel="noopener noreferrer"
-                                    title="Ver foto" style={{ fontSize: '16px', textDecoration: 'none' }}>📷</a>
-                                )}
-                                {r.OrdenMantenimientoId && (
-                                  <span title={`OM generada`} style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', padding: '2px 6px', borderRadius: '10px', fontWeight: '600' }}>
-                                    OM
-                                  </span>
-                                )}
-                              </div>
+                              {r.TieneIncidencia ? (
+                                <Badge estado={r.NivelSeveridad} mapa={SEVERIDADES} />
+                              ) : r.Revisado ? (
+                                <span style={{ color: '#16a34a', fontSize: '13px' }}>Sin incidencia</span>
+                              ) : '-'}
+                            </td>
+                            <td>
+                              {r.FotoUrl
+                                ? <a href={r.FotoUrl} target="_blank" rel="noreferrer" className="ghost-button" style={{ padding: '3px 10px', fontSize: '12px' }}>📷 Foto</a>
+                                : <span style={{ color: '#9ca3af', fontSize: '13px' }}>-</span>}
                             </td>
                             {rondinActivo.Estado === 'en_curso' && (
                               <td>
                                 <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
-                                  onClick={() => setRegistroModal(r)}>
+                                  onClick={() => { setRegistroModal(r); setFotoRondin(r.FotoUrl || null); setIncidenciaForm({ TieneIncidencia: r.TieneIncidencia, NivelSeveridad: r.NivelSeveridad, DescripcionIncidencia: r.DescripcionIncidencia, RequiereMantenimiento: r.RequiereMantenimiento }) }}>
                                   {r.Revisado ? 'Ver/Editar' : 'Revisar'}
                                 </button>
                               </td>
@@ -559,10 +632,16 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             <td>{r.AreasRevisadas}/{r.TotalAreas}</td>
                             <td style={{ color: r.TotalIncidencias > 0 ? '#dc2626' : '#6b7280' }}>{r.TotalIncidencias || 0}</td>
                             <td>
-                              <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
-                                onClick={() => verRondin(r.RondinId)}>
-                                {r.Estado === 'en_curso' ? 'Continuar' : 'Ver'}
-                              </button>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
+                                  onClick={() => verRondin(r.RondinId)}>
+                                  {r.Estado === 'en_curso' ? 'Continuar' : 'Ver'}
+                                </button>
+                                {(esAdmin || esJefeSeg) && (
+                                  <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                    onClick={() => eliminarRondin(r.RondinId)}>Eliminar</button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -571,16 +650,6 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   </div>
                 )}
               </>
-            )}
-
-            {/* Notificación OM generada */}
-            {omGenerada && (
-              <div style={{ background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#065f46', fontSize: '13px', fontWeight: '500' }}>
-                  ✅ Orden de Mantenimiento <strong>{omGenerada}</strong> generada automáticamente
-                </span>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46', fontWeight: 'bold' }} onClick={() => setOmGenerada(null)}>×</button>
-              </div>
             )}
 
             {/* Modal de registro de área */}
@@ -612,44 +681,41 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           onChange={e => setIncidenciaForm(f => ({ ...f, DescripcionIncidencia: e.target.value }))}
                           placeholder="Describe la incidencia..." />
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer' }}>
                         <input type="checkbox" checked={!!incidenciaForm.RequiereMantenimiento}
                           onChange={e => setIncidenciaForm(f => ({ ...f, RequiereMantenimiento: e.target.checked }))} />
                         <span style={{ fontSize: '13px' }}>Requiere orden de mantenimiento</span>
                       </label>
-                      {incidenciaForm.RequiereMantenimiento && (
-                        <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#6b7280', background: '#f3f4f6', borderRadius: '6px', padding: '8px 10px' }}>
-                          Se creará automáticamente una Orden de Mantenimiento con los datos de esta incidencia.
-                        </p>
-                      )}
                     </>
                   )}
 
-                  {/* Foto de la incidencia */}
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>
-                      Foto (opcional)
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Foto de evidencia (opcional)</label>
+                    <label style={{ cursor: 'pointer', border: `2px dashed ${fotoRondin ? '#16a34a' : '#d1d5db'}`, borderRadius: '8px', overflow: 'hidden', background: fotoRondin ? '#f0fdf4' : '#f9fafb', minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFotoRondinChange(e.target.files[0])} />
+                      {uploadingFotoR ? (
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>Subiendo...</div>
+                      ) : fotoRondin ? (
+                        <img src={fotoRondin} alt="evidencia" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '16px' }}>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>Toca para agregar foto</div>
+                        </div>
+                      )}
                     </label>
-                    <input type="file" accept="image/*" capture="environment"
-                      onChange={handleFotoChange}
-                      style={{ display: 'block', fontSize: '13px', width: '100%' }} />
-                    {fotoPreview && (
-                      <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
-                        <img src={fotoPreview} alt="preview"
-                          style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', border: '1px solid #e5e7eb', display: 'block' }} />
-                        <button onClick={() => { setFotoPreview(null); setFotoFile(null) }}
-                          style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '14px', lineHeight: '22px', textAlign: 'center' }}>
-                          ×
-                        </button>
-                      </div>
+                    {fotoRondin && (
+                      <button type="button" onClick={() => setFotoRondin(null)}
+                        style={{ marginTop: '6px', fontSize: '12px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                        Quitar foto
+                      </button>
                     )}
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => { setRegistroModal(null); setIncidenciaForm({}); setFotoPreview(null); setFotoFile(null) }}>Cancelar</button>
-                    <button className="primary-button" disabled={subiendoFoto}
+                    <button className="ghost-button" onClick={() => { setRegistroModal(null); setIncidenciaForm({}); setFotoRondin(null) }}>Cancelar</button>
+                    <button className="primary-button"
                       onClick={() => marcarRegistro(registroModal.RegistroId, incidenciaForm)}>
-                      {subiendoFoto ? 'Subiendo foto...' : 'Marcar como revisado'}
+                      Marcar como revisado
                     </button>
                   </div>
                 </div>
@@ -714,6 +780,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                                 onClick={() => verHistorial(e)}>
                                 Historial
                               </button>
+                              {(esAdmin || esJefeSeg) && (
+                                <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                  onClick={() => eliminarCatExtintor(e.ExtintorId)}>Desactivar</button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -834,12 +904,29 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           {v.HoraSalida ? fmt(v.HoraSalida) : '● Adentro'}
                         </td>
                         <td>
-                          {!v.HoraSalida && (
-                            <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
-                              onClick={() => { if (window.confirm(`Registrar salida de ${v.NombreVisitante}?`)) registrarSalida(v.VisitaId) }}>
-                              Registrar salida
-                            </button>
-                          )}
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {!v.HoraSalida && confirmSalida === v.VisitaId ? (
+                              <>
+                                <button className="primary-button" style={{ padding: '4px 10px', fontSize: '12px', background: '#16a34a', borderColor: '#16a34a' }}
+                                  onClick={() => { registrarSalida(v.VisitaId); setConfirmSalida(null) }}>
+                                  Confirmar salida
+                                </button>
+                                <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
+                                  onClick={() => setConfirmSalida(null)}>
+                                  Cancelar
+                                </button>
+                              </>
+                            ) : !v.HoraSalida ? (
+                              <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                onClick={() => setConfirmSalida(v.VisitaId)}>
+                                Registrar salida
+                              </button>
+                            ) : null}
+                            {(esAdmin || esJefeSeg) && (
+                              <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                onClick={() => eliminarVisita(v.VisitaId)}>Eliminar</button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -891,7 +978,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <h2 style={{ margin: 0 }}>
-                  {esEncargado || esAdmin ? 'Solicitudes de Vehículo' : esSeguridad ? 'Control de Salidas' : 'Mis Solicitudes'}
+                  {esEncargado || esAdmin || esJefeSeg ? 'Solicitudes de Vehículo' : esSeguridad ? 'Control de Salidas' : 'Mis Solicitudes'}
                 </h2>
                 <select className="form-control" style={{ width: 'auto' }} value={filtroEstado}
                   onChange={e => setFiltroEstado(e.target.value)}>
@@ -943,14 +1030,24 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
                                 onClick={() => { setRechazarModal(o.OrdenVehiculoId); setMotivoRechazo('') }}>Rechazar</button>
                             </>)}
-                            {/* Guardia: registrar salida/llegada */}
-                            {(esSeguridad || esAdmin) && o.Estado === 'autorizada' && (
+                            {/* Guardia/jefe: registrar salida/llegada */}
+                            {(esSeguridad || esAdmin || esJefeSeg) && o.Estado === 'autorizada' && (
                               <button className="primary-button" style={{ padding: '3px 8px', fontSize: '12px' }}
                                 onClick={() => { setSalidaModal(o.OrdenVehiculoId); setKmForm('') }}>Registrar salida</button>
                             )}
-                            {(esSeguridad || esAdmin) && o.Estado === 'en_curso' && (
+                            {(esSeguridad || esAdmin || esJefeSeg) && o.Estado === 'en_curso' && (
                               <button className="primary-button" style={{ padding: '3px 8px', fontSize: '12px', background: '#16a34a', borderColor: '#16a34a' }}
                                 onClick={() => { setLlegadaModal(o.OrdenVehiculoId); setKmForm(''); setObsForm('') }}>Registrar llegada</button>
+                            )}
+                            {/* Admin/jefe: eliminar pendientes y rechazadas */}
+                            {(esAdmin || esJefeSeg) && (o.Estado === 'pendiente' || o.Estado === 'rechazada') && (
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                onClick={() => eliminarOrdenV(o.OrdenVehiculoId)}>Eliminar</button>
+                            )}
+                            {/* Ver fotos si hay alguna */}
+                            {(o.FotoSalidaFrontal || o.FotoLlegadaFrontal) && (
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }}
+                                onClick={() => setFotoModal(o)}>Evidencia</button>
                             )}
                           </div>
                         </td>
@@ -1027,13 +1124,37 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
 
             {/* Modal salida */}
             {salidaModal && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '380px' }}>
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
                   <h3 style={{ margin: '0 0 16px' }}>Registrar Salida</h3>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Kilómetros iniciales</label>
-                  <input type="number" className="form-control" value={kmForm} onChange={e => setKmForm(e.target.value)} style={{ marginBottom: '16px' }} />
+                  <input type="number" className="form-control" value={kmForm} onChange={e => setKmForm(e.target.value)} style={{ marginBottom: '20px' }} />
+                  <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: '#1e3a5f' }}>Evidencia fotográfica del vehículo (salida)</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                    {ANGULOS.map(({ key, label }) => {
+                      const uploading = uploadingFoto[`salida_${key}`]
+                      const url = fotosSalida[key]
+                      return (
+                        <label key={key} style={{ cursor: 'pointer', border: `2px dashed ${url ? '#16a34a' : '#d1d5db'}`, borderRadius: '8px', overflow: 'hidden', background: url ? '#f0fdf4' : '#f9fafb', position: 'relative', minHeight: '90px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFotoChange(key, 'salida', e.target.files[0])} />
+                          {uploading ? (
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>Subiendo...</div>
+                          ) : url ? (
+                            <>
+                              <img src={url} alt={label} style={{ width: '100%', height: '80px', objectFit: 'cover' }} />
+                              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600', padding: '2px' }}>✓ {label}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', padding: '0 4px' }}>{label}</span>
+                            </>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => setSalidaModal(null)}>Cancelar</button>
+                    <button className="ghost-button" onClick={() => { setSalidaModal(null); setFotosSalida(fotoVacía) }}>Cancelar</button>
                     <button className="primary-button" onClick={registrarSalida}>Confirmar salida</button>
                   </div>
                 </div>
@@ -1042,25 +1163,91 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
 
             {/* Modal llegada */}
             {llegadaModal && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '380px' }}>
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
                   <h3 style={{ margin: '0 0 16px' }}>Registrar Llegada</h3>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Kilómetros finales</label>
                   <input type="number" className="form-control" value={kmForm} onChange={e => setKmForm(e.target.value)} style={{ marginBottom: '12px' }} />
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Observaciones</label>
-                  <textarea className="form-control" rows={2} value={obsForm} onChange={e => setObsForm(e.target.value)} style={{ marginBottom: '16px' }} />
+                  <textarea className="form-control" rows={2} value={obsForm} onChange={e => setObsForm(e.target.value)} style={{ marginBottom: '20px' }} />
+                  <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: '#1e3a5f' }}>Evidencia fotográfica del vehículo (llegada)</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                    {ANGULOS.map(({ key, label }) => {
+                      const uploading = uploadingFoto[`llegada_${key}`]
+                      const url = fotosLlegada[key]
+                      return (
+                        <label key={key} style={{ cursor: 'pointer', border: `2px dashed ${url ? '#16a34a' : '#d1d5db'}`, borderRadius: '8px', overflow: 'hidden', background: url ? '#f0fdf4' : '#f9fafb', position: 'relative', minHeight: '90px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFotoChange(key, 'llegada', e.target.files[0])} />
+                          {uploading ? (
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>Subiendo...</div>
+                          ) : url ? (
+                            <>
+                              <img src={url} alt={label} style={{ width: '100%', height: '80px', objectFit: 'cover' }} />
+                              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600', padding: '2px' }}>✓ {label}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', padding: '0 4px' }}>{label}</span>
+                            </>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => setLlegadaModal(null)}>Cancelar</button>
+                    <button className="ghost-button" onClick={() => { setLlegadaModal(null); setFotosLlegada(fotoVacía) }}>Cancelar</button>
                     <button className="primary-button" style={{ background: '#16a34a', borderColor: '#16a34a' }} onClick={registrarLlegada}>Confirmar llegada</button>
                   </div>
+                </div>
+              </div>
+            )}
+            {/* Modal ver fotos */}
+            {fotoModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0 }}>Evidencia fotográfica — {fotoModal.Folio}</h3>
+                    <button className="ghost-button" onClick={() => setFotoModal(null)}>Cerrar</button>
+                  </div>
+                  {[
+                    { titulo: 'Fotos de Salida', keys: ['FotoSalidaFrontal', 'FotoSalidaTrasero', 'FotoSalidaLateralIzq', 'FotoSalidaLateralDer'], labels: ['Frontal', 'Trasero', 'Lat. Izquierdo', 'Lat. Derecho'] },
+                    { titulo: 'Fotos de Llegada', keys: ['FotoLlegadaFrontal', 'FotoLlegadaTrasero', 'FotoLlegadaLateralIzq', 'FotoLlegadaLateralDer'], labels: ['Frontal', 'Trasero', 'Lat. Izquierdo', 'Lat. Derecho'] },
+                  ].map(grupo => {
+                    const hayFotos = grupo.keys.some(k => fotoModal[k])
+                    if (!hayFotos) return null
+                    return (
+                      <div key={grupo.titulo} style={{ marginBottom: '24px' }}>
+                        <p style={{ fontWeight: '600', fontSize: '14px', color: '#1e3a5f', marginBottom: '12px' }}>{grupo.titulo}</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                          {grupo.keys.map((k, i) => (
+                            <div key={k}>
+                              <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>{grupo.labels[i]}</p>
+                              {fotoModal[k] ? (
+                                <a href={fotoModal[k]} target="_blank" rel="noreferrer">
+                                  <img src={fotoModal[k]} alt={grupo.labels[i]} style={{ width: '100%', borderRadius: '6px', objectFit: 'cover', maxHeight: '160px', border: '1px solid #e5e7eb' }} />
+                                </a>
+                              ) : (
+                                <div style={{ width: '100%', height: '100px', background: '#f3f4f6', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '12px' }}>Sin foto</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* ══ CATÁLOGOS (admin) ═══════════════════════════════════════════════ */}
-        {tab === 'catalogos' && esAdmin && (
+        {/* ══ ACCESO QR ═══════════════════════════════════════════════════════ */}
+        {tab === 'acceso' && (
+          <AccesoAlumnos usuario={usuario} />
+        )}
+
+        {/* ══ CATÁLOGOS (admin/jefe_seguridad) ═══════════════════════════════ */}
+        {tab === 'catalogos' && (esAdmin || esJefeSeg) && (
           <div>
             <h2 style={{ margin: '0 0 16px' }}>Catálogos de Seguridad</h2>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
@@ -1087,7 +1274,12 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                           <td>{v.Marca}</td><td>{v.Modelo}</td><td>{v.Placa}</td>
                           <td>{v.Año || '-'}</td><td>{v.Color || '-'}</td><td>{v.Capacidad || '-'}</td>
                           <td>{v.Activo ? '✓' : '✗'}</td>
-                          <td><button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('vehiculo', v)}>Editar</button></td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('vehiculo', v)}>Editar</button>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => eliminarCatVehiculo(v.VehiculoId)}>Desactivar</button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1111,7 +1303,12 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                         <tr key={e.ExtintorId}>
                           <td>{e.Codigo}</td><td>{e.Tipo || '-'}</td><td>{e.Ubicacion || '-'}</td>
                           <td>{fmtDate(e.FechaVencimiento)}</td><td>{e.Activo ? '✓' : '✗'}</td>
-                          <td><button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('extintor', e)}>Editar</button></td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('extintor', e)}>Editar</button>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => eliminarCatExtintor(e.ExtintorId)}>Desactivar</button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
