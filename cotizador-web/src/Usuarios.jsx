@@ -91,7 +91,6 @@ export default function Usuarios({ token }) {
     <section className="panel card">
       <div className="panel-header space-between">
         <div>
-          <h2>Usuarios</h2>
           <p style={{ margin: '8px 0 0', color: '#6b7280' }}>Gestión de acceso al sistema</p>
         </div>
         <button className="ghost-button" type="button" onClick={openCreate}>Nuevo usuario</button>

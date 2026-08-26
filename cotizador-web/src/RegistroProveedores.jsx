@@ -457,7 +457,6 @@ export default function RegistroProveedores({ currentUser, currentUserRol }) {
       <div className="panel card">
         <div className="panel-header space-between" style={{ flexWrap:'wrap', gap:'16px', alignItems:'center' }}>
           <div>
-            <h2>Registro de Proveedores</h2>
             <p style={{ margin:'8px 0 0', color:'#6b7280' }}>Solicita el alta de un proveedor y gestiona autorizaciones.</p>
           </div>
           <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>

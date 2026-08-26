@@ -883,7 +883,6 @@ function App() {
           <section className="panel card">
             <div className="panel-header space-between">
               <div>
-                <h2>{activeCatalogDefinition.title}</h2>
                 <p style={{ margin: '8px 0 0', color: '#6b7280' }}>{activeCatalogDefinition.subtitle}</p>
               </div>
               {(activeView !== 'proveedores' || usuario?.rol === 'admin') && (
@@ -981,7 +980,6 @@ function App() {
           <section className="panel card">
             <div className="panel-header">
               <div>
-                <h2>Inventario de Materiales</h2>
                 <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
                   Gestiona el stock de materiales y refacciones
                 </p>
@@ -999,7 +997,6 @@ function App() {
             <section className="panel card">
               <div className="panel-header space-between">
                 <div>
-                  <h2>Aprobaciones de Cotizaciones</h2>
                   <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
                     {pendientes.length > 0
                       ? `${pendientes.length} cotización${pendientes.length !== 1 ? 'es' : ''} pendiente${pendientes.length !== 1 ? 's' : ''} de aprobación`

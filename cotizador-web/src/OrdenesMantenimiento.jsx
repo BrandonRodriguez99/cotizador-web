@@ -902,7 +902,6 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
       <section className="panel card">
         <div className="panel-header space-between" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h2>Órdenes de Mantenimiento</h2>
             <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
               Solicita y gestiona órdenes de trabajo de mantenimiento
             </p>

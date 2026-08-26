@@ -1639,7 +1639,6 @@ export default function OrdenesCompra({
       <div className="panel card">
         <div className="panel-header space-between" style={{ flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
           <div>
-            <h2>Órdenes de Compra</h2>
             <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
               Crea órdenes, consulta su estatus, autoriza y gestiona facturación y evaluación.
             </p>
