@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
-import { getAccesoAlumnos, registrarAcceso } from './api'
+import { getAccesoAlumnos, registrarAcceso, eliminarAcceso } from './api'
 
 const COOLDOWN_MS = 4000
 
@@ -9,7 +9,8 @@ function fmt(dt) {
   return new Date(dt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-export default function AccesoAlumnos({ usuario }) {
+export default function AccesoAlumnos({ usuario = {} }) {
+  const esAdmin = usuario?.rol === 'admin'
   const [modo, setModo]           = useState(null) // 'Entrada' | 'Salida'
   const [escaneando, setEscaneando] = useState(false)
   const [registros, setRegistros] = useState([])
@@ -29,6 +30,12 @@ export default function AccesoAlumnos({ usuario }) {
   }, [fechaFiltro])
 
   useEffect(() => { cargarRegistros() }, [cargarRegistros])
+
+  async function handleEliminar(id) {
+    if (!window.confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return
+    try { await eliminarAcceso(id); cargarRegistros() }
+    catch (e) { alert(e.message) }
+  }
 
   // ── Iniciar / detener escáner ──────────────────────────────────────────────
   useEffect(() => {
@@ -216,12 +223,13 @@ export default function AccesoAlumnos({ usuario }) {
                   <th>Matrícula</th>
                   <th>Nombre</th>
                   <th>Tipo</th>
+                  {esAdmin && <th></th>}
                 </tr>
               </thead>
               <tbody>
                 {registros.length === 0 && !loadingList ? (
                   <tr>
-                    <td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan={esAdmin ? 5 : 4} style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
                       Sin registros para esta fecha.
                     </td>
                   </tr>
@@ -240,6 +248,21 @@ export default function AccesoAlumnos({ usuario }) {
                           {r.TipoAcceso}
                         </span>
                       </td>
+                      {esAdmin && (
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => handleEliminar(r.RegistroId)}
+                            style={{
+                              fontSize: '11px', padding: '2px 8px', borderRadius: '5px',
+                              background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5',
+                              cursor: 'pointer', fontWeight: 600,
+                            }}
+                          >
+                            Eliminar
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}

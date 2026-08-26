@@ -695,6 +695,9 @@ export function getAsistencia(generacionId, fecha) {
 }
 
 // ─── Acceso Alumnos (QR) ────────────────────────────────────────────────────
+export function eliminarAcceso(id) {
+  return fetchJson(`acceso-alumnos/${id}`, { method: 'DELETE', headers: authHeaders() })
+}
 export function getAccesoAlumnos(fecha) {
   const q = fecha ? `?fecha=${fecha}` : ''
   return fetchJson(`acceso-alumnos${q}`, { headers: authHeaders() })
