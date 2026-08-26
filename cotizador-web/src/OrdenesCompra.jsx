@@ -326,7 +326,6 @@ function FacturaModal({ orden, onClose, onSuccess }) {
                 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
                 onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}>
-                  <span>📎</span>
                   {existNombre ? 'Reemplazar archivo' : 'Seleccionar archivo'}
                 </label>
 
@@ -519,7 +518,7 @@ function SolicitudFondosModal({ orden, onClose, onSuccess, currentUserRol, readO
     <Modal title={`Solicitud de Fondos — ${orden.Folio}${sfReadOnly ? ' (solo lectura)' : ''}`} onClose={onClose} width={720}>
       {sfReadOnly && (
         <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'10px', padding:'10px 16px', marginBottom:'4px', fontSize:'12px', color:'#92400e', display:'flex', alignItems:'center', gap:'8px' }}>
-          <span>🔒</span><span>Modo visualización — solo los datos registrados son visibles, no puedes editar.</span>
+          <span>Modo visualización — solo los datos registrados son visibles, no puedes editar.</span>
         </div>
       )}
       <form onSubmit={handleSave} style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
@@ -870,7 +869,6 @@ function EvaluacionModal({ orden, tipoForzado, isAdmin, isAutorizador = false, o
         {/* Banner solo lectura */}
         {readOnly && (
           <div style={{ background: '#fffbeb', borderTop: '1px solid #fde68a', padding: '10px 16px', fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🔒</span>
             <span>Esta evaluación ya fue registrada y no puede modificarse. Solo el administrador puede editarla.</span>
           </div>
         )}
@@ -2115,8 +2113,8 @@ export default function OrdenesCompra({
                               <td>{sf.Proveedor}</td>
                               <td>{sf.UnidadNegocio}</td>
                               <td><strong>{formatMoney(sf.Monto)}</strong></td>
-                              <td>{sf.Aprobado1 ? <span style={{ color:'#16a34a', fontWeight:700 }}>✓ {sf.AprobadoPor1}</span> : <span style={{ color:'#b45309' }}>⏳ Pendiente</span>}</td>
-                              <td>{sf.Aprobado1 ? (sf.Aprobado2 ? <span style={{ color:'#16a34a', fontWeight:700 }}>✓ {sf.AprobadoPor2}</span> : <span style={{ color:'#b45309' }}>⏳ Pendiente</span>) : <span style={{ color:'#d1d5db' }}>🔒</span>}</td>
+                              <td>{sf.Aprobado1 ? <span style={{ color:'#16a34a', fontWeight:700 }}>✓ {sf.AprobadoPor1}</span> : <span style={{ color:'#b45309' }}>Pendiente</span>}</td>
+                              <td>{sf.Aprobado1 ? (sf.Aprobado2 ? <span style={{ color:'#16a34a', fontWeight:700 }}>✓ {sf.AprobadoPor2}</span> : <span style={{ color:'#b45309' }}>Pendiente</span>) : <span style={{ color:'#d1d5db' }}>—</span>}</td>
                               <td>
                                 <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
                                   {canP1 && <button type="button" className="primary-button" style={{ padding:'6px 14px', fontSize:'13px' }} onClick={() => handleApproveSF(sf.OrdenCompraId, 1)}>Aprobar (Paso 1)</button>}

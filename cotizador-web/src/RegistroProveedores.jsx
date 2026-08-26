@@ -357,12 +357,12 @@ function FormularioSolicitud({ solicitudId, currentUser, onGuardado, readOnly })
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
           <button type="submit" disabled={saving}
             style={{ padding:'9px 20px', borderRadius:'8px', border:'1px solid #d1d5db', background:'#fff', cursor:'pointer', fontSize:'13px', fontWeight:600 }}>
-            {saving ? 'Guardando...' : '💾 Guardar borrador'}
+            {saving ? 'Guardando...' : 'Guardar borrador'}
           </button>
           {solicitudId && (
             <button type="button" onClick={enviar} disabled={enviando}
               style={{ padding:'9px 20px', borderRadius:'8px', border:'none', background:'#1e3a8a', color:'#fff', cursor:'pointer', fontSize:'13px', fontWeight:600 }}>
-              {enviando ? 'Enviando...' : '📤 Enviar a autorización'}
+              {enviando ? 'Enviando...' : 'Enviar a autorización'}
             </button>
           )}
         </div>
@@ -493,7 +493,6 @@ export default function RegistroProveedores({ currentUser, currentUserRol }) {
             <p style={{ textAlign:'center', color:'#9ca3af', padding:'40px 0' }}>Cargando...</p>
           ) : solicitudes.length === 0 ? (
             <div style={{ textAlign:'center', color:'#9ca3af', padding:'60px 0' }}>
-              <div style={{ fontSize:'40px', marginBottom:'12px' }}>📋</div>
               <p>No hay solicitudes aún.</p>
               <button type="button" className="primary-button" onClick={nuevaSolicitud} style={{ marginTop:'12px' }}>
                 Crear primera solicitud

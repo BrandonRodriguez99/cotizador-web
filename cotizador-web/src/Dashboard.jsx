@@ -305,7 +305,6 @@ export default function Dashboard({ usuario }) {
 
   if (loading) return (
     <div style={{ padding: '60px', textAlign: 'center', color: '#6b7280' }}>
-      <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
       <p style={{ margin: 0 }}>Cargando dashboard...</p>
     </div>
   )

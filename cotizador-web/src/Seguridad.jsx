@@ -697,7 +697,6 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                         <img src={fotoRondin} alt="evidencia" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover' }} />
                       ) : (
                         <div style={{ textAlign: 'center', padding: '16px' }}>
-                          <div style={{ fontSize: '28px', marginBottom: '4px' }}>📷</div>
                           <div style={{ fontSize: '12px', color: '#6b7280' }}>Toca para agregar foto</div>
                         </div>
                       )}
@@ -1145,8 +1144,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             </>
                           ) : (
                             <>
-                              <span style={{ fontSize: '22px' }}>📷</span>
-                              <span style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', textAlign: 'center', padding: '0 4px' }}>{label}</span>
+                              <span style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', padding: '0 4px' }}>{label}</span>
                             </>
                           )}
                         </label>
@@ -1187,8 +1185,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             </>
                           ) : (
                             <>
-                              <span style={{ fontSize: '22px' }}>📷</span>
-                              <span style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', textAlign: 'center', padding: '0 4px' }}>{label}</span>
+                              <span style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', padding: '0 4px' }}>{label}</span>
                             </>
                           )}
                         </label>
