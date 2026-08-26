@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import AccesoAlumnos from './AccesoAlumnos'
+import AsistenciaGeneracion from './AsistenciaGeneracion'
 import {
   getDashboardSeguridad,
   getVehiculos, createVehiculo, updateVehiculo, deleteVehiculo,
@@ -66,7 +67,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     tabs.push({ id: 'rondines',  label: 'Rondines' })
     tabs.push({ id: 'extintores',label: 'Extintores' })
     tabs.push({ id: 'visitas',   label: 'Visitas' })
-    tabs.push({ id: 'acceso',    label: 'Acceso QR' })
+    tabs.push({ id: 'acceso',      label: 'Acceso QR' })
+    tabs.push({ id: 'asistencia',  label: 'Asistencia' })
   }
   tabs.push({ id: 'vehiculos', label: 'Vehículos' })
   if ((esAdmin || esJefeSeg) && !soloVehiculos) tabs.push({ id: 'catalogos', label: 'Catálogos' })
@@ -1244,6 +1246,11 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
         {/* ══ ACCESO QR ═══════════════════════════════════════════════════════ */}
         {tab === 'acceso' && (
           <AccesoAlumnos usuario={usuario} />
+        )}
+
+        {/* ══ ASISTENCIA ══════════════════════════════════════════════════════ */}
+        {tab === 'asistencia' && (
+          <AsistenciaGeneracion />
         )}
 
         {/* ══ CATÁLOGOS (admin/jefe_seguridad) ═══════════════════════════════ */}

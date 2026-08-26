@@ -686,6 +686,14 @@ export function eliminarSolicitudProveedor(id) {
   return fetchJson(`solicitudes-proveedor/${id}`, { method:'DELETE', headers:authHeaders() })
 }
 
+// ─── Asistencia por generación ──────────────────────────────────────────────
+export function getGeneraciones() {
+  return fetchJson('generaciones', { headers: authHeaders() })
+}
+export function getAsistencia(generacionId, fecha) {
+  return fetchJson(`asistencia?generacionId=${generacionId}&fecha=${fecha}`, { headers: authHeaders() })
+}
+
 // ─── Acceso Alumnos (QR) ────────────────────────────────────────────────────
 export function getAccesoAlumnos(fecha) {
   const q = fecha ? `?fecha=${fecha}` : ''
