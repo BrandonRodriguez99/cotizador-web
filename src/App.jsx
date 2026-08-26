@@ -37,6 +37,7 @@ import Inicio from './Inicio'
 import OrdenesMantenimiento from './OrdenesMantenimiento'
 import Inventario from './Inventario'
 import Seguridad from './Seguridad'
+import AsistenciaGeneracion from './AsistenciaGeneracion'
 import RegistroProveedores from './RegistroProveedores'
 import SolicitudVehiculoPublica from './SolicitudVehiculoPublica'
 import RegistroVisitaPublica from './RegistroVisitaPublica'
@@ -47,6 +48,7 @@ const NAV_ICONS = {
   mantenimiento:        <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></>,
   inventario:           <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
   vehiculos:            <><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>,
+  asistencia:           <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></>,
   ordenesCompra:        <><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></>,
   registroProveedores:  <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></>,
   cotizacion:           <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></>,
@@ -674,7 +676,9 @@ function App() {
                     ? 'Inventario'
                     : activeView === 'seguridad'
                       ? 'Módulo de Seguridad'
-                      : activeView === 'registroProveedores'
+                      : activeView === 'asistencia'
+                        ? 'Asistencia'
+                        : activeView === 'registroProveedores'
                           ? 'Registro de Proveedores'
                           : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
@@ -697,7 +701,9 @@ function App() {
                     ? 'Herramientas > Inventario'
                     : activeView === 'seguridad'
                       ? 'Seguridad > Módulo de Seguridad'
-                      : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                      : activeView === 'asistencia'
+                        ? 'Herramientas > Asistencia'
+                        : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   if (window.location.pathname === '/solicitud-vehiculo') {
     return <SolicitudVehiculoPublica />
@@ -786,6 +792,9 @@ function App() {
                   </button>
                   <button type="button" className={`nav-link${activeView === 'aprobaciones' ? ' active' : ''}`} onClick={() => handleNavClick('aprobaciones')}>
                     <NavIcon i="aprobaciones" />Aprobaciones
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'asistencia' ? ' active' : ''}`} onClick={() => handleNavClick('asistencia')}>
+                    <NavIcon i="asistencia" />Asistencia
                   </button>
                 </>)}
               </div>
@@ -984,6 +993,8 @@ function App() {
           <RegistroProveedores currentUser={usuario?.nombre} currentUserRol={usuario?.rol} />
         ) : activeView === 'seguridad' ? (
           <Seguridad usuario={usuario} />
+        ) : activeView === 'asistencia' ? (
+          <section className="panel card"><AsistenciaGeneracion /></section>
         ) : activeView === 'aprobaciones' ? (
             <section className="panel card">
               <div className="panel-header space-between">
