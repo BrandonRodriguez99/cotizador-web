@@ -37,17 +37,54 @@ import Inicio from './Inicio'
 import OrdenesMantenimiento from './OrdenesMantenimiento'
 import Inventario from './Inventario'
 import Seguridad from './Seguridad'
+import RegistroProveedores from './RegistroProveedores'
 import SolicitudVehiculoPublica from './SolicitudVehiculoPublica'
+import RegistroVisitaPublica from './RegistroVisitaPublica'
+
+const NAV_ICONS = {
+  dashboard:            <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
+  inicio:               <><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><polyline points="9 21 9 12 15 12 15 21"/></>,
+  mantenimiento:        <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></>,
+  inventario:           <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
+  vehiculos:            <><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>,
+  ordenesCompra:        <><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></>,
+  registroProveedores:  <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></>,
+  cotizacion:           <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></>,
+  historial:            <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+  aprobaciones:         <><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></>,
+  cursos:               <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>,
+  conceptos:            <><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></>,
+  coaches:              <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+  modalidades:          <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>,
+  clientes:             <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+  proveedores:          <><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></>,
+  unidadesNegocio:      <><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>,
+  areasConsumo:         <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>,
+  usuarios:             <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+  seguridad:            <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
+}
+
+function NavIcon({ i }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0 }}>
+      {NAV_ICONS[i]}
+    </svg>
+  )
+}
 
 function App() {
   // ─── Auth ───────────────────────────────────────────────────────────────────
   const [token, setToken] = useState(() => window.localStorage.getItem('cotizador-token'))
   const [usuario, setUsuario] = useState(() => {
     try {
+      if (!window.localStorage.getItem('cotizador-token')) return null
       const raw = window.localStorage.getItem('cotizador-usuario')
       return raw ? JSON.parse(raw) : null
     } catch { return null }
   })
+  const [checkingAuth, setCheckingAuth] = useState(() => !!window.localStorage.getItem('cotizador-token'))
 
   function handleLogin(newToken, newUsuario) {
     window.localStorage.setItem('cotizador-token', newToken)
@@ -155,19 +192,26 @@ function App() {
     return `OC-${year}-${String(sequence).padStart(6, '0')}`
   }
 
-  // Sincronizar rol desde DB al iniciar sesión (detecta cambios de rol por admin)
+  // Verificar token al cargar: si está expirado, cerrar sesión directamente
   useEffect(() => {
-    if (!token) return
+    if (!token) { setCheckingAuth(false); return }
     getMe(token).then((data) => {
-      if (!data) return
-      const rolActual = usuario?.rol
-      if (data.usuario.rol !== rolActual) {
-        window.localStorage.setItem('cotizador-token', data.token)
-        window.localStorage.setItem('cotizador-usuario', JSON.stringify(data.usuario))
-        setToken(data.token)
-        setUsuario(data.usuario)
+      if (!data) {
+        handleLogout()
+      } else {
+        const rolActual = usuario?.rol
+        if (data.usuario.rol !== rolActual) {
+          window.localStorage.setItem('cotizador-token', data.token)
+          window.localStorage.setItem('cotizador-usuario', JSON.stringify(data.usuario))
+          setToken(data.token)
+          setUsuario(data.usuario)
+        }
       }
-    }).catch(() => {})
+    }).catch(() => {
+      handleLogout()
+    }).finally(() => {
+      setCheckingAuth(false)
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -288,12 +332,16 @@ function App() {
   }
 
   async function handleApproveOrden(id, aprobador) {
-    await approveOrdenCompra(id, aprobador)
+    await approveOrdenCompra(id, aprobador, usuario?.nombre)
     await loadOrdenes()
   }
 
   async function handleRejectOrden(id, aprobador, motivo) {
     await rejectOrdenCompra(id, aprobador, motivo)
+    await loadOrdenes()
+  }
+
+  async function handleUpdateOrden() {
     await loadOrdenes()
   }
 
@@ -626,9 +674,9 @@ function App() {
                     ? 'Inventario'
                     : activeView === 'seguridad'
                       ? 'Módulo de Seguridad'
-                      : activeView === 'vehiculos'
-                        ? 'Vehículos'
-                        : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                      : activeView === 'registroProveedores'
+                          ? 'Registro de Proveedores'
+                          : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -649,12 +697,22 @@ function App() {
                     ? 'Herramientas > Inventario'
                     : activeView === 'seguridad'
                       ? 'Seguridad > Módulo de Seguridad'
-                      : activeView === 'vehiculos'
-                        ? 'Herramientas > Vehículos'
-                        : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                      : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
-  if (window.location.pathname === '/solicitar-vehiculo') {
+  if (window.location.pathname === '/solicitud-vehiculo') {
     return <SolicitudVehiculoPublica />
+  }
+  if (window.location.pathname === '/registrar-visita') {
+    return <RegistroVisitaPublica />
+  }
+
+  if (checkingAuth) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '12px', color: '#6b7280' }}>
+        <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#1e3a5f', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <span style={{ fontSize: '14px' }}>Verificando sesión...</span>
+      </div>
+    )
   }
 
   if (!usuario) {
@@ -683,7 +741,7 @@ function App() {
             <div className="nav-section">
               <p className="nav-title">Seguridad</p>
               <button type="button" className={`nav-link${activeView === 'seguridad' ? ' active' : ''}`} onClick={() => handleNavClick('seguridad')}>
-                Módulo de Seguridad
+                <NavIcon i="seguridad" />Módulo de Seguridad
               </button>
             </div>
           ) : (
@@ -693,14 +751,14 @@ function App() {
                   <div className="nav-section">
                     <p className="nav-title">Inicio</p>
                     <button type="button" className={`nav-link${activeView === 'dashboard' ? ' active' : ''}`} onClick={() => handleNavClick('dashboard')}>
-                      Dashboard
+                      <NavIcon i="dashboard" />Dashboard
                     </button>
                   </div>
                 ) : (
                   <div className="nav-section">
                     <p className="nav-title">Inicio</p>
                     <button type="button" className={`nav-link${activeView === 'inicio' ? ' active' : ''}`} onClick={() => handleNavClick('inicio')}>
-                      Inicio
+                      <NavIcon i="inicio" />Inicio
                     </button>
                   </div>
                 )
@@ -708,44 +766,45 @@ function App() {
               <div className="nav-section">
                 <p className="nav-title">Herramientas</p>
                 <button type="button" className={`nav-link${activeView === 'mantenimiento' ? ' active' : ''}`} onClick={() => handleNavClick('mantenimiento')}>
-                  Órdenes de Mantenimiento
+                  <NavIcon i="mantenimiento" />Órdenes de Mantenimiento
                 </button>
                 {usuario?.rol !== 'mantenimiento' && (<>
                   <button type="button" className={`nav-link${activeView === 'inventario' ? ' active' : ''}`} onClick={() => handleNavClick('inventario')}>
-                    Inventario
-                  </button>
-                  <button type="button" className={`nav-link${activeView === 'vehiculos' ? ' active' : ''}`} onClick={() => handleNavClick('vehiculos')}>
-                    Vehículos
+                    <NavIcon i="inventario" />Inventario
                   </button>
                   <button type="button" className={`nav-link${activeView === 'ordenesCompra' ? ' active' : ''}`} onClick={() => handleNavClick('ordenesCompra')}>
-                    Ordenes de Compra
+                    <NavIcon i="ordenesCompra" />Ordenes de Compra
+                  </button>
+                  <button type="button" className={`nav-link${activeView === 'registroProveedores' ? ' active' : ''}`} onClick={() => handleNavClick('registroProveedores')}>
+                    <NavIcon i="registroProveedores" />Registro de Proveedores
                   </button>
                   <button type="button" className={`nav-link${activeView === 'cotizacion' ? ' active' : ''}`} onClick={() => handleNavClick('cotizacion')}>
-                    Nueva Cotización
+                    <NavIcon i="cotizacion" />Nueva Cotización
                   </button>
                   <button type="button" className={`nav-link${activeView === 'historial' ? ' active' : ''}`} onClick={() => handleNavClick('historial')}>
-                    Historial de Cotizaciones
+                    <NavIcon i="historial" />Historial de Cotizaciones
                   </button>
                   <button type="button" className={`nav-link${activeView === 'aprobaciones' ? ' active' : ''}`} onClick={() => handleNavClick('aprobaciones')}>
-                    Aprobaciones
+                    <NavIcon i="aprobaciones" />Aprobaciones
                   </button>
                 </>)}
               </div>
               {usuario?.rol !== 'mantenimiento' && <div className="nav-section">
                 <p className="nav-title">Catálogos</p>
-                <button type="button" className={`nav-link${activeView === 'cursos' ? ' active' : ''}`} onClick={() => handleNavClick('cursos')}>Cursos</button>
-                <button type="button" className={`nav-link${activeView === 'conceptos' ? ' active' : ''}`} onClick={() => handleNavClick('conceptos')}>Conceptos de Costo</button>
-                <button type="button" className={`nav-link${activeView === 'coaches' ? ' active' : ''}`} onClick={() => handleNavClick('coaches')}>Coaches</button>
-                <button type="button" className={`nav-link${activeView === 'modalidades' ? ' active' : ''}`} onClick={() => handleNavClick('modalidades')}>Modalidades</button>
-                <button type="button" className={`nav-link${activeView === 'clientes' ? ' active' : ''}`} onClick={() => handleNavClick('clientes')}>Empresas</button>
-                <button type="button" className={`nav-link${activeView === 'proveedores' ? ' active' : ''}`} onClick={() => handleNavClick('proveedores')}>Proveedores</button>
-                <button type="button" className={`nav-link${activeView === 'unidadesNegocio' ? ' active' : ''}`} onClick={() => handleNavClick('unidadesNegocio')}>Unidad de Negocio</button>
+                <button type="button" className={`nav-link${activeView === 'cursos' ? ' active' : ''}`} onClick={() => handleNavClick('cursos')}><NavIcon i="cursos" />Cursos</button>
+                <button type="button" className={`nav-link${activeView === 'conceptos' ? ' active' : ''}`} onClick={() => handleNavClick('conceptos')}><NavIcon i="conceptos" />Conceptos de Costo</button>
+                <button type="button" className={`nav-link${activeView === 'coaches' ? ' active' : ''}`} onClick={() => handleNavClick('coaches')}><NavIcon i="coaches" />Coaches</button>
+                <button type="button" className={`nav-link${activeView === 'modalidades' ? ' active' : ''}`} onClick={() => handleNavClick('modalidades')}><NavIcon i="modalidades" />Modalidades</button>
+                <button type="button" className={`nav-link${activeView === 'clientes' ? ' active' : ''}`} onClick={() => handleNavClick('clientes')}><NavIcon i="clientes" />Empresas</button>
+                <button type="button" className={`nav-link${activeView === 'proveedores' ? ' active' : ''}`} onClick={() => handleNavClick('proveedores')}><NavIcon i="proveedores" />Proveedores</button>
+                <button type="button" className={`nav-link${activeView === 'unidadesNegocio' ? ' active' : ''}`} onClick={() => handleNavClick('unidadesNegocio')}><NavIcon i="unidadesNegocio" />Unidad de Negocio</button>
+                <button type="button" className={`nav-link${activeView === 'areasConsumo' ? ' active' : ''}`} onClick={() => handleNavClick('areasConsumo')}><NavIcon i="areasConsumo" />Áreas de Consumo</button>
               </div>}
               {usuario?.rol === 'admin' && (
                 <div className="nav-section">
                   <p className="nav-title">Administración</p>
-                  <button type="button" className={`nav-link${activeView === 'usuarios' ? ' active' : ''}`} onClick={() => handleNavClick('usuarios')}>Usuarios</button>
-                  <button type="button" className={`nav-link${activeView === 'seguridad' ? ' active' : ''}`} onClick={() => handleNavClick('seguridad')}>Seguridad</button>
+                  <button type="button" className={`nav-link${activeView === 'usuarios' ? ' active' : ''}`} onClick={() => handleNavClick('usuarios')}><NavIcon i="usuarios" />Usuarios</button>
+                  <button type="button" className={`nav-link${activeView === 'seguridad' ? ' active' : ''}`} onClick={() => handleNavClick('seguridad')}><NavIcon i="seguridad" />Seguridad</button>
                 </div>
               )}
             </>
@@ -789,7 +848,6 @@ function App() {
               ☰
             </button>
             <div>
-              <p className="breadcrumb">{breadcrumb}</p>
               <h1>{pageTitle}</h1>
             </div>
           </div>
@@ -818,12 +876,13 @@ function App() {
           <section className="panel card">
             <div className="panel-header space-between">
               <div>
-                <h2>{activeCatalogDefinition.title}</h2>
                 <p style={{ margin: '8px 0 0', color: '#6b7280' }}>{activeCatalogDefinition.subtitle}</p>
               </div>
-              <button className="ghost-button" type="button" onClick={() => openCatalogModal()}>
-                Nuevo registro
-              </button>
+              {(activeView !== 'proveedores' || usuario?.rol === 'admin') && (
+                <button className="ghost-button" type="button" onClick={() => openCatalogModal()}>
+                  Nuevo registro
+                </button>
+              )}
             </div>
             <div className="table-wrap">
               <table className="participants-table">
@@ -852,7 +911,7 @@ function App() {
                         ))}
                         {hasCatalogActions && (
                           <td>
-                            {activeCatalogDefinition.update && (
+                            {activeCatalogDefinition.update && (activeView !== 'proveedores' || usuario?.rol === 'admin') && (
                               <button
                                 type="button"
                                 className="ghost-button"
@@ -861,7 +920,7 @@ function App() {
                                 Editar
                               </button>
                             )}
-                            {activeCatalogDefinition.delete && (
+                            {activeCatalogDefinition.delete && (activeView !== 'proveedores' || usuario?.rol === 'admin') && (
                               <button
                                 type="button"
                                 className="secondary-button"
@@ -889,6 +948,7 @@ function App() {
             currentUserRol={usuario?.rol}
             folio={orderFolio}
             onCreateOrden={handleCreateOrden}
+            onUpdateOrden={handleUpdateOrden}
             onApproveOrden={handleApproveOrden}
             onRejectOrden={handleRejectOrden}
             onDeleteOrden={handleDeleteOrden}
@@ -913,7 +973,6 @@ function App() {
           <section className="panel card">
             <div className="panel-header">
               <div>
-                <h2>Inventario de Materiales</h2>
                 <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
                   Gestiona el stock de materiales y refacciones
                 </p>
@@ -921,15 +980,14 @@ function App() {
             </div>
             <Inventario isAdmin={usuario?.rol === 'admin'} />
           </section>
+        ) : activeView === 'registroProveedores' ? (
+          <RegistroProveedores currentUser={usuario?.nombre} currentUserRol={usuario?.rol} />
         ) : activeView === 'seguridad' ? (
           <Seguridad usuario={usuario} />
-        ) : activeView === 'vehiculos' ? (
-          <Seguridad usuario={usuario} soloVehiculos={true} />
         ) : activeView === 'aprobaciones' ? (
             <section className="panel card">
               <div className="panel-header space-between">
                 <div>
-                  <h2>Aprobaciones de Cotizaciones</h2>
                   <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
                     {pendientes.length > 0
                       ? `${pendientes.length} cotización${pendientes.length !== 1 ? 'es' : ''} pendiente${pendientes.length !== 1 ? 's' : ''} de aprobación`
