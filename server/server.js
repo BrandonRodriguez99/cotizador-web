@@ -79,6 +79,23 @@ sql.connect(config)
           console.log('✅ Admin creado: admin@udat.com / Udat2024!');
         }
         console.log('✅ Tablas de autenticación aseguradas');
+
+        // Tabla Acceso Alumnos QR
+        await pool.request().query(`
+          IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RegistroAccesoAlumnos' AND schema_id = SCHEMA_ID('dbo'))
+          BEGIN
+            CREATE TABLE dbo.RegistroAccesoAlumnos (
+              RegistroId   INT IDENTITY(1,1) PRIMARY KEY,
+              OperadorId   INT          NULL,
+              Matricula    NVARCHAR(100) NOT NULL,
+              Nombre       NVARCHAR(300) NULL,
+              TipoAcceso   NVARCHAR(20)  NOT NULL,
+              FechaHora    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+              RegistradoPor NVARCHAR(200) NULL
+            )
+          END
+        `);
+        console.log('✅ Tabla RegistroAccesoAlumnos asegurada');
       } catch (e) {
         console.log('❌ Error en startup:', e.message);
       }
@@ -1097,6 +1114,63 @@ app.get('/api/ordenescompra/:id/pdf', async (req, res) => {
     console.error('ERROR PDF ORDEN COMPRA:', error.message);
     if (!res.headersSent) res.status(500).json({ error: 'Error al generar el PDF' });
   }
+});
+
+// ─── Acceso Alumnos QR ────────────────────────────────────────────────────────
+app.get('/api/acceso-alumnos', autenticar, async (req, res) => {
+  try {
+    if (!ensurePool(res)) return;
+    const fecha = req.query.fecha || new Date().toISOString().substring(0, 10);
+    const result = await pool.request()
+      .input('fecha', sql.Date, fecha)
+      .query(`
+        SELECT RegistroId, OperadorId, Matricula, Nombre, TipoAcceso, FechaHora, RegistradoPor
+        FROM dbo.RegistroAccesoAlumnos
+        WHERE CAST(FechaHora AS DATE) = @fecha
+        ORDER BY FechaHora DESC
+      `);
+    res.json(result.recordset);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/acceso-alumnos', autenticar, async (req, res) => {
+  try {
+    if (!ensurePool(res)) return;
+    const { matricula, tipoAcceso } = req.body;
+    if (!matricula || !tipoAcceso) return res.status(400).json({ error: 'Matrícula y tipoAcceso son requeridos' });
+
+    // Buscar en UDAT.dbo.Operador (cross-database, mismo servidor)
+    const op = await pool.request()
+      .input('mat', sql.NVarChar(100), matricula.trim())
+      .query(`
+        SELECT TOP 1 OperadorId,
+          LTRIM(RTRIM(ISNULL(Nombre,'') + ' ' + ISNULL(ApellidoPaterno,'') + ' ' + ISNULL(ApellidoMaterno,''))) AS NombreCompleto,
+          Matricula
+        FROM [UDAT].[dbo].[Operador]
+        WHERE Matricula = @mat AND (Eliminado = 0 OR Eliminado IS NULL)
+      `);
+
+    if (!op.recordset.length) {
+      return res.status(404).json({ error: `Matrícula "${matricula}" no encontrada en el sistema` });
+    }
+
+    const { OperadorId, NombreCompleto } = op.recordset[0];
+    const registradoPor = req.usuario?.nombre || req.usuario?.correo || null;
+
+    const ins = await pool.request()
+      .input('OperadorId', sql.Int, OperadorId)
+      .input('Matricula', sql.NVarChar(100), matricula.trim())
+      .input('Nombre', sql.NVarChar(300), NombreCompleto)
+      .input('TipoAcceso', sql.NVarChar(20), tipoAcceso)
+      .input('RegistradoPor', sql.NVarChar(200), registradoPor)
+      .query(`
+        INSERT INTO dbo.RegistroAccesoAlumnos (OperadorId, Matricula, Nombre, TipoAcceso, RegistradoPor)
+        OUTPUT INSERTED.*
+        VALUES (@OperadorId, @Matricula, @Nombre, @TipoAcceso, @RegistradoPor)
+      `);
+
+    res.json(ins.recordset[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 const PORT = process.env.PORT || 4000;
