@@ -855,7 +855,6 @@ function App() {
               ☰
             </button>
             <div>
-              <p className="breadcrumb">{breadcrumb}</p>
               <h1>{pageTitle}</h1>
             </div>
           </div>
