@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getGeneraciones, getAsistencia, getMovimientosAlumno } from './api'
 import * as XLSX from 'xlsx'
+import AsistenciaGrid from './AsistenciaGrid'
 
 function fmt(dt) {
   if (!dt) return '—'
@@ -170,6 +171,7 @@ export default function AsistenciaGeneracion() {
   const [filtro, setFiltro]             = useState('todos')
   const [busqueda, setBusqueda]         = useState('')
   const [detalleAlumno, setDetalleAlumno] = useState(null)
+  const [vista, setVista]               = useState('diaria') // 'diaria' | 'registro'
 
   useEffect(() => {
     getGeneraciones()
@@ -228,6 +230,28 @@ export default function AsistenciaGeneracion() {
 
   return (
     <div>
+      {/* ── Tabs de vista ── */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
+        {[
+          { id: 'diaria',   label: 'Vista diaria' },
+          { id: 'registro', label: 'Registro completo' },
+        ].map(t => (
+          <button key={t.id} type="button" onClick={() => setVista(t.id)} style={{
+            background: 'none', border: 'none', padding: '10px 20px', cursor: 'pointer',
+            fontWeight: vista === t.id ? 700 : 500, fontSize: '14px',
+            color: vista === t.id ? '#1e3a5f' : '#6b7280',
+            borderBottom: vista === t.id ? '2px solid #1e3a5f' : '2px solid transparent',
+            marginBottom: '-2px',
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* ── Registro completo ── */}
+      {vista === 'registro' && <AsistenciaGrid />}
+
+      {/* ── Vista diaria ── */}
+      {vista === 'diaria' && <>
+
       {/* ── Filtros ── */}
       <div style={{
         display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end',
@@ -390,6 +414,8 @@ export default function AsistenciaGeneracion() {
           Selecciona una generación para ver la asistencia.
         </div>
       )}
+
+      </> /* fin vista diaria */}
 
       {/* ── Modal de movimientos ── */}
       {detalleAlumno && (

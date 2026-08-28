@@ -696,6 +696,18 @@ export function getAsistencia(generacionId, fecha) {
 export function getMovimientosAlumno(matricula, fecha) {
   return fetchJson(`acceso-alumnos/alumno?matricula=${encodeURIComponent(matricula)}&fecha=${fecha}`, { headers: authHeaders() })
 }
+export function getAsistenciaGrid(generacionId) {
+  return fetchJson(`asistencia-grid?generacionId=${generacionId}`, { headers: authHeaders() })
+}
+export function guardarAsistencia(data) {
+  return fetchJson('asistencia-grid/guardar', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) })
+}
+export function getCriterios() {
+  return fetchJson('criterios-asistencia', { headers: authHeaders() })
+}
+export function updateCriterios(criterios) {
+  return fetchJson('criterios-asistencia', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(criterios) })
+}
 
 // ─── Acceso Alumnos (QR) ────────────────────────────────────────────────────
 export function eliminarAcceso(id) {
