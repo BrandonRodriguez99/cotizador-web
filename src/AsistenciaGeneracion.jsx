@@ -32,8 +32,8 @@ function ModalMovimientos({ alumno, fecha, onClose }) {
       .catch(e  => { setError(e.message);  setLoading(false) })
   }, [alumno.Matricula, fecha])
 
-  const entradas = movimientos.filter(m => m.TipoAcceso === 'entrada').length
-  const salidas  = movimientos.filter(m => m.TipoAcceso === 'salida').length
+  const entradas = movimientos.filter(m => m.TipoAcceso?.toLowerCase() === 'entrada').length
+  const salidas  = movimientos.filter(m => m.TipoAcceso?.toLowerCase() === 'salida').length
 
   return (
     <div
@@ -105,7 +105,7 @@ function ModalMovimientos({ alumno, fecha, onClose }) {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
                 {movimientos.map((m, i) => {
-                  const esEntrada = m.TipoAcceso === 'entrada'
+                  const esEntrada = m.TipoAcceso?.toLowerCase() === 'entrada'
                   const hora = m.FechaHora ? new Date(m.FechaHora).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'
                   return (
                     <div key={m.RegistroId} style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', paddingBottom: i < movimientos.length - 1 ? '20px' : 0 }}>
