@@ -693,6 +693,9 @@ export function getGeneraciones() {
 export function getAsistencia(generacionId, fecha) {
   return fetchJson(`asistencia?generacionId=${generacionId}&fecha=${fecha}`, { headers: authHeaders() })
 }
+export function getMovimientosAlumno(matricula, fecha) {
+  return fetchJson(`acceso-alumnos/alumno?matricula=${encodeURIComponent(matricula)}&fecha=${fecha}`, { headers: authHeaders() })
+}
 
 // ─── Acceso Alumnos (QR) ────────────────────────────────────────────────────
 export function eliminarAcceso(id) {
