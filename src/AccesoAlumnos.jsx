@@ -3,6 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 import { getAccesoAlumnos, registrarAcceso, eliminarAcceso } from './api'
 
 const COOLDOWN_MS = 4000
+const LOCK_MS     = 2500   // pausa global entre escaneos
 const POR_PAGINA  = 15
 
 function fmt(dt) {
@@ -28,6 +29,10 @@ export default function AccesoAlumnos({ usuario = {} }) {
   const scannerRef    = useRef(null)
   const cooldownRef   = useRef({})
   const feedbackTimer = useRef(null)
+  const scanLockRef   = useRef(false)
+  const lockTimerRef  = useRef(null)
+  const [lockPct, setLockPct]       = useState(0)
+  const [scanLocked, setScanLocked] = useState(false)
 
   const cargarRegistros = useCallback(async () => {
     setLoadingList(true)
@@ -73,12 +78,16 @@ export default function AccesoAlumnos({ usuario = {} }) {
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 240, height: 240 } },
       async (text) => {
+        // Bloqueo global: no procesar nada mientras la pausa esté activa
+        if (scanLockRef.current) return
+
         const matricula = text.trim()
         const ahora = Date.now()
         if (cooldownRef.current[matricula] && ahora - cooldownRef.current[matricula] < COOLDOWN_MS) return
         cooldownRef.current[matricula] = ahora
 
         clearTimeout(feedbackTimer.current)
+        clearTimeout(lockTimerRef.current)
         setFeedback({ tipo: 'cargando', msg: `Verificando ${matricula}…` })
 
         try {
@@ -92,12 +101,26 @@ export default function AccesoAlumnos({ usuario = {} }) {
         }
 
         feedbackTimer.current = setTimeout(() => setFeedback(null), 3500)
+
+        // Activar bloqueo global con barra de progreso
+        scanLockRef.current = true
+        setScanLocked(true)
+        setLockPct(100)
+        setTimeout(() => setLockPct(0), 40) // inicia la transición CSS
+        lockTimerRef.current = setTimeout(() => {
+          scanLockRef.current = false
+          setScanLocked(false)
+        }, LOCK_MS)
       },
       () => {}
     ).catch(console.error)
 
     return () => {
       clearTimeout(feedbackTimer.current)
+      clearTimeout(lockTimerRef.current)
+      scanLockRef.current = false
+      setScanLocked(false)
+      setLockPct(0)
       qr.stop().catch(() => {}).then(() => qr.clear())
     }
   }, [escaneando, modo, cargarRegistros])
@@ -200,6 +223,24 @@ export default function AccesoAlumnos({ usuario = {} }) {
                 </div>
                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px', fontWeight: 600 }}>Total</div>
               </div>
+            </div>
+
+            {/* Barra de bloqueo global */}
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ height: '5px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${lockPct}%`,
+                  background: modo === 'Entrada' ? '#16a34a' : '#dc2626',
+                  borderRadius: '3px',
+                  transition: lockPct === 100 ? 'none' : `width ${LOCK_MS}ms linear`,
+                }} />
+              </div>
+              {scanLocked && (
+                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>
+                  Listo en un momento…
+                </p>
+              )}
             </div>
 
             <div id="qr-reader" style={{ width: '100%', borderRadius: '8px', overflow: 'hidden' }} />
