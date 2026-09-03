@@ -6,6 +6,33 @@ const COOLDOWN_MS = 4000
 const LOCK_MS     = 2500   // pausa global entre escaneos
 const POR_PAGINA  = 15
 
+function beep(tipo) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    if (tipo === 'entrada') {
+      // Dos tonos ascendentes cortos
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.12)
+    } else if (tipo === 'salida') {
+      // Dos tonos descendentes cortos
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.12)
+    } else {
+      // Error: tono bajo y largo
+      osc.frequency.setValueAtTime(300, ctx.currentTime)
+    }
+    osc.type = 'sine'
+    gain.gain.setValueAtTime(0.4, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.28)
+    osc.onended = () => ctx.close()
+  } catch (_) {}
+}
+
 function fmt(dt) {
   if (!dt) return '-'
   return new Date(dt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
@@ -92,11 +119,13 @@ export default function AccesoAlumnos({ usuario = {} }) {
 
         try {
           const res = await registrarAcceso(matricula, modo)
+          beep(modo === 'Entrada' ? 'entrada' : 'salida')
           setFeedback({ tipo: 'ok', msg: 'Acceso registrado', nombre: res.Nombre, matricula, hora: fmt(res.FechaHora) })
           if (modo === 'Entrada') setContadorEntradas(n => n + 1)
           else                    setContadorSalidas(n => n + 1)
           cargarRegistros()
         } catch (e) {
+          beep('error')
           setFeedback({ tipo: 'error', msg: e.message || 'Matrícula no encontrada', matricula })
         }
 
