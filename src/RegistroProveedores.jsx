@@ -523,7 +523,7 @@ export default function RegistroProveedores({ currentUser, currentUserRol }) {
                         <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
                           <button type="button" className="ghost-button" onClick={() => abrirSolicitud(sol)}
                             style={{ fontSize:'11px', padding:'3px 10px' }}>
-                            {sol.Estado === 'borrador' ? 'Editar' : 'Ver'}
+                            {sol.Estado === 'aprobado' || sol.Estado === 'rechazado' ? 'Ver' : 'Editar'}
                           </button>
                           {esAutorizador && sol.Estado === 'pendiente' && (<>
                             <button type="button" onClick={() => handleAprobar(sol.SolicitudId)}
