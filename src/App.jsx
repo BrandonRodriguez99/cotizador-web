@@ -964,7 +964,11 @@ function App() {
           />
         ) : activeView === 'historial' ? (
           <HistorialCotizaciones
-            cotizaciones={cotizaciones}
+            cotizaciones={
+              ['admin', 'autorizador1', 'autorizador2'].includes(usuario?.rol)
+                ? cotizaciones
+                : cotizaciones.filter(c => c.CreadoPor === creadoPor)
+            }
             loading={cotizacionesLoading}
             error={cotizacionesError}
             onVerCotizacion={loadDetallesCotizacion}
