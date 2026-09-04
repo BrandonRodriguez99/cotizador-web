@@ -263,6 +263,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [fotosLlegada, setFotosLlegada]   = useState(fotoVacía)
   const [uploadingFoto, setUploadingFoto] = useState({})
   const [fotoModal, setFotoModal]         = useState(null)
+  const [expandedAlumnos, setExpandedAlumnos] = useState(null)
 
   const loadOrdenesV = useCallback(async () => {
     setLoadingOV(true); setErrorOV('')
@@ -1003,6 +1004,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                       <th>Solicitante</th>
                       <th>Vehículo</th>
                       <th>Destino</th>
+                      <th>Alumnos</th>
                       <th>Salida est.</th>
                       <th>Estado</th>
                       <th>Km ida/vuelta</th>
@@ -1012,12 +1014,32 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   <tbody>
                     {ordenesV.length === 0 ? (
                       <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>Sin solicitudes.</td></tr>
-                    ) : ordenesV.map(o => (
+                    ) : ordenesV.flatMap(o => {
+                      const alumnos = Array.isArray(o.Alumnos) ? o.Alumnos : []
+                      const expandido = expandedAlumnos === o.OrdenVehiculoId
+                      return [
                       <tr key={o.OrdenVehiculoId}>
                         <td style={{ fontWeight: '600', color: '#1e3a5f' }}>{o.Folio || '-'}</td>
                         <td>{o.Solicitante || '-'}</td>
                         <td>{o.VehiculoNombre || '-'}</td>
                         <td>{o.Destino || '-'}</td>
+                        <td>
+                          {alumnos.length > 0 ? (
+                            <button
+                              onClick={() => setExpandedAlumnos(expandido ? null : o.OrdenVehiculoId)}
+                              style={{
+                                background: expandido ? '#dcfce7' : '#f0fdf4',
+                                color: '#15803d', border: '1px solid #bbf7d0',
+                                borderRadius: '999px', padding: '2px 10px', fontSize: '12px',
+                                fontWeight: 600, cursor: 'pointer',
+                              }}
+                            >
+                              {alumnos.length} alumno{alumnos.length !== 1 ? 's' : ''} {expandido ? '▲' : '▼'}
+                            </button>
+                          ) : (
+                            <span style={{ color: '#d1d5db', fontSize: '12px' }}>—</span>
+                          )}
+                        </td>
                         <td>{o.FechaSalidaEstimada ? `${fmtDate(o.FechaSalidaEstimada)} ${o.HoraSalidaEstimada || ''}`.trim() : '-'}</td>
                         <td><Badge estado={o.Estado} mapa={ESTADOS_VEHICULO} /></td>
                         <td style={{ fontSize: '12px', color: '#6b7280' }}>
@@ -1025,14 +1047,12 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {/* Encargado: autorizar/rechazar */}
                             {(esEncargado || esAdmin) && o.Estado === 'pendiente' && (<>
                               <button className="primary-button" style={{ padding: '3px 8px', fontSize: '12px', background: '#16a34a', borderColor: '#16a34a' }}
                                 onClick={() => autorizar(o.OrdenVehiculoId)}>Autorizar</button>
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
                                 onClick={() => { setRechazarModal(o.OrdenVehiculoId); setMotivoRechazo('') }}>Rechazar</button>
                             </>)}
-                            {/* Guardia/jefe: registrar salida/llegada */}
                             {(esSeguridad || esAdmin || esJefeSeg) && o.Estado === 'autorizada' && (
                               <button className="primary-button" style={{ padding: '3px 8px', fontSize: '12px' }}
                                 onClick={() => { setSalidaModal(o.OrdenVehiculoId); setKmForm('') }}>Registrar salida</button>
@@ -1041,20 +1061,37 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                               <button className="primary-button" style={{ padding: '3px 8px', fontSize: '12px', background: '#16a34a', borderColor: '#16a34a' }}
                                 onClick={() => { setLlegadaModal(o.OrdenVehiculoId); setKmForm(''); setObsForm('') }}>Registrar llegada</button>
                             )}
-                            {/* Admin/jefe: eliminar pendientes y rechazadas */}
                             {(esAdmin || esJefeSeg) && (o.Estado === 'pendiente' || o.Estado === 'rechazada') && (
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
                                 onClick={() => eliminarOrdenV(o.OrdenVehiculoId)}>Eliminar</button>
                             )}
-                            {/* Ver fotos si hay alguna */}
                             {(o.FotoSalidaFrontal || o.FotoLlegadaFrontal) && (
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }}
                                 onClick={() => setFotoModal(o)}>Evidencia</button>
                             )}
                           </div>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>,
+                      expandido && alumnos.length > 0 && (
+                        <tr key={`alumnos-${o.OrdenVehiculoId}`} style={{ background: '#f0fdf4' }}>
+                          <td colSpan={9} style={{ padding: '10px 16px' }}>
+                            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, color: '#15803d' }}>
+                              Alumnos que acompañan:
+                            </p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {alumnos.map((a, i) => (
+                                <span key={i} style={{
+                                  background: '#dcfce7', color: '#15803d', borderRadius: '999px',
+                                  padding: '3px 12px', fontSize: '12px', fontWeight: 600,
+                                }}>
+                                  {a.Nombre} {a.Matricula ? <span style={{ fontWeight: 400, opacity: 0.7 }}>· {a.Matricula}</span> : ''}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    ].filter(Boolean)})}
                   </tbody>
                 </table>
               </div>
