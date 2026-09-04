@@ -162,6 +162,32 @@ function AlumnosPicker({ generaciones, alumnos, loadingAlumnos, genId, onGenChan
   )
 }
 
+const ANGULOS = [
+  { key: 'Frontal', label: 'Frontal' },
+  { key: 'Trasero', label: 'Trasero' },
+  { key: 'LateralIzq', label: 'Lateral Izq.' },
+  { key: 'LateralDer', label: 'Lateral Der.' },
+]
+
+async function uploadFotoPublica(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = async ev => {
+      try {
+        const fd = new FormData()
+        fd.append('file', ev.target.result)
+        fd.append('upload_preset', 'douxyql6')
+        fd.append('folder', 'vehiculos')
+        const r = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', { method: 'POST', body: fd })
+        const data = await r.json()
+        if (data.error) throw new Error(data.error.message)
+        resolve(data.secure_url)
+      } catch (e) { reject(e) }
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function SolicitudVehiculoPublica() {
   const [vehiculos, setVehiculos]       = useState([])
   const [usuarios, setUsuarios]         = useState([])
@@ -171,6 +197,10 @@ export default function SolicitudVehiculoPublica() {
   const [genId, setGenId]               = useState(null)
   const [seleccionados, setSeleccionados] = useState([])
 
+  const fotoVacía = { Frontal: null, Trasero: null, LateralIzq: null, LateralDer: null }
+  const [fotos, setFotos]               = useState(fotoVacía)
+  const [uploadingFoto, setUploadingFoto] = useState({})
+
   const [form, setForm] = useState({
     SolicitanteId: null, VehiculoId: '', Destino: '',
     Motivo: '', FechaSalidaEstimada: '', HoraSalidaEstimada: '', Observaciones: '',
@@ -178,6 +208,16 @@ export default function SolicitudVehiculoPublica() {
   const [enviando, setEnviando] = useState(false)
   const [folio, setFolio]       = useState(null)
   const [error, setError]       = useState(null)
+
+  async function handleFotoChange(angulo, file) {
+    if (!file) return
+    setUploadingFoto(p => ({ ...p, [angulo]: true }))
+    try {
+      const url = await uploadFotoPublica(file)
+      setFotos(p => ({ ...p, [angulo]: url }))
+    } catch (e) { alert('Error subiendo foto: ' + e.message) }
+    finally { setUploadingFoto(p => ({ ...p, [angulo]: false })) }
+  }
 
   useEffect(() => {
     fetch(`${API_BASE}/public/vehiculos`).then(r => r.json()).then(d => { if (Array.isArray(d)) setVehiculos(d) }).catch(() => {})
@@ -222,6 +262,10 @@ export default function SolicitudVehiculoPublica() {
         Pasajeros: seleccionados.length || null,
         Observaciones: form.Observaciones.trim() || null,
         Alumnos: seleccionados.map(a => ({ OperadorId: a.OperadorId, Matricula: a.Matricula, Nombre: a.Nombre })),
+        FotoSalidaFrontal:    fotos.Frontal    || null,
+        FotoSalidaTrasero:    fotos.Trasero    || null,
+        FotoSalidaLateralIzq: fotos.LateralIzq || null,
+        FotoSalidaLateralDer: fotos.LateralDer || null,
       }
       const r = await fetch(`${API_BASE}/public/solicitud-vehiculo`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -237,7 +281,7 @@ export default function SolicitudVehiculoPublica() {
   }
 
   function resetForm() {
-    setFolio(null); setSeleccionados([]); setGenId(null)
+    setFolio(null); setSeleccionados([]); setGenId(null); setFotos(fotoVacía)
     setForm({ SolicitanteId: null, VehiculoId: '', Destino: '', Motivo: '', FechaSalidaEstimada: '', HoraSalidaEstimada: '', Observaciones: '' })
   }
 
@@ -367,6 +411,51 @@ export default function SolicitudVehiculoPublica() {
                 rows={2} style={{ ...inputStyle, resize: 'vertical' }}
                 placeholder="Cualquier detalle extra que deba conocer el encargado..."
               />
+            </div>
+
+            {/* Fotos del vehículo */}
+            <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+              <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+                Fotos del vehículo <span style={{ fontWeight: 400, color: '#9ca3af' }}>(opcional)</span>
+              </p>
+              <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#6b7280' }}>
+                Toma una foto de cada ángulo del vehículo antes de salir.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {ANGULOS.map(({ key, label }) => {
+                  const url = fotos[key]
+                  const uploading = uploadingFoto[key]
+                  return (
+                    <label key={key} style={{
+                      cursor: 'pointer',
+                      border: `2px dashed ${url ? '#16a34a' : '#d1d5db'}`,
+                      borderRadius: '8px', overflow: 'hidden',
+                      background: url ? '#f0fdf4' : '#f9fafb',
+                      minHeight: '90px', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', position: 'relative',
+                    }}>
+                      <input
+                        type="file" accept="image/*" capture="environment"
+                        style={{ display: 'none' }}
+                        onChange={e => handleFotoChange(key, e.target.files[0])}
+                      />
+                      {uploading ? (
+                        <span style={{ fontSize: '12px', color: '#6b7280' }}>Subiendo...</span>
+                      ) : url ? (
+                        <>
+                          <img src={url} alt={label} style={{ width: '100%', height: '80px', objectFit: 'cover' }} />
+                          <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, padding: '3px' }}>✓ {label}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: '22px', marginBottom: '4px' }}>📷</span>
+                          <span style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', padding: '0 4px' }}>{label}</span>
+                        </>
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
             </div>
 
           </div>

@@ -329,14 +329,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
 
   async function registrarSalida() {
     try {
-      await registrarSalidaVehiculo(salidaModal, {
-        KmInicial: kmForm,
-        FotoSalidaFrontal:    fotosSalida.Frontal,
-        FotoSalidaTrasero:    fotosSalida.Trasero,
-        FotoSalidaLateralIzq: fotosSalida.LateralIzq,
-        FotoSalidaLateralDer: fotosSalida.LateralDer,
-      })
-      setSalidaModal(null); setKmForm(''); setFotosSalida(fotoVacía)
+      await registrarSalidaVehiculo(salidaModal, { KmInicial: kmForm })
+      setSalidaModal(null); setKmForm('')
       await loadOrdenesV()
     } catch (e) { alert('Error: ' + e.message) }
   }
@@ -1168,32 +1162,32 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   <h3 style={{ margin: '0 0 16px' }}>Registrar Salida</h3>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Kilómetros iniciales</label>
                   <input type="number" className="form-control" value={kmForm} onChange={e => setKmForm(e.target.value)} style={{ marginBottom: '20px' }} />
-                  <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: '#1e3a5f' }}>Evidencia fotográfica del vehículo (salida)</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-                    {ANGULOS.map(({ key, label }) => {
-                      const uploading = uploadingFoto[`salida_${key}`]
-                      const url = fotosSalida[key]
-                      return (
-                        <label key={key} style={{ cursor: 'pointer', border: `2px dashed ${url ? '#16a34a' : '#d1d5db'}`, borderRadius: '8px', overflow: 'hidden', background: url ? '#f0fdf4' : '#f9fafb', position: 'relative', minHeight: '90px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => handleFotoChange(key, 'salida', e.target.files[0])} />
-                          {uploading ? (
-                            <div style={{ fontSize: '12px', color: '#6b7280' }}>Subiendo...</div>
-                          ) : url ? (
-                            <>
-                              <img src={url} alt={label} style={{ width: '100%', height: '80px', objectFit: 'cover' }} />
-                              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600', padding: '2px' }}>✓ {label}</span>
-                            </>
-                          ) : (
-                            <>
-                              <span style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', padding: '0 4px' }}>{label}</span>
-                            </>
-                          )}
-                        </label>
-                      )
-                    })}
-                  </div>
+                  {(() => {
+                    const orden = ordenesV.find(o => o.OrdenVehiculoId === salidaModal)
+                    const fotosSolicitante = orden ? ANGULOS.filter(a => orden[`FotoSalida${a.key}`]) : []
+                    return fotosSolicitante.length > 0 ? (
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: '#1e3a5f' }}>
+                          Fotos del vehículo (subidas por el solicitante)
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                          {fotosSolicitante.map(({ key, label }) => (
+                            <a key={key} href={orden[`FotoSalida${key}`]} target="_blank" rel="noreferrer"
+                              style={{ border: '2px solid #16a34a', borderRadius: '8px', overflow: 'hidden', display: 'block' }}>
+                              <img src={orden[`FotoSalida${key}`]} alt={label} style={{ width: '100%', height: '80px', objectFit: 'cover', display: 'block' }} />
+                              <span style={{ display: 'block', fontSize: '11px', color: '#16a34a', fontWeight: 600, padding: '3px 6px', background: '#f0fdf4' }}>✓ {label}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '20px' }}>
+                        El solicitante no adjuntó fotos del vehículo.
+                      </p>
+                    )
+                  })()}
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="ghost-button" onClick={() => { setSalidaModal(null); setFotosSalida(fotoVacía) }}>Cancelar</button>
+                    <button className="ghost-button" onClick={() => { setSalidaModal(null); setKmForm('') }}>Cancelar</button>
                     <button className="primary-button" onClick={registrarSalida}>Confirmar salida</button>
                   </div>
                 </div>
