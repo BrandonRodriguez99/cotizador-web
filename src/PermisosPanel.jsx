@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
 import { getPermisos, updatePermisosRol } from './api'
 
-const ROLES = [
-  { id: 'admin', label: 'Admin' },
-  { id: 'autorizador1', label: 'Autorizador 1' },
-  { id: 'autorizador2', label: 'Autorizador 2' },
-  { id: 'empleado', label: 'Empleado' },
-  { id: 'jefe_mantenimiento', label: 'Jefe Mtto.' },
-  { id: 'mantenimiento', label: 'Mantenimiento' },
-  { id: 'seguridad', label: 'Seguridad' },
-  { id: 'encargado_vehiculos', label: 'Enc. Vehículos' },
+const ROLES_DEFAULT = [
+  'admin', 'autorizador1', 'autorizador2', 'empleado',
+  'jefe_mantenimiento', 'mantenimiento', 'seguridad', 'encargado_vehiculos',
 ]
+
+const ROL_LABELS = {
+  admin: 'Admin',
+  autorizador1: 'Autorizador 1',
+  autorizador2: 'Autorizador 2',
+  empleado: 'Empleado',
+  jefe_mantenimiento: 'Jefe Mtto.',
+  mantenimiento: 'Mantenimiento',
+  seguridad: 'Seguridad',
+  encargado_vehiculos: 'Enc. Vehículos',
+}
 
 const SECCIONES = [
   { titulo: 'Inicio', vistas: [
@@ -49,37 +54,46 @@ const ALL_VISTAS = SECCIONES.flatMap(s => s.vistas.map(v => v.id))
 
 export default function PermisosPanel() {
   const [permisos, setPermisos] = useState({})
+  const [roles, setRoles] = useState(ROLES_DEFAULT)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(null)
   const [savedOk, setSavedOk] = useState(null)
+  const [nuevoRol, setNuevoRol] = useState('')
+  const [addError, setAddError] = useState('')
 
   useEffect(() => {
     setLoading(true)
     getPermisos()
-      .then(data => setPermisos(data))
+      .then(data => {
+        setPermisos(data)
+        // Merge API roles with defaults (preservar orden default + agregar extras)
+        const apiRoles = Object.keys(data)
+        const merged = [...new Set([...ROLES_DEFAULT, ...apiRoles])]
+        setRoles(merged)
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [])
 
-  function toggle(rol, vista) {
+  function toggle(rolId, vista) {
     setPermisos(prev => {
-      const actual = new Set(prev[rol] || [])
+      const actual = new Set(prev[rolId] || [])
       actual.has(vista) ? actual.delete(vista) : actual.add(vista)
-      return { ...prev, [rol]: [...actual] }
+      return { ...prev, [rolId]: [...actual] }
     })
   }
 
-  function toggleAll(rol, todas) {
-    setPermisos(prev => ({ ...prev, [rol]: todas ? [...ALL_VISTAS] : [] }))
+  function toggleAll(rolId, todas) {
+    setPermisos(prev => ({ ...prev, [rolId]: todas ? [...ALL_VISTAS] : [] }))
   }
 
-  async function handleGuardar(rol) {
-    setSaving(rol)
+  async function handleGuardar(rolId) {
+    setSaving(rolId)
     setSavedOk(null)
     try {
-      await updatePermisosRol(rol, permisos[rol] || [])
-      setSavedOk(rol)
+      await updatePermisosRol(rolId, permisos[rolId] || [])
+      setSavedOk(rolId)
       setTimeout(() => setSavedOk(null), 2000)
     } catch (err) {
       alert('Error al guardar: ' + err.message)
@@ -88,26 +102,49 @@ export default function PermisosPanel() {
     }
   }
 
+  function handleAgregarRol() {
+    const r = nuevoRol.trim().toLowerCase().replace(/\s+/g, '_')
+    if (!r) { setAddError('Escribe un nombre de rol'); return }
+    if (roles.includes(r)) { setAddError('Ese rol ya existe'); return }
+    setRoles(prev => [...prev, r])
+    setPermisos(prev => ({ ...prev, [r]: [] }))
+    setNuevoRol('')
+    setAddError('')
+  }
+
   if (loading) return <div className="notification">Cargando permisos...</div>
   if (error) return <div className="notification error">{error}</div>
 
-  const colSpanPerSeccion = SECCIONES.map(s => s.vistas.length)
-  const totalCols = ALL_VISTAS.length
-
   return (
     <section className="panel card">
-      <div className="panel-header">
+      <div className="panel-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
           Configura qué vistas puede ver cada rol. Los cambios aplican en el próximo inicio de sesión.
         </p>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="nombre_rol_nuevo"
+            value={nuevoRol}
+            onChange={e => { setNuevoRol(e.target.value); setAddError('') }}
+            onKeyDown={e => e.key === 'Enter' && handleAgregarRol()}
+            style={{ width: '180px', padding: '6px 10px', fontSize: '13px' }}
+          />
+          <button className="ghost-button" style={{ fontSize: '13px', padding: '6px 14px', whiteSpace: 'nowrap' }} onClick={handleAgregarRol}>
+            + Agregar rol
+          </button>
+          {addError && <span style={{ color: '#dc2626', fontSize: '12px' }}>{addError}</span>}
+        </div>
       </div>
+
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', fontSize: '12px', minWidth: '900px', width: '100%' }}>
           <thead>
             <tr>
               <th style={thStyle(true)} rowSpan={2}>Rol</th>
-              {SECCIONES.map((s, i) => (
-                <th key={s.titulo} colSpan={colSpanPerSeccion[i]}
+              {SECCIONES.map(s => (
+                <th key={s.titulo} colSpan={s.vistas.length}
                   style={{ ...thStyle(), background: '#f0f4ff', textAlign: 'center', fontWeight: 700 }}>
                   {s.titulo}
                 </th>
@@ -116,45 +153,54 @@ export default function PermisosPanel() {
             </tr>
             <tr>
               {SECCIONES.flatMap(s => s.vistas.map(v => (
-                <th key={v.id} style={{ ...thStyle(), fontWeight: 500, writingMode: 'vertical-rl', transform: 'rotate(180deg)', padding: '8px 6px', maxWidth: '28px', whiteSpace: 'nowrap' }}>
+                <th key={v.id} style={{
+                  ...thStyle(), fontWeight: 500,
+                  writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+                  padding: '8px 6px', maxWidth: '28px', whiteSpace: 'nowrap',
+                }}>
                   {v.label}
                 </th>
               )))}
             </tr>
           </thead>
           <tbody>
-            {ROLES.map(rol => {
-              const selSet = new Set(permisos[rol] || [])
+            {roles.map(rolId => {
+              const selSet = new Set(permisos[rolId] || [])
               const todas = ALL_VISTAS.every(v => selSet.has(v))
+              const label = ROL_LABELS[rolId] || rolId
               return (
-                <tr key={rol.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                <tr key={rolId} style={{ borderBottom: '1px solid #e5e7eb' }}>
                   <td style={{ ...tdStyle(), fontWeight: 600, whiteSpace: 'nowrap', paddingRight: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <input type="checkbox" title="Seleccionar todas"
                         checked={todas}
-                        onChange={() => toggleAll(rol.id, !todas)}
-                        style={{ cursor: 'pointer' }}
+                        onChange={() => toggleAll(rolId, !todas)}
+                        style={{ cursor: 'pointer', width: '14px', height: '14px' }}
                       />
-                      {rol.label}
+                      {label}
                     </div>
                   </td>
                   {ALL_VISTAS.map(vista => (
                     <td key={vista} style={{ ...tdStyle(), textAlign: 'center' }}>
                       <input type="checkbox"
                         checked={selSet.has(vista)}
-                        onChange={() => toggle(rol.id, vista)}
-                        style={{ cursor: 'pointer' }}
+                        onChange={() => toggle(rolId, vista)}
+                        style={{ cursor: 'pointer', width: '14px', height: '14px' }}
                       />
                     </td>
                   ))}
                   <td style={{ ...tdStyle(), whiteSpace: 'nowrap' }}>
                     <button
                       className="primary-button"
-                      style={{ fontSize: '12px', padding: '4px 12px', background: savedOk === rol.id ? '#16a34a' : undefined, borderColor: savedOk === rol.id ? '#16a34a' : undefined }}
+                      style={{
+                        fontSize: '12px', padding: '4px 12px',
+                        background: savedOk === rolId ? '#16a34a' : undefined,
+                        borderColor: savedOk === rolId ? '#16a34a' : undefined,
+                      }}
                       disabled={saving !== null}
-                      onClick={() => handleGuardar(rol.id)}
+                      onClick={() => handleGuardar(rolId)}
                     >
-                      {saving === rol.id ? '...' : savedOk === rol.id ? 'Guardado' : 'Guardar'}
+                      {saving === rolId ? '...' : savedOk === rolId ? 'Guardado ✓' : 'Guardar'}
                     </button>
                   </td>
                 </tr>
