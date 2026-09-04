@@ -82,7 +82,7 @@ function Field({ label, children, span }) {
 }
 
 // ── Formulario de solicitud ───────────────────────────────────────────────────
-function FormularioSolicitud({ solicitudId, currentUser, onGuardado, readOnly }) {
+function FormularioSolicitud({ solicitudId, currentUser, onGuardado, readOnly, estado }) {
   const [form, setForm] = useState(emptyForm())
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(!!solicitudId)
@@ -357,9 +357,9 @@ function FormularioSolicitud({ solicitudId, currentUser, onGuardado, readOnly })
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
           <button type="submit" disabled={saving}
             style={{ padding:'9px 20px', borderRadius:'8px', border:'1px solid #d1d5db', background:'#fff', cursor:'pointer', fontSize:'13px', fontWeight:600 }}>
-            {saving ? 'Guardando...' : 'Guardar borrador'}
+            {saving ? 'Guardando...' : estado === 'pendiente' ? 'Guardar cambios' : 'Guardar borrador'}
           </button>
-          {solicitudId && (
+          {solicitudId && estado !== 'pendiente' && (
             <button type="button" onClick={enviar} disabled={enviando}
               style={{ padding:'9px 20px', borderRadius:'8px', border:'none', background:'#1e3a8a', color:'#fff', cursor:'pointer', fontSize:'13px', fontWeight:600 }}>
               {enviando ? 'Enviando...' : 'Enviar a autorización'}
@@ -449,7 +449,7 @@ export default function RegistroProveedores({ currentUser, currentUserRol }) {
     { key: 'formulario', label: selectedId ? 'Ver / Editar' : 'Nueva solicitud' },
   ]
 
-  const readOnly = selectedEstado && selectedEstado !== 'borrador'
+  const readOnly = selectedEstado === 'aprobado' || selectedEstado === 'rechazado'
   const puedeFirmar = esAutorizador && selectedEstado === 'pendiente'
 
   return (
@@ -576,6 +576,7 @@ export default function RegistroProveedores({ currentUser, currentUserRol }) {
               currentUser={currentUser}
               onGuardado={handleGuardado}
               readOnly={readOnly}
+              estado={selectedEstado}
             />
           </div>
         )}
