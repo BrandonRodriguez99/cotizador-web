@@ -354,7 +354,7 @@ export default function SolicitudVehiculoPublica() {
                 alumnos={alumnos}
                 loadingAlumnos={loadingAlumnos}
                 genId={genId}
-                onGenChange={id => { setGenId(id); setSeleccionados([]) }}
+                onGenChange={id => setGenId(id)}
                 seleccionados={seleccionados}
                 onToggle={toggleAlumno}
               />
