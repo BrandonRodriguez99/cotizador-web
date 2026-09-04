@@ -709,6 +709,14 @@ export function updateCriterios(criterios) {
   return fetchJson('criterios-asistencia', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(criterios) })
 }
 
+// ─── Permisos de Rol ─────────────────────────────────────────────────────────
+export function getPermisos() {
+  return fetchJson('admin/permisos', { headers: authHeaders() })
+}
+export function updatePermisosRol(rol, vistas) {
+  return fetchJson(`admin/permisos/${encodeURIComponent(rol)}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ vistas }) })
+}
+
 // ─── Acceso Alumnos (QR) ────────────────────────────────────────────────────
 export function eliminarAcceso(id) {
   return fetchJson(`acceso-alumnos/${id}`, { method: 'DELETE', headers: authHeaders() })
