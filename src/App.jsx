@@ -130,9 +130,11 @@ function App() {
       ? 'mantenimiento'
       : rolInicial === 'seguridad'
         ? 'seguridad'
-        : (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
-          ? 'dashboard'
-          : 'inicio'
+        : rolInicial === 'encargado_vehiculos'
+          ? 'vehiculos'
+          : (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
+            ? 'dashboard'
+            : 'inicio'
   )
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [catalogItems, setCatalogItems] = useState([])
@@ -743,11 +745,17 @@ function App() {
 
         <nav className="sidebar-nav">
           {usuario?.rol === 'seguridad' ? (
-            // Rol seguridad: solo ve el módulo de seguridad
             <div className="nav-section">
               <p className="nav-title">Seguridad</p>
               <button type="button" className={`nav-link${activeView === 'seguridad' ? ' active' : ''}`} onClick={() => handleNavClick('seguridad')}>
                 <NavIcon i="seguridad" />Módulo de Seguridad
+              </button>
+            </div>
+          ) : usuario?.rol === 'encargado_vehiculos' ? (
+            <div className="nav-section">
+              <p className="nav-title">Vehículos</p>
+              <button type="button" className={`nav-link${activeView === 'vehiculos' ? ' active' : ''}`} onClick={() => handleNavClick('vehiculos')}>
+                <NavIcon i="vehiculos" />Vehículos
               </button>
             </div>
           ) : (
@@ -993,6 +1001,8 @@ function App() {
           <RegistroProveedores currentUser={usuario?.nombre} currentUserRol={usuario?.rol} />
         ) : activeView === 'seguridad' ? (
           <Seguridad usuario={usuario} />
+        ) : activeView === 'vehiculos' ? (
+          <Seguridad usuario={usuario} soloVehiculos />
         ) : activeView === 'asistencia' ? (
           <section className="panel card"><AsistenciaGeneracion /></section>
         ) : activeView === 'aprobaciones' ? (
