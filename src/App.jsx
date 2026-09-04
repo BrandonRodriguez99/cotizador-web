@@ -130,9 +130,7 @@ function App() {
       ? 'mantenimiento'
       : rolInicial === 'seguridad'
         ? 'seguridad'
-        : rolInicial === 'encargado_vehiculos'
-          ? 'vehiculos'
-          : (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
+        : (rolInicial === 'admin' || rolInicial === 'autorizador1' || rolInicial === 'autorizador2')
             ? 'dashboard'
             : 'inicio'
   )
@@ -751,13 +749,6 @@ function App() {
                 <NavIcon i="seguridad" />Módulo de Seguridad
               </button>
             </div>
-          ) : usuario?.rol === 'encargado_vehiculos' ? (
-            <div className="nav-section">
-              <p className="nav-title">Vehículos</p>
-              <button type="button" className={`nav-link${activeView === 'vehiculos' ? ' active' : ''}`} onClick={() => handleNavClick('vehiculos')}>
-                <NavIcon i="vehiculos" />Vehículos
-              </button>
-            </div>
           ) : (
             <>
               {usuario?.rol !== 'mantenimiento' && (
@@ -804,6 +795,11 @@ function App() {
                   <button type="button" className={`nav-link${activeView === 'asistencia' ? ' active' : ''}`} onClick={() => handleNavClick('asistencia')}>
                     <NavIcon i="asistencia" />Asistencia
                   </button>
+                  {usuario?.rol === 'encargado_vehiculos' && (
+                    <button type="button" className={`nav-link${activeView === 'vehiculos' ? ' active' : ''}`} onClick={() => handleNavClick('vehiculos')}>
+                      <NavIcon i="vehiculos" />Vehículos
+                    </button>
+                  )}
                 </>)}
               </div>
               {usuario?.rol !== 'mantenimiento' && <div className="nav-section">
