@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 import {
   getOrdenesMantenimiento,
   getOrdenMantenimientoById,
@@ -537,224 +538,146 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   })
 
   // ── Generación de PDF ─────────────────────────────────────────────────────
-  function descargarPDF(orden, materiales) {
-    const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' })
-    const ML = 12, CW = 192
-
-    // Colores
-    const AZUL   = [26, 58, 105]
-    const AZUL2  = [41, 98, 173]
-    const GR     = [200, 200, 200]
-    const BLK    = [0, 0, 0]
-    const WHT    = [255, 255, 255]
-    const LGRAY  = [248, 248, 248]
-
-    let y = ML
-
-    function sp(str) {
-      if (str == null) return ''
-      return String(str)
-        .replace(/[‘’]/g, "'")
-        .replace(/[“”]/g, '"')
-        .replace(/–/g, '-')
-        .replace(/—/g, '--')
-        .replace(/…/g, '...')
-        .replace(/ /g, ' ')
-        .replace(/•/g, '*')
-        .replace(/→/g, '->')
-        .replace(/←/g, '<-')
-        .replace(/×/g, 'x')
-        .replace(/[^\x00-\xFF]/g, '')
-    }
-
-    function t(str, x, yy, { sz = 9, bold = false, col = BLK, align = 'left', maxW = null } = {}) {
-      doc.setFontSize(sz)
-      doc.setTextColor(...col)
-      doc.setFont('helvetica', bold ? 'bold' : 'normal')
-      const opts = { align }
-      if (maxW) opts.maxWidth = maxW
-      doc.text(sp(str), x, yy, opts)
-    }
-
-    function box(x, yy, w, h, fill, stroke) {
-      doc.setLineWidth(0.3)
-      if (fill) doc.setFillColor(...fill)
-      if (stroke) doc.setDrawColor(...stroke)
-      doc.rect(x, yy, w, h, fill && stroke ? 'FD' : fill ? 'F' : 'D')
-    }
-
-    function ln(x1, y1, x2, y2, col = GR) {
-      doc.setDrawColor(...col); doc.setLineWidth(0.3); doc.line(x1, y1, x2, y2)
-    }
-
-    function fd(v) {
-      if (!v) return ''
+  async function descargarPDF(orden, materiales) {
+    const fd = (v) => {
+      if (!v) return ‘’
       const d = new Date(v)
-      return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+      return isNaN(d.getTime()) ? ‘’ : d.toLocaleDateString(‘es-MX’, { day: ‘2-digit’, month: ‘short’, year: ‘numeric’ })
     }
+    const s = (v) => String(v ?? ‘’)
+    const esc = (v) => s(v).replace(/&/g,’&amp;’).replace(/</g,’&lt;’).replace(/>/g,’&gt;’).replace(/"/g,’&quot;’)
+    const chk = (checked) =>
+      `<span style="display:inline-block;width:11px;height:11px;border:1px solid #000;text-align:center;line-height:11px;font-size:9px;margin-right:4px;">${checked ? ‘✓’ : ‘’}</span>`
 
-    function chkbox(x, yy, checked) {
-      box(x, yy, 3.5, 3.5, null, BLK)
-      if (checked) {
-        doc.setDrawColor(...AZUL2); doc.setLineWidth(0.6)
-        doc.line(x + 0.4, yy + 2.2, x + 1.4, yy + 3.3)
-        doc.line(x + 1.4, yy + 3.3, x + 3.2, yy + 0.7)
-      }
-    }
-
-    function secHeader(title) {
-      box(ML, y, CW, 6.5, AZUL, AZUL)
-      t(title, ML + CW / 2, y + 4.5, { sz: 9, bold: true, col: WHT, align: 'center' })
-      y += 6.5
-    }
-
-    // ── CABECERA ──────────────────────────────────────────────────────────────
-    const HDR_H = 22, LOGO_W = 30, META_W = 52, TITLE_W = CW - LOGO_W - META_W
-    box(ML, y, CW, HDR_H, WHT, GR)
-    ln(ML + LOGO_W, y, ML + LOGO_W, y + HDR_H)
-    ln(ML + LOGO_W + TITLE_W, y, ML + LOGO_W + TITLE_W, y + HDR_H)
-    // Logo UDAT
-    doc.setDrawColor(...AZUL2); doc.setLineWidth(0.8); doc.rect(ML + 4, y + 3, 22, 16)
-    t('UDAT', ML + 15, y + 12, { sz: 12, bold: true, col: AZUL2, align: 'center' })
-    // Título
-    t('Orden de Mantenimiento', ML + LOGO_W + TITLE_W / 2, y + 13, { sz: 15, bold: true, align: 'center' })
-    // Meta (No./Rev./Fecha)
-    const metaX = ML + LOGO_W + TITLE_W
-    ;[['No.', 'FGA03-02'], ['Rev.', '2'], ['Fecha', '20-Ago-2025']].forEach(([lbl, val], i) => {
-      const ry = y + i * (HDR_H / 3)
-      if (i > 0) ln(metaX, ry, metaX + META_W, ry)
-      ln(metaX + 17, ry, metaX + 17, ry + HDR_H / 3)
-      t(lbl, metaX + 2, ry + (HDR_H / 3) * 0.7, { sz: 8, bold: true })
-      t(val, metaX + 19, ry + (HDR_H / 3) * 0.7, { sz: 8, bold: true })
-    })
-    y += HDR_H + 4
-
-    // ── CAMPOS INFO ───────────────────────────────────────────────────────────
-    function infoRow(lLabel, lVal, rLabel, rVal) {
-      const mid = ML + CW / 2
-      t(lLabel + ':', ML, y + 5, { sz: 8, bold: true })
-      t(lVal || '', ML + doc.getTextWidth(lLabel + ':') + 2, y + 5, { sz: 8, col: [50,50,50] })
-      ln(ML, y + 7, mid - 3, y + 7)
-      if (rLabel) {
-        t(rLabel + ':', mid, y + 5, { sz: 8, bold: true })
-        t(rVal || '', mid + doc.getTextWidth(rLabel + ':') + 2, y + 5, { sz: 8, col: [50,50,50] })
-        ln(mid, y + 7, ML + CW, y + 7)
-      }
-      y += 8
-    }
-    infoRow('Departamento', orden.Departamento, 'Fecha de Reporte', fd(orden.FechaReporte))
-    infoRow('Nombre de quien Solicita', orden.NombreSolicita, 'Puesto', orden.Puesto)
-    infoRow('Equipo', orden.Equipo, 'Código', orden.Codigo)
-    y += 2
-
-    // ── RAZÓN DE LA ORDEN ─────────────────────────────────────────────────────
     const RAZONES_PDF = [
-      { key: 'correctivo', label: 'Mantenimiento Correctivo' },
-      { key: 'preventivo', label: 'Mantenimiento Preventivo' },
-      { key: 'predictivo', label: 'Mantenimiento Predictivo' },
-      { key: 'programado', label: 'Mantenimiento Programado' },
+      { key: ‘correctivo’, label: ‘Mantenimiento Correctivo’ },
+      { key: ‘preventivo’, label: ‘Mantenimiento Preventivo’ },
+      { key: ‘predictivo’, label: ‘Mantenimiento Predictivo’ },
+      { key: ‘programado’, label: ‘Mantenimiento Programado’ },
     ]
-    t('Razón de la Orden:', ML, y + 5, { sz: 8, bold: true })
-    const rzLW = 38, rzCW = (CW - rzLW) / 2
-    RAZONES_PDF.forEach((rz, i) => {
-      const cx = ML + rzLW + (i % 2) * rzCW
-      const cy = y + Math.floor(i / 2) * 6.5
-      chkbox(cx, cy + 0.5, orden.RazonOrden === rz.key)
-      t(rz.label, cx + 5.5, cy + 4, { sz: 8 })
-    })
-    y += 16
+    const TIPOS_FALLA = [‘Plomería’, ‘Eléctrica’, ‘Albañilería’, ‘Otro’]
+    const mats = (materiales || [])
 
-    // ── DESCRIPCIÓN DE LA FALLA ───────────────────────────────────────────────
-    secHeader('Descripción de la falla: (Dato a llenar por el usuario)')
-    const descLines = doc.splitTextToSize(sp(orden.DescripcionFalla), CW - 4)
-    const descH = Math.max(22, descLines.length * 5 + 6)
-    box(ML, y, CW, descH, WHT, GR)
-    if (descLines.length) { doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.text(descLines, ML + 2, y + 5) }
-    y += descH + 2
+    const wrap = document.createElement(‘div’)
+    wrap.style.cssText = ‘position:absolute;top:-9999px;left:-9999px;width:800px;background:#fff;’
+    document.body.appendChild(wrap)
+    wrap.innerHTML = `
+      <div style="font-family:Arial,sans-serif;font-size:11px;color:#000;padding:24px 28px;box-sizing:border-box;width:800px;">
+        <table style="width:100%;border-collapse:collapse;border:1px solid #ccc;margin-bottom:8px;">
+          <tr>
+            <td style="width:90px;border-right:1px solid #ccc;padding:8px;text-align:center;vertical-align:middle;">
+              <div style="border:2px solid #2962ad;padding:4px 10px;display:inline-block;color:#2962ad;font-weight:bold;font-size:14px;">UDAT</div>
+            </td>
+            <td style="text-align:center;font-size:17px;font-weight:bold;border-right:1px solid #ccc;padding:8px;">Orden de Mantenimiento</td>
+            <td style="width:150px;padding:0;vertical-align:top;">
+              <table style="width:100%;border-collapse:collapse;font-size:10px;">
+                <tr><td style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;padding:3px 6px;font-weight:bold;">No.</td><td style="border-bottom:1px solid #ccc;padding:3px 6px;">FGA03-02</td></tr>
+                <tr><td style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;padding:3px 6px;font-weight:bold;">Rev.</td><td style="border-bottom:1px solid #ccc;padding:3px 6px;">2</td></tr>
+                <tr><td style="border-right:1px solid #ccc;padding:3px 6px;font-weight:bold;">Fecha</td><td style="padding:3px 6px;">20-Ago-2025</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:6px;font-size:11px;">
+          <tr>
+            <td style="border-bottom:1px solid #ddd;padding:3px 0;width:50%;"><b>Departamento:</b> ${esc(orden.Departamento)}</td>
+            <td style="border-bottom:1px solid #ddd;padding:3px 0;"><b>Fecha de Reporte:</b> ${esc(fd(orden.FechaReporte))}</td>
+          </tr>
+          <tr>
+            <td style="border-bottom:1px solid #ddd;padding:3px 0;"><b>Nombre de quien Solicita:</b> ${esc(orden.NombreSolicita)}</td>
+            <td style="border-bottom:1px solid #ddd;padding:3px 0;"><b>Puesto:</b> ${esc(orden.Puesto)}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 0;"><b>Equipo:</b> ${esc(orden.Equipo)}</td>
+            <td style="padding:3px 0;"><b>Código:</b> ${esc(orden.Codigo)}</td>
+          </tr>
+        </table>
+        <div style="margin-bottom:6px;font-size:11px;">
+          <b>Razón de la Orden:</b>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 24px;margin-top:4px;padding-left:8px;">
+            ${RAZONES_PDF.map(r => `<div>${chk(orden.RazonOrden === r.key)}${r.label}</div>`).join(‘’)}
+          </div>
+        </div>
+        <div style="background:#1a3a69;color:#fff;text-align:center;font-weight:bold;padding:4px;font-size:11px;">Descripción de la falla: (Dato a llenar por el usuario)</div>
+        <div style="border:1px solid #ccc;border-top:none;min-height:60px;padding:6px;margin-bottom:6px;font-size:11px;white-space:pre-wrap;">${esc(orden.DescripcionFalla)}</div>
+        <div style="background:#1a3a69;color:#fff;text-align:center;font-weight:bold;padding:4px;font-size:11px;">Para llenado exclusivo de Mantenimiento</div>
+        <div style="border:1px solid #ccc;border-top:none;padding:4px 8px;margin-bottom:6px;font-size:11px;display:flex;gap:16px;align-items:center;">
+          <b>Tipo de falla:</b>
+          ${TIPOS_FALLA.map(t => `<div>${chk(orden.TipoFalla === t)}${t}</div>`).join(‘’)}
+        </div>
+        <div style="background:#1a3a69;color:#fff;text-align:center;font-weight:bold;padding:4px;font-size:11px;">Refacciones y/o Materiales utilizados en el mantenimiento:</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:6px;font-size:11px;">
+          <thead><tr>
+            <th style="background:#2962ad;color:#fff;padding:4px 8px;text-align:left;border:1px solid #2962ad;">Refacción o Material</th>
+            <th style="background:#2962ad;color:#fff;padding:4px 8px;text-align:center;border:1px solid #2962ad;width:80px;">Cantidad</th>
+          </tr></thead>
+          <tbody>
+            ${mats.length === 0
+              ? ‘<tr><td colspan="2" style="border:1px solid #ccc;padding:4px 8px;">&nbsp;</td></tr>’
+              : mats.map((m, i) => `<tr style="background:${i%2===0?’#fff’:’#f8f8f8’}"><td style="border:1px solid #ccc;padding:4px 8px;">${esc(m.Material ?? m.material ?? ‘’)}</td><td style="border:1px solid #ccc;padding:4px 8px;text-align:center;">${esc(m.Cantidad ?? m.cantidad ?? ‘’)}</td></tr>`).join(‘’)}
+          </tbody>
+        </table>
+        <div style="background:#1a3a69;color:#fff;text-align:center;font-weight:bold;padding:4px;font-size:11px;">Fecha de terminación</div>
+        <div style="border:1px solid #ccc;border-top:none;min-height:28px;padding:6px;margin-bottom:6px;font-size:11px;">${esc(fd(orden.FechaTerminacion))}</div>
+        <div style="background:#1a3a69;color:#fff;text-align:center;font-weight:bold;padding:4px;font-size:11px;">Descripción de mantenimiento realizado</div>
+        <div style="border:1px solid #ccc;border-top:none;min-height:60px;padding:6px;margin-bottom:6px;font-size:11px;white-space:pre-wrap;">${esc(orden.DescripcionMantenimiento)}</div>
+        <div style="border:1px solid #ccc;min-height:40px;margin-bottom:8px;"></div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr>
+            <td style="border:1px solid #ccc;padding:8px;text-align:center;width:50%;">
+              <div style="min-height:20px;color:#444;font-size:10px;">${esc(orden.TecnicoResponsable)}</div>
+              <div style="border-top:1px solid #000;margin:24px 20px 4px;"></div>
+              <div style="font-weight:bold;">Nombre y Firma</div>
+              <div style="font-weight:bold;">Técnico Responsable</div>
+            </td>
+            <td style="border:1px solid #ccc;padding:8px;text-align:center;width:50%;">
+              <div style="min-height:20px;color:#444;font-size:10px;">${esc(orden.UsuarioEquipo)}</div>
+              <div style="border-top:1px solid #000;margin:24px 20px 4px;"></div>
+              <div style="font-weight:bold;">Nombre y Firma</div>
+              <div style="font-weight:bold;">Usuario del Equipo</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `
 
-    // ── PARA LLENADO EXCLUSIVO ────────────────────────────────────────────────
-    secHeader('Para llenado exclusivo de Mantenimiento')
-
-    // Tipo de falla
-    box(ML, y, CW, 8, WHT, GR)
-    t('Tipo de falla:', ML + 2, y + 5.5, { sz: 8, bold: true })
-    let tx = ML + 33
-    ;['Plomería', 'Eléctrica', 'Albañilería', 'Otro'].forEach(tipo => {
-      chkbox(tx, y + 2, orden.TipoFalla === tipo)
-      const label = tipo + (tipo === 'Otro' ? ':' : '')
-      t(label, tx + 5.5, y + 5.5, { sz: 8 })
-      tx += doc.getTextWidth(label) + 12
-    })
-    y += 8
-
-    // ── TABLA MATERIALES ──────────────────────────────────────────────────────
-    const mats = (materiales || []).map(m => ({
-      mat: sp(m.Material ?? m.material ?? ''),
-      qty: sp(m.Cantidad ?? m.cantidad ?? ''),
-    }))
-    const MAT_W = CW * 0.78, QTY_W = CW - MAT_W
-
-    secHeader('Refacciones y/o Materiales utilizados en el mantenimiento:')
-    // Encabezados de columna
-    box(ML, y, MAT_W, 6.5, AZUL2, AZUL2)
-    box(ML + MAT_W, y, QTY_W, 6.5, AZUL2, AZUL2)
-    t('Refacción o Material', ML + 2, y + 4.5, { sz: 8, bold: true, col: WHT })
-    t('Cantidad', ML + MAT_W + QTY_W / 2, y + 4.5, { sz: 8, bold: true, col: WHT, align: 'center' })
-    y += 6.5
-
-    if (mats.length === 0) {
-      box(ML, y, CW, 7, LGRAY, GR); y += 7
-    } else {
-      mats.forEach((m, i) => {
-        const bg = i % 2 === 0 ? WHT : LGRAY
-        box(ML, y, MAT_W, 7, bg, GR)
-        box(ML + MAT_W, y, QTY_W, 7, bg, GR)
-        t(m.mat, ML + 2, y + 4.8, { sz: 8, maxW: MAT_W - 4 })
-        t(m.qty, ML + MAT_W + QTY_W / 2, y + 4.8, { sz: 8, align: 'center' })
-        y += 7
-      })
+    try {
+      const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, backgroundColor: ‘#ffffff’, logging: false })
+      const imgData = canvas.toDataURL(‘image/png’)
+      const doc = new jsPDF({ unit: ‘mm’, format: ‘letter’, orientation: ‘portrait’ })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const margin = 8
+      const imgW = pageW - margin * 2
+      const imgH = (canvas.height * imgW) / canvas.width
+      if (imgH <= pageH - margin * 2) {
+        doc.addImage(imgData, ‘PNG’, margin, margin, imgW, imgH)
+      } else {
+        const ratio = canvas.width / imgW
+        const pageHpx = (pageH - margin * 2) * ratio
+        let srcY = 0
+        while (srcY < canvas.height) {
+          const slicePx = Math.min(pageHpx, canvas.height - srcY)
+          const tmp = document.createElement(‘canvas’)
+          tmp.width = canvas.width
+          tmp.height = slicePx
+          tmp.getContext(‘2d’).drawImage(canvas, 0, srcY, canvas.width, slicePx, 0, 0, canvas.width, slicePx)
+          doc.addImage(tmp.toDataURL(‘image/png’), ‘PNG’, margin, margin, imgW, slicePx / ratio)
+          srcY += pageHpx
+          if (srcY < canvas.height) doc.addPage()
+        }
+      }
+      doc.save(`OM-${orden.Folio || ‘orden’}.pdf`)
+    } finally {
+      document.body.removeChild(wrap)
     }
-    y += 3
-
-    // ── FECHA DE TERMINACIÓN ──────────────────────────────────────────────────
-    secHeader('Fecha de terminación')
-    box(ML, y, CW, 8, WHT, GR)
-    t(fd(orden.FechaTerminacion), ML + 2, y + 5.5, { sz: 9 })
-    y += 8 + 2
-
-    // ── DESCRIPCIÓN DE MANTENIMIENTO ──────────────────────────────────────────
-    secHeader('Descripción de mantenimiento realizado')
-    const mantLines = doc.splitTextToSize(sp(orden.DescripcionMantenimiento), CW - 4)
-    const mantH = Math.max(22, mantLines.length * 5 + 6)
-    box(ML, y, CW, mantH, WHT, GR)
-    if (mantLines.length) { doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.text(mantLines, ML + 2, y + 5) }
-    y += mantH + 3
-
-    // Espacio en blanco
-    box(ML, y, CW, 14, WHT, GR); y += 14 + 5
-
-    // ── FIRMAS ────────────────────────────────────────────────────────────────
-    const half = CW / 2
-    box(ML, y, half, 22, WHT, GR)
-    box(ML + half, y, half, 22, WHT, GR)
-    const sigY = y + 13
-    ln(ML + 6, sigY, ML + half - 6, sigY, BLK)
-    ln(ML + half + 6, sigY, ML + CW - 6, sigY, BLK)
-    if (orden.TecnicoResponsable) t(orden.TecnicoResponsable, ML + half / 2, sigY - 2, { sz: 7.5, align: 'center', col: [50,50,50] })
-    if (orden.UsuarioEquipo)      t(orden.UsuarioEquipo, ML + half + half / 2, sigY - 2, { sz: 7.5, align: 'center', col: [50,50,50] })
-    t('Nombre y Firma',      ML + half / 2,        sigY + 4, { sz: 7, bold: true, align: 'center' })
-    t('Técnico Responsable', ML + half / 2,        sigY + 8, { sz: 7, bold: true, align: 'center' })
-    t('Nombre y Firma',      ML + half + half / 2, sigY + 4, { sz: 7, bold: true, align: 'center' })
-    t('Usuario del Equipo',  ML + half + half / 2, sigY + 8, { sz: 7, bold: true, align: 'center' })
-
-    doc.save(`OM-${orden.Folio || 'orden'}.pdf`)
   }
 
   async function generarPDFOrden(id) {
     setPdfLoading(id)
     try {
       const data = await getOrdenMantenimientoById(id)
-      descargarPDF(data.orden, data.materiales)
+      await descargarPDF(data.orden, data.materiales)
     } catch { alert('Error al generar el PDF') }
     finally { setPdfLoading(null) }
   }
