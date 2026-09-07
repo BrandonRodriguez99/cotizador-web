@@ -551,13 +551,29 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
 
     let y = ML
 
+    function sp(str) {
+      if (str == null) return ''
+      return String(str)
+        .replace(/[‘’]/g, "'")
+        .replace(/[“”]/g, '"')
+        .replace(/–/g, '-')
+        .replace(/—/g, '--')
+        .replace(/…/g, '...')
+        .replace(/ /g, ' ')
+        .replace(/•/g, '*')
+        .replace(/→/g, '->')
+        .replace(/←/g, '<-')
+        .replace(/×/g, 'x')
+        .replace(/[^\x00-\xFF]/g, '')
+    }
+
     function t(str, x, yy, { sz = 9, bold = false, col = BLK, align = 'left', maxW = null } = {}) {
       doc.setFontSize(sz)
       doc.setTextColor(...col)
       doc.setFont('helvetica', bold ? 'bold' : 'normal')
       const opts = { align }
       if (maxW) opts.maxWidth = maxW
-      doc.text(String(str ?? ''), x, yy, opts)
+      doc.text(sp(str), x, yy, opts)
     }
 
     function box(x, yy, w, h, fill, stroke) {
@@ -650,7 +666,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
 
     // ── DESCRIPCIÓN DE LA FALLA ───────────────────────────────────────────────
     secHeader('Descripción de la falla: (Dato a llenar por el usuario)')
-    const descLines = doc.splitTextToSize(String(orden.DescripcionFalla || ''), CW - 4)
+    const descLines = doc.splitTextToSize(sp(orden.DescripcionFalla), CW - 4)
     const descH = Math.max(22, descLines.length * 5 + 6)
     box(ML, y, CW, descH, WHT, GR)
     if (descLines.length) { doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.text(descLines, ML + 2, y + 5) }
@@ -673,8 +689,8 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
 
     // ── TABLA MATERIALES ──────────────────────────────────────────────────────
     const mats = (materiales || []).map(m => ({
-      mat: String(m.Material ?? m.material ?? ''),
-      qty: String(m.Cantidad ?? m.cantidad ?? ''),
+      mat: sp(m.Material ?? m.material ?? ''),
+      qty: sp(m.Cantidad ?? m.cantidad ?? ''),
     }))
     const MAT_W = CW * 0.78, QTY_W = CW - MAT_W
 
@@ -708,7 +724,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
 
     // ── DESCRIPCIÓN DE MANTENIMIENTO ──────────────────────────────────────────
     secHeader('Descripción de mantenimiento realizado')
-    const mantLines = doc.splitTextToSize(String(orden.DescripcionMantenimiento || ''), CW - 4)
+    const mantLines = doc.splitTextToSize(sp(orden.DescripcionMantenimiento), CW - 4)
     const mantH = Math.max(22, mantLines.length * 5 + 6)
     box(ML, y, CW, mantH, WHT, GR)
     if (mantLines.length) { doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.text(mantLines, ML + 2, y + 5) }

@@ -685,3 +685,46 @@ export function eliminarDocumentoProveedor(solicitudId, docId) {
 export function eliminarSolicitudProveedor(id) {
   return fetchJson(`solicitudes-proveedor/${id}`, { method:'DELETE', headers:authHeaders() })
 }
+
+// ─── Asistencia por generación ──────────────────────────────────────────────
+export function getGeneraciones() {
+  return fetchJson('generaciones', { headers: authHeaders() })
+}
+export function getAsistencia(generacionId, fecha) {
+  return fetchJson(`asistencia?generacionId=${generacionId}&fecha=${fecha}`, { headers: authHeaders() })
+}
+export function getMovimientosAlumno(matricula, fecha) {
+  return fetchJson(`acceso-alumnos/alumno?matricula=${encodeURIComponent(matricula)}&fecha=${fecha}`, { headers: authHeaders() })
+}
+export function getAsistenciaGrid(generacionId) {
+  return fetchJson(`asistencia-grid?generacionId=${generacionId}`, { headers: authHeaders() })
+}
+export function guardarAsistencia(data) {
+  return fetchJson('asistencia-grid/guardar', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) })
+}
+export function getCriterios() {
+  return fetchJson('criterios-asistencia', { headers: authHeaders() })
+}
+export function updateCriterios(criterios) {
+  return fetchJson('criterios-asistencia', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(criterios) })
+}
+
+// ─── Permisos de Rol ─────────────────────────────────────────────────────────
+export function getPermisos() {
+  return fetchJson('admin/permisos', { headers: authHeaders() })
+}
+export function updatePermisosRol(rol, vistas) {
+  return fetchJson(`admin/permisos/${encodeURIComponent(rol)}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ vistas }) })
+}
+
+// ─── Acceso Alumnos (QR) ────────────────────────────────────────────────────
+export function eliminarAcceso(id) {
+  return fetchJson(`acceso-alumnos/${id}`, { method: 'DELETE', headers: authHeaders() })
+}
+export function getAccesoAlumnos(fecha) {
+  const q = fecha ? `?fecha=${fecha}` : ''
+  return fetchJson(`acceso-alumnos${q}`, { headers: authHeaders() })
+}
+export function registrarAcceso(matricula, tipoAcceso) {
+  return fetchJson('acceso-alumnos', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ matricula, tipoAcceso }) })
+}

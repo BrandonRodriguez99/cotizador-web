@@ -1530,6 +1530,7 @@ export default function OrdenesCompra({
   const isAdmin = currentUserRol === 'admin'
   const isAutorizador = currentUserRol === 'autorizador1' || currentUserRol === 'autorizador2'
   const puedeRecepcionar = currentUserRol === 'admin'
+  const puedeGenerarSolicitud = ['admin', 'jefe_mantenimiento'].includes(currentUserRol)
 
   const [filtros, setFiltros] = useState({ texto:'', unidadNegocio:'', estado:'', tipo:'', fechaDesde:'', fechaHasta:'' })
   const hasFiltros = Object.values(filtros).some(Boolean)
@@ -2042,7 +2043,7 @@ export default function OrdenesCompra({
                             </button>
                             <button type="button" className="ghost-button"
                               style={{ fontSize: '11px', padding: '4px 10px', color: '#15803d', borderColor: '#bbf7d0' }}
-                              onClick={() => openModal('solicitud', order, !isAdmin)}>
+                              onClick={() => openModal('solicitud', order, !puedeGenerarSolicitud)}>
                               Sol. Fondos
                             </button>
                             <button type="button" className="ghost-button"
@@ -2120,7 +2121,7 @@ export default function OrdenesCompra({
                                   {canP2 && <button type="button" className="primary-button" style={{ padding:'6px 14px', fontSize:'13px', background:'#7c3aed' }} onClick={() => handleApproveSF(sf.OrdenCompraId, 2)}>Aprobar (Paso 2)</button>}
                                   <button type="button" className="ghost-button"
                                     style={{ padding:'6px 12px', fontSize:'12px', color:'#374151' }}
-                                    onClick={() => { const o = ordenes.find(x => x.OrdenCompraId === sf.OrdenCompraId); if (o) openModal('solicitud', o, !isAdmin) }}>
+                                    onClick={() => { const o = ordenes.find(x => x.OrdenCompraId === sf.OrdenCompraId); if (o) openModal('solicitud', o, !puedeGenerarSolicitud) }}>
                                     Ver detalle
                                   </button>
                                 </div>
@@ -2192,7 +2193,7 @@ export default function OrdenesCompra({
                               <>
                                 <button type="button" className="ghost-button"
                                   style={{ fontSize:'11px', padding:'3px 8px', color:'#15803d', borderColor:'#bbf7d0' }}
-                                  onClick={() => openModal('solicitud', order, !isAdmin)}>
+                                  onClick={() => openModal('solicitud', order, !puedeGenerarSolicitud)}>
                                   Sol. Fondos
                                 </button>
                                 <button type="button" className="ghost-button"

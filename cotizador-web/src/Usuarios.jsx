@@ -1,8 +1,25 @@
 import { useState, useEffect } from 'react'
-import { getUsuarios, createUsuario, updateUsuario, resetearPasswordUsuario } from './api'
+import { getUsuarios, createUsuario, updateUsuario, resetearPasswordUsuario, getPermisos } from './api'
+
+const ROL_LABELS_BASE = {
+  admin: 'Administrador del sistema',
+  autorizador1: 'Autorizador 1 — Administración',
+  autorizador2: 'Autorizador 2 — Sec. Académica',
+  empleado: 'Empleado (Solicitante)',
+  mantenimiento: 'Personal de Mantenimiento',
+  jefe_mantenimiento: 'Jefe de Mantenimiento',
+  seguridad: 'Guardia de Seguridad',
+  jefe_seguridad: 'Jefe de Seguridad',
+  encargado_vehiculos: 'Encargado de Vehículos',
+}
+
+function labelRol(r) {
+  return ROL_LABELS_BASE[r] || r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
 
 export default function Usuarios({ token }) {
   const [usuarios, setUsuarios] = useState([])
+  const [roles, setRoles] = useState(Object.keys(ROL_LABELS_BASE))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -24,7 +41,13 @@ export default function Usuarios({ token }) {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    getPermisos().then(data => {
+      const todos = [...new Set([...Object.keys(ROL_LABELS_BASE), ...Object.keys(data)])]
+      setRoles(todos)
+    }).catch(() => {})
+  }, [])
 
   function openCreate() {
     setEditingUser(null)
@@ -134,17 +157,7 @@ export default function Usuarios({ token }) {
                     </div>
                   </td>
                   <td>{u.Correo}</td>
-                  <td>{{
-                    admin: 'Administrador del sistema',
-                    autorizador1: 'Autorizador 1 — Administración',
-                    autorizador2: 'Autorizador 2 — Sec. Académica',
-                    empleado: 'Empleado',
-                    mantenimiento: 'Personal de Mantenimiento',
-                    jefe_mantenimiento: 'Jefe de Mantenimiento',
-                    seguridad: 'Guardia de Seguridad',
-                    jefe_seguridad: 'Jefe de Seguridad',
-                    encargado_vehiculos: 'Encargado de Vehículos',
-                  }[u.Rol] || u.Rol}</td>
+                  <td>{labelRol(u.Rol)}</td>
                   <td>
                     <span style={{
                       padding: '2px 10px', borderRadius: '12px', fontSize: '12px',
@@ -212,15 +225,9 @@ export default function Usuarios({ token }) {
                     value={form.rol}
                     onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}
                   >
-                    <option value="empleado">Empleado (Solicitante)</option>
-                    <option value="mantenimiento">Personal de Mantenimiento</option>
-                    <option value="jefe_mantenimiento">Jefe de Mantenimiento</option>
-                    <option value="autorizador1">Autorizador 1 — Administración</option>
-                    <option value="autorizador2">Autorizador 2 — Secretaría Académica</option>
-                    <option value="seguridad">Guardia de Seguridad</option>
-                    <option value="jefe_seguridad">Jefe de Seguridad</option>
-                    <option value="encargado_vehiculos">Encargado de Vehículos</option>
-                    <option value="admin">Administrador del sistema</option>
+                    {roles.map(r => (
+                      <option key={r} value={r}>{labelRol(r)}</option>
+                    ))}
                   </select>
                 </div>
                 {!editingUser && (

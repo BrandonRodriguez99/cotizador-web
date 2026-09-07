@@ -26,7 +26,7 @@ export default function Login({ onLogin }) {
     setLoading(true)
     try {
       const data = await apiLogin(correo, password)
-      onLogin(data.token, data.usuario)
+      onLogin(data.token, data.usuario, data.vistas || [])
     } catch (err) {
       setError(err.message)
     } finally {
