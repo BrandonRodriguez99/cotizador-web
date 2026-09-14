@@ -79,9 +79,8 @@ export default function Login({ onLogin }) {
     <div className="login-screen">
       <div className="login-card">
         <div className="login-brand">
-          <div className="brand-icon"></div>
-          <p className="brand-label">UDAT</p>
-          <span>COTIZADOR</span>
+          <img src="/logo-udat.png" alt="UDAT" className="login-logo" />
+          <span>UDAT360</span>
         </div>
 
         {view === 'login' && (
