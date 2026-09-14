@@ -1036,12 +1036,26 @@ textarea.form-control {
   margin-bottom: 32px;
 }
 
+.login-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 .login-logo {
-  display: block;
-  height: 52px;
+  height: 68px;
   width: auto;
-  margin: 0 auto 12px;
   object-fit: contain;
+}
+
+.login-brand-suffix {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
 
 .login-brand .brand-label {
