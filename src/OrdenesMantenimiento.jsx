@@ -537,7 +537,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
   })
 
   // ── Generación de PDF ─────────────────────────────────────────────────────
-  function descargarPDF(orden, materiales) {
+  async function descargarPDF(orden, materiales) {
     const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' })
     const ML = 12, CW = 192
 
@@ -598,8 +598,19 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     ln(ML + LOGO_W, y, ML + LOGO_W, y + HDR_H)
     ln(ML + LOGO_W + TITLE_W, y, ML + LOGO_W + TITLE_W, y + HDR_H)
     // Logo UDAT
-    doc.setDrawColor(...AZUL2); doc.setLineWidth(0.8); doc.rect(ML + 4, y + 3, 22, 16)
-    t('UDAT', ML + 15, y + 12, { sz: 12, bold: true, col: AZUL2, align: 'center' })
+    try {
+      const res = await fetch('/logo-udat-sello.png')
+      const blob = await res.blob()
+      const logoUrl = await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+      })
+      doc.addImage(logoUrl, 'PNG', ML + 3, y + 2, 24, 18)
+    } catch {
+      doc.setDrawColor(...AZUL2); doc.setLineWidth(0.8); doc.rect(ML + 4, y + 3, 22, 16)
+      t('UDAT', ML + 15, y + 12, { sz: 12, bold: true, col: AZUL2, align: 'center' })
+    }
     // Título
     t('Orden de Mantenimiento', ML + LOGO_W + TITLE_W / 2, y + 13, { sz: 15, bold: true, align: 'center' })
     // Meta (No./Rev./Fecha)
@@ -738,7 +749,7 @@ export default function OrdenesMantenimiento({ currentUser, currentUserRol }) {
     setPdfLoading(id)
     try {
       const data = await getOrdenMantenimientoById(id)
-      descargarPDF(data.orden, data.materiales)
+      await descargarPDF(data.orden, data.materiales)
     } catch { alert('Error al generar el PDF') }
     finally { setPdfLoading(null) }
   }

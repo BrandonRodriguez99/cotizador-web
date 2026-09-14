@@ -1,6 +1,16 @@
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
+async function getLogoDataUrl() {
+  const res = await fetch('/logo-udat-sello.png')
+  const blob = await res.blob()
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result)
+    reader.readAsDataURL(blob)
+  })
+}
+
 function fmtMoney(v) {
   return '$' + Number(v || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -12,15 +22,15 @@ function fmtFecha(val) {
   return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function generarHtmlCotizacion(cotizacion, costos = [], participantes = []) {
+function generarHtmlCotizacion(cotizacion, costos = [], participantes = [], logoUrl = '') {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;width:794px;padding:20px;background:#fff;box-sizing:border-box">
 
     <!-- ENCABEZADO -->
     <table style="width:100%;border-collapse:collapse;border:2px solid #1e3a8a;margin-bottom:8px">
       <tr>
-        <td style="width:100px;text-align:center;padding:10px 6px;vertical-align:middle;border:1px solid #1e3a8a">
-          <span style="font-size:22px;font-weight:900;color:#1e3a8a">UDAT</span>
+        <td style="width:100px;text-align:center;padding:6px;vertical-align:middle;border:1px solid #1e3a8a">
+          ${logoUrl ? `<img src="${logoUrl}" style="width:76px;height:76px;object-fit:contain;display:block;margin:0 auto;" />` : `<span style="font-size:22px;font-weight:900;color:#1e3a8a">UDAT</span>`}
         </td>
         <td style="text-align:center;vertical-align:middle;font-size:18px;font-weight:900;letter-spacing:1px;border:1px solid #1e3a8a">
           Cotización
@@ -161,9 +171,10 @@ function generarHtmlCotizacion(cotizacion, costos = [], participantes = []) {
 }
 
 export async function descargarPdfCotizacion(cotizacion, costos = [], participantes = []) {
+  const logoUrl = await getLogoDataUrl().catch(() => '')
   const contenedor = document.createElement('div')
   contenedor.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;'
-  contenedor.innerHTML = generarHtmlCotizacion(cotizacion, costos, participantes)
+  contenedor.innerHTML = generarHtmlCotizacion(cotizacion, costos, participantes, logoUrl)
   document.body.appendChild(contenedor)
 
   try {
