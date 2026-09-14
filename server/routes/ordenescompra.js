@@ -1,7 +1,12 @@
 import express from 'express';
 import sql from 'mssql';
 import PDFDocument from 'pdfkit';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { getPool, query } from '../db.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LOGO_PATH = path.join(__dirname, '../assets/logo-udat-sello.png');
 
 const router = express.Router();
 let ordenesTableReady = false;
@@ -354,10 +359,14 @@ router.get('/:id/pdf', async (req, res) => {
     const LOGO_W = 82, META_W = 132, TITLE_W = CW - LOGO_W - META_W;
 
     // Celda logo
-    cell(doc, ML, y, LOGO_W, HDR_H, { fill: '#f1f5f9' });
-    doc.save().circle(ML + LOGO_W / 2, y + HDR_H / 2, 27).fill('#1e3a8a').restore();
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#ffffff')
-      .text('UDAT', ML, y + HDR_H / 2 - 8, { width: LOGO_W, align: 'center' });
+    cell(doc, ML, y, LOGO_W, HDR_H, { fill: '#ffffff' });
+    try {
+      doc.image(LOGO_PATH, ML + 4, y + 4, { fit: [LOGO_W - 8, HDR_H - 8], align: 'center', valign: 'center' });
+    } catch {
+      doc.save().circle(ML + LOGO_W / 2, y + HDR_H / 2, 27).fill('#1e3a8a').restore();
+      doc.font('Helvetica-Bold').fontSize(11).fillColor('#ffffff')
+        .text('UDAT', ML, y + HDR_H / 2 - 8, { width: LOGO_W, align: 'center' });
+    }
 
     // Celda título
     cell(doc, ML + LOGO_W, y, TITLE_W, HDR_H, {
