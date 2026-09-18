@@ -126,7 +126,11 @@ export default function AccesoAlumnos({ usuario = {} }) {
           cargarRegistros()
         } catch (e) {
           beep('error')
-          setFeedback({ tipo: 'error', msg: e.message || 'Matrícula no encontrada', matricula })
+          if (e.baja) {
+            setFeedback({ tipo: 'baja', nombre: e.nombre || '', matricula })
+          } else {
+            setFeedback({ tipo: 'error', msg: e.message || 'Matrícula no encontrada', matricula })
+          }
         }
 
         feedbackTimer.current = setTimeout(() => setFeedback(null), 3500)
@@ -279,14 +283,21 @@ export default function AccesoAlumnos({ usuario = {} }) {
               {feedback && (
                 <div style={{
                   padding: '12px 16px', borderRadius: '8px', fontSize: '14px',
-                  background: feedback.tipo === 'ok' ? '#f0fdf4' : feedback.tipo === 'error' ? '#fef2f2' : '#f3f4f6',
-                  border: `1px solid ${feedback.tipo === 'ok' ? '#86efac' : feedback.tipo === 'error' ? '#fca5a5' : '#e5e7eb'}`,
-                  color: feedback.tipo === 'ok' ? '#15803d' : feedback.tipo === 'error' ? '#b91c1c' : '#6b7280',
+                  background: feedback.tipo === 'ok' ? '#f0fdf4' : feedback.tipo === 'baja' ? '#fff7ed' : feedback.tipo === 'error' ? '#fef2f2' : '#f3f4f6',
+                  border: `1px solid ${feedback.tipo === 'ok' ? '#86efac' : feedback.tipo === 'baja' ? '#fdba74' : feedback.tipo === 'error' ? '#fca5a5' : '#e5e7eb'}`,
+                  color: feedback.tipo === 'ok' ? '#15803d' : feedback.tipo === 'baja' ? '#c2410c' : feedback.tipo === 'error' ? '#b91c1c' : '#6b7280',
                 }}>
                   {feedback.tipo === 'ok' && (
                     <>
                       <div style={{ fontWeight: 700 }}>{feedback.nombre}</div>
                       <div style={{ fontSize: '12px', marginTop: '2px' }}>{feedback.matricula} · {feedback.hora}</div>
+                    </>
+                  )}
+                  {feedback.tipo === 'baja' && (
+                    <>
+                      <div style={{ fontWeight: 800, fontSize: '16px', letterSpacing: '0.05em' }}>BAJA — Acceso denegado</div>
+                      {feedback.nombre && <div style={{ fontWeight: 600, marginTop: '4px' }}>{feedback.nombre}</div>}
+                      <div style={{ fontSize: '12px', marginTop: '2px' }}>Matrícula: {feedback.matricula}</div>
                     </>
                   )}
                   {feedback.tipo === 'error' && (

@@ -24,13 +24,16 @@ async function fetchJson(path, options = {}) {
     }
     const errorBody = await response.text();
     let message = errorBody;
+    let parsedErr = null;
     try {
-      const parsed = JSON.parse(errorBody);
-      message = parsed.error || errorBody;
+      parsedErr = JSON.parse(errorBody);
+      message = parsedErr.error || errorBody;
     } catch {
       // usar texto plano
     }
-    throw new Error(message);
+    const err = new Error(message);
+    if (parsedErr && typeof parsedErr === 'object') Object.assign(err, parsedErr);
+    throw err;
   }
 
   if (response.status === 204) {
