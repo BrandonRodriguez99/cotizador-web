@@ -133,6 +133,7 @@ export default function AsistenciaGrid() {
   const [showCriterios, setShowCriterios] = useState(false)
   const [activeCell, setActiveCell]     = useState(null)
   const [saving, setSaving]             = useState({})
+  const [empresaFiltro, setEmpresaFiltro] = useState('')
 
   useEffect(() => {
     getGeneraciones()
@@ -223,6 +224,8 @@ export default function AsistenciaGrid() {
   }
 
   const { fechas = [], alumnos = [] } = gridData || {}
+  const empresas = [...new Set(alumnos.map(a => a.Empresa).filter(Boolean))].sort()
+  const alumnosFiltrados = empresaFiltro ? alumnos.filter(a => a.Empresa === empresaFiltro) : alumnos
 
   return (
     <div>
@@ -231,6 +234,12 @@ export default function AsistenciaGrid() {
         <select className="form-control" style={{ maxWidth: '280px' }} value={genId} onChange={e => setGenId(e.target.value)}>
           {generaciones.map(g => <option key={g.GeneracionId} value={g.GeneracionId}>{g.Nombre}</option>)}
         </select>
+        {empresas.length > 0 && (
+          <select className="form-control" style={{ maxWidth: '220px' }} value={empresaFiltro} onChange={e => setEmpresaFiltro(e.target.value)}>
+            <option value=''>Todas las empresas</option>
+            {empresas.map(e => <option key={e} value={e}>{e}</option>)}
+          </select>
+        )}
         <button className="ghost-button" onClick={cargar} disabled={loading}>{loading ? 'Cargando…' : 'Actualizar'}</button>
         {gridData && <button className="ghost-button" onClick={exportarExcel}>Exportar Excel</button>}
         <button className="ghost-button" onClick={() => setShowCriterios(true)} style={{ marginLeft: 'auto' }}>Criterios</button>
@@ -258,7 +267,7 @@ export default function AsistenciaGrid() {
       {gridData && !loading && (
         <>
           <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>
-            {gridData.generacion} · Desde {new Date(gridData.fechaInicio + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} · {fechas.length} días · {alumnos.length} alumnos
+            {gridData.generacion} · Desde {new Date(gridData.fechaInicio + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} · {fechas.length} días · {alumnosFiltrados.length}{alumnosFiltrados.length !== alumnos.length ? ` de ${alumnos.length}` : ''} alumnos
             <span style={{ marginLeft: '12px' }}>— Haz clic en cualquier celda para editar</span>
           </p>
 
@@ -295,7 +304,7 @@ export default function AsistenciaGrid() {
                 </tr>
               </thead>
               <tbody>
-                {alumnos.map((alumno, ai) => (
+                {alumnosFiltrados.map((alumno, ai) => (
                   <tr key={alumno.OperadorId} style={{ borderTop: '1px solid #f1f5f9' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
                     onMouseLeave={e => e.currentTarget.style.background = ''}>
