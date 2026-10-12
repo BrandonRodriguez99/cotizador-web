@@ -66,6 +66,7 @@ const NAV_ICONS = {
   usuarios:             <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
   seguridad:            <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
   permisos:             <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
+  powerbi:              <><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 8h2v5H7z"/><path d="M11 6h2v7h-2z"/><path d="M15 10h2v3h-2z"/></>,
 }
 
 const SIDEBAR_CONFIG = [
@@ -94,6 +95,9 @@ const SIDEBAR_CONFIG = [
     { vista: 'proveedores', label: 'Proveedores' },
     { vista: 'unidadesNegocio', label: 'Unidad de Negocio' },
     { vista: 'areasConsumo', label: 'Áreas de Consumo' },
+  ]},
+  { titulo: 'Reportes', items: [
+    { vista: 'powerbi', label: 'Estadístico Power BI' },
   ]},
   { titulo: 'Administración', items: [
     { vista: 'usuarios', label: 'Usuarios' },
@@ -733,7 +737,9 @@ function App() {
                             ? 'Vehículos'
                             : activeView === 'permisos'
                               ? 'Permisos'
-                              : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                              : activeView === 'powerbi'
+                                ? 'Estadístico Power BI'
+                                : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -760,7 +766,9 @@ function App() {
                           ? 'Herramientas > Vehículos'
                           : activeView === 'permisos'
                             ? 'Administración > Permisos'
-                            : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                            : activeView === 'powerbi'
+                              ? 'Reportes > Estadístico Power BI'
+                              : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   if (window.location.pathname === '/solicitud-vehiculo') {
     return <SolicitudVehiculoPublica />
@@ -1142,6 +1150,16 @@ function App() {
                 </table>
               </div>
               <div className="table-footer">Total pendientes: {pendientes.length}</div>
+            </section>
+          ) : activeView === 'powerbi' ? (
+            <section className="panel" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', minHeight: '500px' }}>
+              <iframe
+                title="Estadístico Power BI"
+                src="https://app.powerbi.com/reportEmbed?reportId=474fb608-cd66-44ff-9aec-9914e30fa79b&appId=2e8514c3-27fa-4680-bc01-3a96a0727049&autoAuth=true&ctid=49423566-017f-4396-af0b-0c3d9c32a02b&actionBarEnabled=true"
+                frameBorder="0"
+                allowFullScreen
+                style={{ flex: 1, width: '100%', border: 'none', borderRadius: '8px' }}
+              />
             </section>
           ) : (
             <NuevaCotizacion
