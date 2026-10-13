@@ -275,11 +275,28 @@ export default function ControlDieselModule({ usuario }) {
 
   async function handleEditar(id, body) {
     await editarCargaDiesel(id, body)
-    setCargas(prev => prev.map(c => c.CargaId === id
-      ? { ...c, VehiculoNombre: body.vehiculoNombre, Fecha: body.fecha, Tipo: body.tipo,
-          Litros: body.litros, KmActual: body.kmActual, ValorPesos: body.valorPesos,
-          FolioTicket: body.folioTicket, OperadorNombre: body.operadorNombre }
-      : c))
+    await cargar() // recargar para reflejar KmRecorridos/Rendimiento recalculados
+  }
+
+  function exportarCSV() {
+    const cols = ['#','Vehículo','Tipo','Fecha','Litros','KM Actual','KM Recorridos',
+                  'Rendimiento km/L','$/km','$/L','Folio','Operador']
+    const rows = filtradas.map((c, i) => {
+      const costoPorKm = (c.ValorPesos && c.Litros && c.KmRecorridos && c.KmRecorridos > 0)
+        ? ((Number(c.ValorPesos) * Number(c.Litros)) / Number(c.KmRecorridos)).toFixed(2) : ''
+      return [
+        i + 1, c.VehiculoNombre, c.Tipo, fmtFecha(c.Fecha),
+        c.Litros, c.KmActual, c.KmRecorridos ?? '',
+        c.Rendimiento ?? '', costoPorKm,
+        c.ValorPesos ?? '', c.FolioTicket ?? '', c.OperadorNombre ?? '',
+      ]
+    })
+    const csv = [cols, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = `control-diesel-${new Date().toISOString().slice(0,10)}.csv`
+    a.click(); URL.revokeObjectURL(url)
   }
 
   // Filtrar y mostrar en orden ascendente (más antiguo primero)
@@ -336,7 +353,7 @@ export default function ControlDieselModule({ usuario }) {
             <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
               Registro de cargas de diésel, gasolina y UREA
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               {precios.diesel != null && (
                 <span style={{ fontSize: '12px', color: '#6b7280', display: 'flex', gap: '10px' }}>
                   <span>Diésel: <strong style={{ color: '#1d4ed8' }}>${fmt(precios.diesel)}/L</strong></span>
@@ -350,6 +367,14 @@ export default function ControlDieselModule({ usuario }) {
                   ⚙ Actualizar precios
                 </button>
               )}
+              <button className="ghost-button" style={{ fontSize: '12px', padding: '5px 12px' }}
+                disabled={loading} onClick={cargar}>
+                ↻ Actualizar
+              </button>
+              <button className="ghost-button" style={{ fontSize: '12px', padding: '5px 12px' }}
+                onClick={exportarCSV}>
+                ↓ Exportar CSV
+              </button>
             </div>
           </div>
         </div>
