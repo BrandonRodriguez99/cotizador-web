@@ -21,6 +21,24 @@ function fmt(dt) {
   return new Date(dt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+function IconOk({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+      <circle cx="10" cy="10" r="10" fill="#16A34A" />
+      <path d="M5.5 10.5L8.5 13.5L14.5 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconDefecto({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+      <circle cx="10" cy="10" r="10" fill="#DC2626" />
+      <path d="M6.5 6.5L13.5 13.5M13.5 6.5L6.5 13.5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function Badge({ value }) {
   const es = value === 'seguro' || value === 'Seguro para conducir'
   const label = value === 'seguro' ? 'Seguro' : value === 'no_seguro' ? 'No seguro' : value
@@ -217,7 +235,7 @@ function DVIRDetallePanel({ id, onClose }) {
                             background: p.Estado === 'defecto' ? '#fff5f5' : 'transparent',
                             display: 'flex', alignItems: 'center', gap: '8px',
                           }}>
-                            <span style={{ fontSize: '14px', flexShrink: 0 }}>{p.Estado === 'ok' ? '✅' : '❌'}</span>
+                            {p.Estado === 'ok' ? <IconOk /> : <IconDefecto />}
                             <span style={{ fontSize: '12px', fontWeight: p.Estado === 'defecto' ? 600 : 400, color: p.Estado === 'defecto' ? '#b91c1c' : '#374151' }}>{p.Nombre}</span>
                           </div>
                         ))}
