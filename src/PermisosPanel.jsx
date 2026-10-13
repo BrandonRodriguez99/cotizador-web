@@ -33,6 +33,7 @@ const SECCIONES = [
     { id: 'asistencia', label: 'Asistencia' },
     { id: 'vehiculos', label: 'Vehículos' },
     { id: 'seguridad', label: 'Seguridad' },
+    { id: 'dvir', label: 'DVIR' },
   ]},
   { titulo: 'Catálogos', vistas: [
     { id: 'cursos', label: 'Cursos' },
