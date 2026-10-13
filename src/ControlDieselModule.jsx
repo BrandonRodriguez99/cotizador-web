@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react'
-import { getDieselCargas, eliminarCargaDiesel, editarCargaDiesel, getDieselPrecio, setDieselPrecio } from './api'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { getDieselCargas, eliminarCargaDiesel, editarCargaDiesel, getDieselPrecio, setDieselPrecio, getDVIRVehiculos, crearCargaDiesel } from './api'
 
 const TIPO_LABEL = { diesel: 'Diésel', gasolina: 'Gasolina', urea: 'UREA' }
 
@@ -230,6 +230,179 @@ function PrecioConfig({ onClose, onUpdated }) {
   )
 }
 
+function NuevoRegistroPanel({ precios, usuario, onClose, onCreado }) {
+  const hoy = new Date().toISOString().slice(0, 10)
+  const [vehiculos, setVehiculos] = useState([])
+  const [form, setForm] = useState({
+    vehiculoIdx: 0,
+    tipo: 'diesel',
+    fecha: hoy,
+    litros: '',
+    kmActual: '',
+    valorPesos: '',
+    folioTicket: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState('')
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  useEffect(() => {
+    getDVIRVehiculos().then(setVehiculos).catch(() => {})
+  }, [])
+
+  // Actualizar precio al cambiar tipo
+  useEffect(() => {
+    const p = { diesel: precios.diesel, gasolina: precios.gasolina, urea: precios.urea }[form.tipo]
+    if (p != null && p > 0) setForm(f => ({ ...f, valorPesos: String(p) }))
+  }, [form.tipo, precios])
+
+  // Pre-llenar precio inicial al cargar
+  useEffect(() => {
+    if (precios.diesel != null && precios.diesel > 0)
+      setForm(f => ({ ...f, valorPesos: String(precios.diesel) }))
+  }, [precios.diesel])
+
+  async function handleGuardar() {
+    setError('')
+    if (!form.litros || !form.kmActual) { setError('Litros y KM son obligatorios'); return }
+    const vehiculo = vehiculos[form.vehiculoIdx]
+    setSaving(true)
+    try {
+      await crearCargaDiesel({
+        vehiculoId:     vehiculo?.VehiculoId ?? null,
+        vehiculoNombre: vehiculo?.Nombre ?? '',
+        fecha:          form.fecha,
+        tipo:           form.tipo,
+        litros:         parseFloat(form.litros),
+        kmActual:       parseInt(form.kmActual),
+        valorPesos:     form.valorPesos !== '' ? parseFloat(form.valorPesos) : null,
+        folioTicket:    form.folioTicket || null,
+        terminal:       null,
+        operadorNombre: usuario?.nombre || null,
+        urlFotoTicket:  null,
+      })
+      onCreado()
+      onClose()
+    } catch (e) {
+      setError(e.message || 'Error al guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inp = {
+    width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb',
+    borderRadius: '7px', fontSize: '13px', background: '#f9fafb', boxSizing: 'border-box',
+  }
+  const lbl = { fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px', display: 'block' }
+
+  return (
+    <>
+      {/* Overlay */}
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 900,
+      }} />
+      {/* Panel */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px,100vw)',
+        background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
+        zIndex: 901, display: 'flex', flexDirection: 'column',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Control de Diésel
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginTop: '2px' }}>
+              Nueva carga
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Formulario */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+            <div>
+              <label style={lbl}>VEHÍCULO</label>
+              <select style={inp} value={form.vehiculoIdx} onChange={e => setForm(f => ({ ...f, vehiculoIdx: Number(e.target.value) }))}>
+                {vehiculos.length === 0
+                  ? <option>Cargando...</option>
+                  : vehiculos.map((v, i) => <option key={v.VehiculoId} value={i}>{v.Nombre}</option>)
+                }
+              </select>
+            </div>
+
+            <div>
+              <label style={lbl}>TIPO DE COMBUSTIBLE</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {['diesel','gasolina','urea'].map(t => (
+                  <button key={t} onClick={() => setForm(f => ({ ...f, tipo: t }))} style={{
+                    flex: 1, padding: '8px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                    border: form.tipo === t ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                    background: form.tipo === t ? '#eff6ff' : '#f9fafb',
+                    color: form.tipo === t ? '#1d4ed8' : '#374151',
+                  }}>
+                    {TIPO_LABEL[t]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={lbl}>FECHA</label>
+              <input type="date" style={inp} value={form.fecha} onChange={set('fecha')} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={lbl}>LITROS</label>
+                <input type="number" step="0.1" placeholder="0.0" style={inp} value={form.litros} onChange={set('litros')} />
+              </div>
+              <div>
+                <label style={lbl}>KM ACTUAL (ODÓM.)</label>
+                <input type="number" placeholder="0" style={inp} value={form.kmActual} onChange={set('kmActual')} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={lbl}>PRECIO ($/L)</label>
+                <input type="number" step="0.01" placeholder="0.00" style={inp} value={form.valorPesos} onChange={set('valorPesos')} />
+              </div>
+              <div>
+                <label style={lbl}>FOLIO TICKET</label>
+                <input type="text" placeholder="—" style={inp} value={form.folioTicket} onChange={set('folioTicket')} />
+              </div>
+            </div>
+
+            <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: '#0369a1' }}>
+              El operador se registra automáticamente como <strong>{usuario?.nombre}</strong>
+            </div>
+
+            {error && (
+              <div style={{ background: '#fef2f2', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: '#b91c1c' }}>
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '10px' }}>
+          <button className="ghost-button" style={{ flex: 1 }} onClick={onClose}>Cancelar</button>
+          <button className="primary-button" style={{ flex: 2 }} disabled={saving} onClick={handleGuardar}>
+            {saving ? 'Guardando...' : 'Registrar carga'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 export default function ControlDieselModule({ usuario }) {
   const isAdmin = usuario?.rol === 'admin' || usuario?.rol === 'encargado_vehiculos'
 
@@ -240,6 +413,7 @@ export default function ControlDieselModule({ usuario }) {
   const [editando, setEditando]     = useState(null)
   const [precios, setPrecios]       = useState({ diesel: null, gasolina: null, urea: null })
   const [showPrecio, setShowPrecio] = useState(false)
+  const [showNuevo, setShowNuevo]   = useState(false)
   const [tab, setTab]               = useState('registros') // 'registros' | 'resumen'
 
   const [filtros, setFiltros] = useState({ vehiculo: '', tipo: '', desde: '', hasta: '' })
@@ -374,6 +548,10 @@ export default function ControlDieselModule({ usuario }) {
               <button className="ghost-button" style={{ fontSize: '12px', padding: '5px 12px' }}
                 onClick={exportarCSV}>
                 ↓ Exportar CSV
+              </button>
+              <button className="primary-button" style={{ fontSize: '12px', padding: '5px 14px' }}
+                onClick={() => setShowNuevo(true)}>
+                + Nuevo registro
               </button>
             </div>
           </div>
@@ -562,6 +740,14 @@ export default function ControlDieselModule({ usuario }) {
       {fotoUrl    && <FotoModal url={fotoUrl} onClose={() => setFotoUrl(null)} />}
       {editando   && <EditModal carga={editando} onClose={() => setEditando(null)} onSave={handleEditar} />}
       {showPrecio && <PrecioConfig onClose={() => setShowPrecio(false)} onUpdated={p => setPrecios(p)} />}
+      {showNuevo  && (
+        <NuevoRegistroPanel
+          precios={precios}
+          usuario={usuario}
+          onClose={() => setShowNuevo(false)}
+          onCreado={cargar}
+        />
+      )}
     </div>
   )
 }
