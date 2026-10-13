@@ -238,8 +238,9 @@ export default function ControlDieselModule({ usuario }) {
   const [fotoUrl, setFotoUrl]       = useState(null)
   const [eliminando, setEliminando] = useState(null)
   const [editando, setEditando]     = useState(null)
-  const [precios, setPrecios] = useState({ diesel: null, gasolina: null, urea: null })
+  const [precios, setPrecios]       = useState({ diesel: null, gasolina: null, urea: null })
   const [showPrecio, setShowPrecio] = useState(false)
+  const [tab, setTab]               = useState('registros') // 'registros' | 'resumen'
 
   const [filtros, setFiltros] = useState({ vehiculo: '', tipo: '', desde: '', hasta: '' })
   const setF = k => e => setFiltros(f => ({ ...f, [k]: e.target.value }))
@@ -300,16 +301,18 @@ export default function ControlDieselModule({ usuario }) {
   const resumen = useMemo(() => {
     const mapa = {}
     cargas.filter(c => c.Tipo === 'diesel' && c.Rendimiento != null).forEach(c => {
-      if (!mapa[c.VehiculoNombre]) mapa[c.VehiculoNombre] = { litros: 0, rendimientos: [], km: 0 }
+      if (!mapa[c.VehiculoNombre]) mapa[c.VehiculoNombre] = { litros: 0, rendimientos: [], km: 0, costo: 0 }
       mapa[c.VehiculoNombre].litros += Number(c.Litros || 0)
       mapa[c.VehiculoNombre].rendimientos.push(Number(c.Rendimiento))
       mapa[c.VehiculoNombre].km += Number(c.KmRecorridos || 0)
+      if (c.ValorPesos) mapa[c.VehiculoNombre].costo += Number(c.ValorPesos) * Number(c.Litros || 0)
     })
     return Object.entries(mapa).map(([nombre, d]) => ({
       nombre,
       litros: d.litros,
       km: d.km,
       rendPromedio: d.rendimientos.reduce((a, b) => a + b, 0) / d.rendimientos.length,
+      costoPorKm: d.km > 0 && d.costo > 0 ? d.costo / d.km : null,
     })).sort((a, b) => a.nombre.localeCompare(b.nombre))
   }, [cargas])
 
@@ -318,13 +321,20 @@ export default function ControlDieselModule({ usuario }) {
     padding: '7px 12px', fontSize: '13px', color: '#374151', outline: 'none',
   }
 
+  const tabStyle = active => ({
+    padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', border: 'none',
+    borderBottom: active ? '2px solid #3b82f6' : '2px solid transparent',
+    color: active ? '#1d4ed8' : '#6b7280', background: 'none',
+  })
+
   return (
     <div className="cotizacion-page">
       <div className="panel card">
+        {/* ── Header con precios ── */}
         <div className="panel-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
-              Registro de cargas de diésel y UREA · rendimiento por unidad
+              Registro de cargas de diésel, gasolina y UREA
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {precios.diesel != null && (
@@ -344,155 +354,188 @@ export default function ControlDieselModule({ usuario }) {
           </div>
         </div>
 
-        {/* ── Resumen por vehículo ── */}
-        {resumen.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af',
-              textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
-              Rendimiento promedio por unidad (diésel)
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-              {resumen.map(r => (
-                <div key={r.nombre} style={{
-                  background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: '12px',
-                  padding: '12px 16px', minWidth: '180px',
-                }}>
-                  <p style={{ margin: '0 0 6px', fontSize: '12px', fontWeight: 700, color: '#374151' }}>
-                    {r.nombre}
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <span style={{ fontSize: '11px', color: '#6b7280' }}>
-                      Promedio: <RendBadge value={r.rendPromedio} />
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#6b7280' }}>
-                      Total litros: <strong>{fmt(r.litros, 0)} L</strong>
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#6b7280' }}>
-                      Total km: <strong>{fmtKm(r.km)}</strong>
-                    </span>
+        {/* ── Tabs ── */}
+        <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: '20px' }}>
+          <button style={tabStyle(tab === 'registros')} onClick={() => setTab('registros')}>Registros</button>
+          <button style={tabStyle(tab === 'resumen')}   onClick={() => setTab('resumen')}>Rendimiento por unidad</button>
+        </div>
+
+        {/* ══ TAB: RESUMEN ══ */}
+        {tab === 'resumen' && (
+          <div>
+            {loading ? (
+              <div className="notification" style={{ textAlign: 'center' }}>Cargando...</div>
+            ) : resumen.length === 0 ? (
+              <div className="notification" style={{ textAlign: 'center' }}>Sin datos suficientes para calcular rendimiento.</div>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                {resumen.map(r => (
+                  <div key={r.nombre} style={{
+                    background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: '14px',
+                    padding: '16px 20px', minWidth: '220px',
+                  }}>
+                    <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: '#111827' }}>
+                      {r.nombre}
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', color: '#6b7280' }}>Rendimiento prom.</span>
+                        <RendBadge value={r.rendPromedio} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280' }}>
+                        <span>Total litros</span>
+                        <strong style={{ color: '#374151' }}>{fmt(r.litros, 0)} L</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280' }}>
+                        <span>Total km</span>
+                        <strong style={{ color: '#374151' }}>{fmtKm(r.km)}</strong>
+                      </div>
+                      {r.costoPorKm != null && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280' }}>
+                          <span>Costo prom. / km</span>
+                          <strong style={{ color: '#374151' }}>${fmt(r.costoPorKm)}/km</strong>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* ── Filtros ── */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px', alignItems: 'flex-end' }}>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Vehículo</div>
-            <input style={{ ...inputStyle, width: '160px' }}
-              placeholder="Buscar..." value={filtros.vehiculo} onChange={setF('vehiculo')} />
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Tipo</div>
-            <select style={{ ...inputStyle }} value={filtros.tipo} onChange={setF('tipo')}>
-              <option value="">Todos</option>
-              <option value="diesel">Diésel</option>
-              <option value="gasolina">Gasolina</option>
-              <option value="urea">UREA</option>
-            </select>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Desde</div>
-            <input type="date" style={inputStyle} value={filtros.desde} onChange={setF('desde')} />
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Hasta</div>
-            <input type="date" style={inputStyle} value={filtros.hasta} onChange={setF('hasta')} />
-          </div>
-          {Object.values(filtros).some(Boolean) && (
-            <button className="ghost-button" style={{ fontSize: '12px' }}
-              onClick={() => setFiltros({ vehiculo: '', tipo: '', desde: '', hasta: '' })}>
-              Limpiar filtros
-            </button>
-          )}
-        </div>
+        {/* ══ TAB: REGISTROS ══ */}
+        {tab === 'registros' && (
+          <>
+            {/* ── Filtros ── */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px', alignItems: 'flex-end' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Vehículo</div>
+                <input style={{ ...inputStyle, width: '160px' }}
+                  placeholder="Buscar..." value={filtros.vehiculo} onChange={setF('vehiculo')} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Tipo</div>
+                <select style={{ ...inputStyle }} value={filtros.tipo} onChange={setF('tipo')}>
+                  <option value="">Todos</option>
+                  <option value="diesel">Diésel</option>
+                  <option value="gasolina">Gasolina</option>
+                  <option value="urea">UREA</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Desde</div>
+                <input type="date" style={inputStyle} value={filtros.desde} onChange={setF('desde')} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>Hasta</div>
+                <input type="date" style={inputStyle} value={filtros.hasta} onChange={setF('hasta')} />
+              </div>
+              {Object.values(filtros).some(Boolean) && (
+                <button className="ghost-button" style={{ fontSize: '12px' }}
+                  onClick={() => setFiltros({ vehiculo: '', tipo: '', desde: '', hasta: '' })}>
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
 
-        {/* ── Tabla ── */}
-        {loading ? (
-          <div className="notification" style={{ textAlign: 'center' }}>Cargando registros...</div>
-        ) : filtradas.length === 0 ? (
-          <div className="notification" style={{ textAlign: 'center' }}>
-            No hay registros de carga.
-            {cargas.length === 0 && ' Registra la primera carga desde la app Android.'}
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Vehículo</th>
-                  <th>Tipo</th>
-                  <th>Fecha</th>
-                  <th>Litros</th>
-                  <th>KM Actual</th>
-                  <th>KM Recorridos</th>
-                  <th>Rendimiento</th>
-                  <th>$/L</th>
-                  <th>Folio</th>
-                  <th>Operador</th>
-                  <th>Ticket</th>
-                  {isAdmin && <th></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filtradas.map((c, i) => (
-                  <tr key={c.CargaId}>
-                    <td style={{ color: '#9ca3af', fontSize: '12px' }}>{i + 1}</td>
-                    <td style={{ fontWeight: 600, color: '#111827' }}>{c.VehiculoNombre}</td>
-                    <td><TipoBadge tipo={c.Tipo} /></td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{fmtFecha(c.Fecha)}</td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(c.Litros, 1)} L</td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtKm(c.KmActual)}</td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums', color: c.KmRecorridos != null ? '#374151' : '#d1d5db' }}>
-                      {c.KmRecorridos != null ? fmtKm(c.KmRecorridos) : '—'}
-                    </td>
-                    <td><RendBadge value={c.Rendimiento} /></td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums', color: c.ValorPesos ? '#374151' : '#d1d5db' }}>
-                      {c.ValorPesos ? `$${fmt(c.ValorPesos)}` : '—'}
-                    </td>
-                    <td style={{ color: c.FolioTicket ? '#374151' : '#d1d5db' }}>{c.FolioTicket || '—'}</td>
-                    <td style={{ color: c.OperadorNombre ? '#374151' : '#d1d5db' }}>{c.OperadorNombre || '—'}</td>
-                    <td>
-                      {c.UrlFotoTicket ? (
-                        <button className="ghost-button"
-                          style={{ fontSize: '11px', padding: '3px 8px', color: '#1d4ed8', borderColor: '#bfdbfe' }}
-                          onClick={() => setFotoUrl(c.UrlFotoTicket)}>
-                          Ver
-                        </button>
-                      ) : (
-                        <span style={{ color: '#d1d5db', fontSize: '12px' }}>—</span>
-                      )}
-                    </td>
-                    {isAdmin && (
-                      <td>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button className="ghost-button"
-                            style={{ fontSize: '11px', padding: '3px 8px', color: '#374151', borderColor: '#e5e7eb' }}
-                            onClick={() => setEditando(c)}>
-                            Editar
-                          </button>
-                          <button className="ghost-button"
-                            style={{ fontSize: '11px', padding: '3px 8px', color: '#b91c1c', borderColor: '#fca5a5' }}
-                            disabled={eliminando === c.CargaId}
-                            onClick={() => handleEliminar(c.CargaId)}>
-                            {eliminando === c.CargaId ? '...' : 'Eliminar'}
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            {/* ── Tabla ── */}
+            {loading ? (
+              <div className="notification" style={{ textAlign: 'center' }}>Cargando registros...</div>
+            ) : filtradas.length === 0 ? (
+              <div className="notification" style={{ textAlign: 'center' }}>
+                No hay registros de carga.
+                {cargas.length === 0 && ' Registra la primera carga desde la app Android.'}
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Vehículo</th>
+                      <th>Tipo</th>
+                      <th>Fecha</th>
+                      <th>Litros</th>
+                      <th>KM Actual</th>
+                      <th>KM Recorridos</th>
+                      <th>Rendimiento</th>
+                      <th>$/km</th>
+                      <th>$/L</th>
+                      <th>Folio</th>
+                      <th>Operador</th>
+                      <th>Ticket</th>
+                      {isAdmin && <th></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtradas.map((c, i) => {
+                      const costoPorKm = (c.ValorPesos && c.Litros && c.KmRecorridos && c.KmRecorridos > 0)
+                        ? (Number(c.ValorPesos) * Number(c.Litros)) / Number(c.KmRecorridos)
+                        : null
+                      return (
+                        <tr key={c.CargaId}>
+                          <td style={{ color: '#9ca3af', fontSize: '12px' }}>{i + 1}</td>
+                          <td style={{ fontWeight: 600, color: '#111827' }}>{c.VehiculoNombre}</td>
+                          <td><TipoBadge tipo={c.Tipo} /></td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{fmtFecha(c.Fecha)}</td>
+                          <td style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(c.Litros, 1)} L</td>
+                          <td style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtKm(c.KmActual)}</td>
+                          <td style={{ fontVariantNumeric: 'tabular-nums', color: c.KmRecorridos != null ? '#374151' : '#d1d5db' }}>
+                            {c.KmRecorridos != null ? fmtKm(c.KmRecorridos) : '—'}
+                          </td>
+                          <td><RendBadge value={c.Rendimiento} /></td>
+                          <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {costoPorKm != null
+                              ? <span style={{ fontWeight: 600, color: '#374151' }}>${fmt(costoPorKm)}</span>
+                              : <span style={{ color: '#d1d5db' }}>—</span>}
+                          </td>
+                          <td style={{ fontVariantNumeric: 'tabular-nums', color: c.ValorPesos ? '#374151' : '#d1d5db' }}>
+                            {c.ValorPesos ? `$${fmt(c.ValorPesos)}` : '—'}
+                          </td>
+                          <td style={{ color: c.FolioTicket ? '#374151' : '#d1d5db' }}>{c.FolioTicket || '—'}</td>
+                          <td style={{ color: c.OperadorNombre ? '#374151' : '#d1d5db' }}>{c.OperadorNombre || '—'}</td>
+                          <td>
+                            {c.UrlFotoTicket ? (
+                              <button className="ghost-button"
+                                style={{ fontSize: '11px', padding: '3px 8px', color: '#1d4ed8', borderColor: '#bfdbfe' }}
+                                onClick={() => setFotoUrl(c.UrlFotoTicket)}>
+                                Ver
+                              </button>
+                            ) : (
+                              <span style={{ color: '#d1d5db', fontSize: '12px' }}>—</span>
+                            )}
+                          </td>
+                          {isAdmin && (
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button className="ghost-button"
+                                  style={{ fontSize: '11px', padding: '3px 8px', color: '#374151', borderColor: '#e5e7eb' }}
+                                  onClick={() => setEditando(c)}>
+                                  Editar
+                                </button>
+                                <button className="ghost-button"
+                                  style={{ fontSize: '11px', padding: '3px 8px', color: '#b91c1c', borderColor: '#fca5a5' }}
+                                  disabled={eliminando === c.CargaId}
+                                  onClick={() => handleEliminar(c.CargaId)}>
+                                  {eliminando === c.CargaId ? '...' : 'Eliminar'}
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {fotoUrl   && <FotoModal url={fotoUrl} onClose={() => setFotoUrl(null)} />}
-      {editando  && <EditModal carga={editando} onClose={() => setEditando(null)} onSave={handleEditar} />}
+      {fotoUrl    && <FotoModal url={fotoUrl} onClose={() => setFotoUrl(null)} />}
+      {editando   && <EditModal carga={editando} onClose={() => setEditando(null)} onSave={handleEditar} />}
       {showPrecio && <PrecioConfig onClose={() => setShowPrecio(false)} onUpdated={p => setPrecios(p)} />}
     </div>
   )
