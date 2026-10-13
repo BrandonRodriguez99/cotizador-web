@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  getDVIRVehiculos, crearDVIRVehiculo, eliminarDVIRVehiculo,
+  getDVIRVehiculos,
   getDVIRLista, getDVIRDetalle, eliminarDVIR,
 } from './api'
 
@@ -174,72 +174,37 @@ function DVIRDetalleModal({ id, onClose }) {
   )
 }
 
-// ── Modal vehículos ───────────────────────────────────────────────────────────
-function VehiculosModal({ onClose, isAdmin }) {
+// ── Modal vehículos (solo lectura — se administran en módulo Vehículos) ───────
+function VehiculosModal({ onClose }) {
   const [vehiculos, setVehiculos] = useState([])
-  const [form, setForm]   = useState({ nombre: '', vin: '', matricula: '' })
-  const [saving, setSaving] = useState(false)
 
-  const cargar = useCallback(() => {
+  useEffect(() => {
     getDVIRVehiculos().then(setVehiculos).catch(console.error)
   }, [])
 
-  useEffect(() => { cargar() }, [cargar])
-
-  async function handleGuardar(e) {
-    e.preventDefault()
-    if (!form.nombre.trim()) return
-    setSaving(true)
-    try {
-      await crearDVIRVehiculo(form)
-      setForm({ nombre: '', vin: '', matricula: '' })
-      cargar()
-    } catch (err) { alert(err.message) } finally { setSaving(false) }
-  }
-
-  async function handleEliminar(id) {
-    if (!window.confirm('¿Desactivar este vehículo?')) return
-    try {
-      await eliminarDVIRVehiculo(id)
-      cargar()
-    } catch (err) { alert(err.message) }
-  }
-
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 600, padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>Catálogo de vehículos</h2>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 560, padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>Vehículos disponibles</h2>
           <button className="ghost-button" onClick={onClose} style={{ padding: '4px 10px' }}>✕</button>
         </div>
-
-        {isAdmin && (
-          <form onSubmit={handleGuardar} style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <input className="form-control" placeholder="Nombre del vehículo *" value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} style={{ flex: '2', minWidth: '180px' }} />
-            <input className="form-control" placeholder="VIN" value={form.vin}
-              onChange={e => setForm(f => ({ ...f, vin: e.target.value }))} style={{ flex: '1', minWidth: '120px' }} />
-            <input className="form-control" placeholder="Matrícula" value={form.matricula}
-              onChange={e => setForm(f => ({ ...f, matricula: e.target.value }))} style={{ flex: '1', minWidth: '100px' }} />
-            <button className="primary-button" type="submit" disabled={saving} style={{ whiteSpace: 'nowrap' }}>
-              {saving ? 'Guardando…' : 'Agregar'}
-            </button>
-          </form>
-        )}
-
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6b7280' }}>
+          Para agregar o editar vehículos ve a <strong>Herramientas → Vehículos</strong>.
+        </p>
         <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
           <table className="data-table" style={{ width: '100%' }}>
-            <thead><tr><th>Nombre</th><th>VIN</th><th>Matrícula</th>{isAdmin && <th></th>}</tr></thead>
+            <thead><tr><th>Vehículo</th><th>Placa</th><th>Año</th><th>Color</th></tr></thead>
             <tbody>
               {vehiculos.map(v => (
                 <tr key={v.VehiculoId}>
-                  <td style={{ fontWeight: 600 }}>{v.Nombre}</td>
-                  <td style={{ fontSize: '12px', color: '#6b7280' }}>{v.VIN || '—'}</td>
-                  <td style={{ fontSize: '12px', color: '#6b7280' }}>{v.Matricula || '—'}</td>
-                  {isAdmin && <td><button className="ghost-button" style={{ color: '#dc2626', fontSize: '12px' }} onClick={() => handleEliminar(v.VehiculoId)}>Eliminar</button></td>}
+                  <td style={{ fontWeight: 600 }}>{v.Marca} {v.Modelo}</td>
+                  <td style={{ fontSize: '12px' }}>{v.Placa}</td>
+                  <td style={{ fontSize: '12px', color: '#6b7280' }}>{v.Año || '—'}</td>
+                  <td style={{ fontSize: '12px', color: '#6b7280' }}>{v.Color || '—'}</td>
                 </tr>
               ))}
-              {!vehiculos.length && <tr><td colSpan={isAdmin ? 4 : 3} style={{ textAlign: 'center', color: '#9ca3af', padding: '20px' }}>Sin vehículos registrados</td></tr>}
+              {!vehiculos.length && <tr><td colSpan={4} style={{ textAlign: 'center', color: '#9ca3af', padding: '20px' }}>Sin vehículos en el catálogo</td></tr>}
             </tbody>
           </table>
         </div>
@@ -382,7 +347,7 @@ export default function DVIRModule({ usuario }) {
       )}
 
       {detalleId && <DVIRDetalleModal id={detalleId} onClose={() => setDetalleId(null)} />}
-      {verVehiculos && <VehiculosModal onClose={() => setVerVehiculos(false)} isAdmin={isAdmin} />}
+      {verVehiculos && <VehiculosModal onClose={() => setVerVehiculos(false)} />}
     </section>
   )
 }

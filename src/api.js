@@ -736,12 +736,6 @@ export function registrarAcceso(matricula, tipoAcceso) {
 export function getDVIRVehiculos() {
   return fetchJson('dvir/vehiculos', { headers: authHeaders() })
 }
-export function crearDVIRVehiculo(data) {
-  return fetchJson('dvir/vehiculos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) })
-}
-export function eliminarDVIRVehiculo(id) {
-  return fetchJson(`dvir/vehiculos/${id}`, { method: 'DELETE', headers: authHeaders() })
-}
 export function getDVIRLista(params = {}) {
   const q = new URLSearchParams(params).toString()
   return fetchJson(`dvir${q ? '?' + q : ''}`, { headers: authHeaders() })
