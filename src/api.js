@@ -768,6 +768,6 @@ export function editarCargaDiesel(id, body) {
 export function getDieselPrecio() {
   return fetchJson('diesel/precio', { headers: authHeaders() })
 }
-export function setDieselPrecio(precio) {
-  return fetchJson('diesel/precio', { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ precio }) })
+export function setDieselPrecio(precios) {
+  return fetchJson('diesel/precio', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(precios) })
 }

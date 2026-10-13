@@ -158,53 +158,66 @@ function EditModal({ carga, onClose, onSave }) {
 }
 
 function PrecioConfig({ onClose, onUpdated }) {
-  const [precio, setPrecio] = useState('')
+  const [precios, setPrecios] = useState({ diesel: '', gasolina: '', urea: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
 
   useEffect(() => {
-    getDieselPrecio().then(d => { setPrecio(d.precio ?? ''); setLoading(false) }).catch(() => setLoading(false))
+    getDieselPrecio()
+      .then(d => { setPrecios({ diesel: d.diesel ?? 0, gasolina: d.gasolina ?? 0, urea: d.urea ?? 0 }); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [])
 
+  const setP = k => e => setPrecios(p => ({ ...p, [k]: e.target.value }))
+
   async function handleSave() {
-    if (precio === '' || isNaN(Number(precio))) return
     setSaving(true)
     try {
-      await setDieselPrecio(Number(precio))
-      onUpdated(Number(precio))
+      await setDieselPrecio({
+        diesel:   Number(precios.diesel),
+        gasolina: Number(precios.gasolina),
+        urea:     Number(precios.urea),
+      })
+      onUpdated({ diesel: Number(precios.diesel), gasolina: Number(precios.gasolina), urea: Number(precios.urea) })
       onClose()
     } catch (e) {
-      alert(e.message || 'Error al guardar precio')
+      alert(e.message || 'Error al guardar precios')
     } finally {
       setSaving(false)
     }
   }
 
+  const inputStyle = { width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb',
+    borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }
+  const labelStyle = { fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '5px', display: 'block' }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex',
       alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', width: '340px',
+      <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', width: '360px',
         maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Precio del Diésel</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Precio por litro</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280' }}>✕</button>
         </div>
-        <p style={{ fontSize: '13px', color: '#6b7280', marginTop: 0, marginBottom: '16px' }}>
-          Este precio aparece por defecto en la app al registrar nuevas cargas. Los registros existentes no se modifican.
+        <p style={{ fontSize: '13px', color: '#6b7280', marginTop: 0, marginBottom: '20px' }}>
+          Aparece por defecto en la app al registrar cargas. No afecta registros anteriores.
         </p>
-        <label style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', marginBottom: '6px', display: 'block' }}>
-          PRECIO POR LITRO ($)
-        </label>
-        {loading ? (
-          <div style={{ color: '#9ca3af', fontSize: '13px' }}>Cargando...</div>
-        ) : (
-          <input
-            type="number" step="0.01" min="0"
-            style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb',
-              borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-            value={precio}
-            onChange={e => setPrecio(e.target.value)}
-          />
+        {loading ? <div style={{ color: '#9ca3af', fontSize: '13px' }}>Cargando...</div> : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label style={labelStyle}>DIÉSEL ($/L)</label>
+              <input type="number" step="0.01" min="0" style={inputStyle} value={precios.diesel} onChange={setP('diesel')} />
+            </div>
+            <div>
+              <label style={labelStyle}>GASOLINA ($/L)</label>
+              <input type="number" step="0.01" min="0" style={inputStyle} value={precios.gasolina} onChange={setP('gasolina')} />
+            </div>
+            <div>
+              <label style={labelStyle}>UREA ($/L)</label>
+              <input type="number" step="0.01" min="0" style={inputStyle} value={precios.urea} onChange={setP('urea')} />
+            </div>
+          </div>
         )}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
           <button className="ghost-button" onClick={onClose}>Cancelar</button>
@@ -225,7 +238,7 @@ export default function ControlDieselModule({ usuario }) {
   const [fotoUrl, setFotoUrl]       = useState(null)
   const [eliminando, setEliminando] = useState(null)
   const [editando, setEditando]     = useState(null)
-  const [precioActual, setPrecioActual] = useState(null)
+  const [precios, setPrecios] = useState({ diesel: null, gasolina: null, urea: null })
   const [showPrecio, setShowPrecio] = useState(false)
 
   const [filtros, setFiltros] = useState({ vehiculo: '', tipo: '', desde: '', hasta: '' })
@@ -236,7 +249,7 @@ export default function ControlDieselModule({ usuario }) {
     try {
       const [data, precioData] = await Promise.all([getDieselCargas(), getDieselPrecio()])
       setCargas(data)
-      setPrecioActual(precioData.precio)
+      setPrecios({ diesel: precioData.diesel, gasolina: precioData.gasolina, urea: precioData.urea })
     } catch (e) {
       console.error(e)
     } finally {
@@ -313,16 +326,18 @@ export default function ControlDieselModule({ usuario }) {
             <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
               Registro de cargas de diésel y UREA · rendimiento por unidad
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {precioActual != null && (
-                <span style={{ fontSize: '13px', color: '#6b7280' }}>
-                  Precio actual: <strong style={{ color: '#374151' }}>${fmt(precioActual)}/L</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {precios.diesel != null && (
+                <span style={{ fontSize: '12px', color: '#6b7280', display: 'flex', gap: '10px' }}>
+                  <span>Diésel: <strong style={{ color: '#1d4ed8' }}>${fmt(precios.diesel)}/L</strong></span>
+                  <span>Gasolina: <strong style={{ color: '#c2410c' }}>${fmt(precios.gasolina)}/L</strong></span>
+                  <span>UREA: <strong style={{ color: '#16a34a' }}>${fmt(precios.urea)}/L</strong></span>
                 </span>
               )}
               {isAdmin && (
                 <button className="ghost-button" style={{ fontSize: '12px', padding: '5px 12px' }}
                   onClick={() => setShowPrecio(true)}>
-                  ⚙ Actualizar precio
+                  ⚙ Actualizar precios
                 </button>
               )}
             </div>
@@ -478,7 +493,7 @@ export default function ControlDieselModule({ usuario }) {
 
       {fotoUrl   && <FotoModal url={fotoUrl} onClose={() => setFotoUrl(null)} />}
       {editando  && <EditModal carga={editando} onClose={() => setEditando(null)} onSave={handleEditar} />}
-      {showPrecio && <PrecioConfig onClose={() => setShowPrecio(false)} onUpdated={p => setPrecioActual(p)} />}
+      {showPrecio && <PrecioConfig onClose={() => setShowPrecio(false)} onUpdated={p => setPrecios(p)} />}
     </div>
   )
 }
