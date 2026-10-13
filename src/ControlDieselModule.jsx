@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { getDieselCargas, eliminarCargaDiesel, editarCargaDiesel, getDieselPrecio, setDieselPrecio } from './api'
 
-const TIPO_LABEL = { diesel: 'Diésel', urea: 'UREA' }
+const TIPO_LABEL = { diesel: 'Diésel', gasolina: 'Gasolina', urea: 'UREA' }
 
 function fmt(n, dec = 2) {
   if (n == null) return '—'
@@ -31,12 +31,15 @@ function RendBadge({ value }) {
 }
 
 function TipoBadge({ tipo }) {
-  const isDiesel = tipo === 'diesel'
+  const styles = {
+    diesel:   { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    gasolina: { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+    urea:     { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+  }
+  const s = styles[tipo] || styles.urea
   return (
     <span style={{
-      background: isDiesel ? '#eff6ff' : '#f0fdf4',
-      color:      isDiesel ? '#1d4ed8' : '#16a34a',
-      border:     `1px solid ${isDiesel ? '#bfdbfe' : '#bbf7d0'}`,
+      background: s.bg, color: s.color, border: `1px solid ${s.border}`,
       borderRadius: '999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700,
     }}>
       {TIPO_LABEL[tipo] ?? tipo}
@@ -117,6 +120,7 @@ function EditModal({ carga, onClose, onSave }) {
             <label style={labelStyle}>Tipo</label>
             <select style={inputStyle} value={form.tipo} onChange={set('tipo')}>
               <option value="diesel">Diésel</option>
+              <option value="gasolina">Gasolina</option>
               <option value="urea">UREA</option>
             </select>
           </div>
@@ -214,7 +218,7 @@ function PrecioConfig({ onClose, onUpdated }) {
 }
 
 export default function ControlDieselModule({ usuario }) {
-  const isAdmin = usuario?.rol === 'admin'
+  const isAdmin = usuario?.rol === 'admin' || usuario?.rol === 'encargado_vehiculos'
 
   const [cargas, setCargas]         = useState([])
   const [loading, setLoading]       = useState(true)
@@ -370,6 +374,7 @@ export default function ControlDieselModule({ usuario }) {
             <select style={{ ...inputStyle }} value={filtros.tipo} onChange={setF('tipo')}>
               <option value="">Todos</option>
               <option value="diesel">Diésel</option>
+              <option value="gasolina">Gasolina</option>
               <option value="urea">UREA</option>
             </select>
           </div>
