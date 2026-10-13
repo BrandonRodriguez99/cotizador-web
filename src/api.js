@@ -762,3 +762,12 @@ export function getDieselCargas(params = {}) {
 export function eliminarCargaDiesel(id) {
   return fetchJson(`diesel/cargas/${id}`, { method: 'DELETE', headers: authHeaders() })
 }
+export function editarCargaDiesel(id, body) {
+  return fetchJson(`diesel/cargas/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) })
+}
+export function getDieselPrecio() {
+  return fetchJson('diesel/precio', { headers: authHeaders() })
+}
+export function setDieselPrecio(precio) {
+  return fetchJson('diesel/precio', { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ precio }) })
+}
