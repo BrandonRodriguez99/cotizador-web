@@ -746,3 +746,10 @@ export function getDVIRDetalle(id) {
 export function eliminarDVIR(id) {
   return fetchJson(`dvir/${id}`, { method: 'DELETE', headers: authHeaders() })
 }
+export function resolverDefecto(puntoId, resuelto) {
+  return fetchJson(`dvir/puntos/${puntoId}`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resuelto }),
+  })
+}

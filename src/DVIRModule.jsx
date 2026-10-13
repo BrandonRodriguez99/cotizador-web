@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   getDVIRVehiculos,
-  getDVIRLista, getDVIRDetalle, eliminarDVIR,
+  getDVIRLista, getDVIRDetalle, eliminarDVIR, resolverDefecto,
 } from './api'
 
 const CATEGORIAS = {
@@ -52,16 +52,30 @@ function Badge({ value }) {
 }
 
 // ── Panel lateral de detalle ──────────────────────────────────────────────────
-function DVIRDetallePanel({ id, onClose }) {
+function DVIRDetallePanel({ id, onClose, onResolucionCambiada }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [fotoAmpliada, setFotoAmpliada] = useState(null)
+  const [resolviendo, setResolviendo] = useState(null) // puntoId en proceso
 
   useEffect(() => {
     setData(null)
     setLoading(true)
     getDVIRDetalle(id).then(setData).catch(console.error).finally(() => setLoading(false))
   }, [id])
+
+  async function handleResolucion(puntoId, resuelto) {
+    setResolviendo(puntoId)
+    try {
+      await resolverDefecto(puntoId, resuelto)
+      setData(prev => ({
+        ...prev,
+        puntos: prev.puntos.map(p => p.DVIRPuntoId === puntoId ? { ...p, Resuelto: resuelto ? 1 : 0 } : p),
+      }))
+      onResolucionCambiada?.()
+    } catch (e) { console.error(e) }
+    finally { setResolviendo(null) }
+  }
 
   const porCategoria = {}
   if (data) {
@@ -182,11 +196,24 @@ function DVIRDetallePanel({ id, onClose }) {
                 </div>
               )}
 
-              {/* Defectos destacados (si hay) */}
+              {/* Defectos con seguimiento de resolución */}
               {data.Defectos > 0 && (
                 <div style={{ marginBottom: '22px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
-                    Defectos reportados
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      Defectos reportados
+                    </div>
+                    {(() => {
+                      const resueltos = (data.puntos || []).filter(p => p.Estado === 'defecto' && p.Resuelto).length
+                      const pct = Math.round((resueltos / data.Defectos) * 100)
+                      return (
+                        <span style={{
+                          fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px',
+                          background: pct === 100 ? '#dcfce7' : pct > 0 ? '#fef9c3' : '#fee2e2',
+                          color: pct === 100 ? '#15803d' : pct > 0 ? '#a16207' : '#b91c1c',
+                        }}>{resueltos}/{data.Defectos} resueltos · {pct}%</span>
+                      )
+                    })()}
                   </div>
                   {Object.entries(CATEGORIAS).map(([key, label]) => {
                     const items = (porCategoria[key] || []).filter(p => p.Estado === 'defecto')
@@ -194,18 +221,44 @@ function DVIRDetallePanel({ id, onClose }) {
                     return (
                       <div key={key} style={{ marginBottom: '10px' }}>
                         <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, marginBottom: '6px' }}>{label}</div>
-                        {items.map((p, i) => (
-                          <div key={i} style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', marginBottom: '6px' }}>
-                            <div style={{ fontWeight: 600, fontSize: '13px', color: '#b91c1c', marginBottom: p.Comentario || p.FotoUrl ? '6px' : 0 }}>
-                              ✗ {p.Nombre}
+                        {items.map((p, i) => {
+                          const resuelto = !!p.Resuelto
+                          return (
+                            <div key={i} style={{
+                              background: resuelto ? '#f0fdf4' : '#fff5f5',
+                              border: `1px solid ${resuelto ? '#86efac' : '#fecaca'}`,
+                              borderRadius: '8px', padding: '10px 14px', marginBottom: '6px',
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 600, fontSize: '13px', color: resuelto ? '#15803d' : '#b91c1c', marginBottom: p.Comentario || p.FotoUrl ? '6px' : 0 }}>
+                                    {resuelto ? '✓' : '✗'} {p.Nombre}
+                                  </div>
+                                  {p.Comentario && <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#6b7280' }}>{p.Comentario}</p>}
+                                  {p.FotoUrl && (
+                                    <img src={p.FotoUrl} alt="defecto" onClick={() => setFotoAmpliada(p.FotoUrl)}
+                                      style={{ height: '72px', borderRadius: '6px', objectFit: 'cover', cursor: 'zoom-in', border: `1px solid ${resuelto ? '#86efac' : '#fecaca'}` }} />
+                                  )}
+                                </div>
+                                {/* Dropdown de resolución */}
+                                <select
+                                  value={resuelto ? '1' : '0'}
+                                  disabled={resolviendo === p.DVIRPuntoId}
+                                  onChange={e => handleResolucion(p.DVIRPuntoId, e.target.value === '1')}
+                                  style={{
+                                    fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '6px', cursor: 'pointer',
+                                    border: `1px solid ${resuelto ? '#86efac' : '#fca5a5'}`,
+                                    background: resuelto ? '#dcfce7' : '#fef2f2',
+                                    color: resuelto ? '#15803d' : '#b91c1c',
+                                    flexShrink: 0,
+                                  }}>
+                                  <option value="0">No resuelto</option>
+                                  <option value="1">Resuelto ✓</option>
+                                </select>
+                              </div>
                             </div>
-                            {p.Comentario && <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#6b7280' }}>{p.Comentario}</p>}
-                            {p.FotoUrl && (
-                              <img src={p.FotoUrl} alt="defecto" onClick={() => setFotoAmpliada(p.FotoUrl)}
-                                style={{ height: '72px', borderRadius: '6px', objectFit: 'cover', cursor: 'zoom-in', border: '1px solid #fecaca' }} />
-                            )}
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )
                   })}
@@ -398,6 +451,8 @@ export default function DVIRModule({ usuario }) {
                 <th>Ubicación</th>
                 <th>Estado</th>
                 <th>Defectos</th>
+                <th>Resueltos</th>
+                <th>Cumplimiento</th>
                 <th>Realizado por</th>
                 <th>Fecha</th>
                 <th></th>
@@ -426,6 +481,26 @@ export default function DVIRModule({ usuario }) {
                     <td style={{ fontSize: '12px', color: '#6b7280', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.Ubicacion || '—'}</td>
                     <td><Badge value={i.EstadoSeguridad} /></td>
                     <td style={{ textAlign: 'center', fontWeight: i.Defectos > 0 ? 700 : 400, color: i.Defectos > 0 ? '#b91c1c' : '#9ca3af' }}>{i.Defectos}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      {i.Defectos > 0
+                        ? <span style={{ fontWeight: 700, color: i.Resueltos === i.Defectos ? '#15803d' : i.Resueltos > 0 ? '#a16207' : '#9ca3af' }}>
+                            {i.Resueltos ?? 0}/{i.Defectos}
+                          </span>
+                        : <span style={{ color: '#9ca3af' }}>—</span>
+                      }
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      {i.Defectos > 0 ? (() => {
+                        const pct = Math.round(((i.Resueltos ?? 0) / i.Defectos) * 100)
+                        const color = pct === 100 ? '#15803d' : pct > 0 ? '#a16207' : '#b91c1c'
+                        const bg    = pct === 100 ? '#dcfce7' : pct > 0 ? '#fef9c3' : '#fee2e2'
+                        return (
+                          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', background: bg, color }}>
+                            {pct}%
+                          </span>
+                        )
+                      })() : <span style={{ color: '#9ca3af' }}>—</span>}
+                    </td>
                     <td style={{ fontSize: '12px', color: '#6b7280' }}>{i.CreadoPor || '—'}</td>
                     <td style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>{fmt(i.FechaCreacion)}</td>
                     <td onClick={e => e.stopPropagation()}>
@@ -445,7 +520,13 @@ export default function DVIRModule({ usuario }) {
         </div>
       )}
 
-      {detalleId && <DVIRDetallePanel id={detalleId} onClose={() => setDetalleId(null)} />}
+      {detalleId && (
+        <DVIRDetallePanel
+          id={detalleId}
+          onClose={() => setDetalleId(null)}
+          onResolucionCambiada={cargar}
+        />
+      )}
       {verVehiculos && <VehiculosModal onClose={() => setVerVehiculos(false)} />}
     </section>
   )
