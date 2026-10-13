@@ -39,6 +39,7 @@ import Inventario from './Inventario'
 import Seguridad from './Seguridad'
 import AsistenciaGeneracion from './AsistenciaGeneracion'
 import DVIRModule from './DVIRModule'
+import ControlDieselModule from './ControlDieselModule'
 import RegistroProveedores from './RegistroProveedores'
 import SolicitudVehiculoPublica from './SolicitudVehiculoPublica'
 import RegistroVisitaPublica from './RegistroVisitaPublica'
@@ -68,6 +69,7 @@ const NAV_ICONS = {
   seguridad:            <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
   permisos:             <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
   dvir:                 <><path d="M9 11l3 3L22 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></>,
+  diesel:               <><path d="M3 22V8l9-6 9 6v14"/><path d="M12 2v20"/><path d="M3 12h18"/></>,
 }
 
 const SIDEBAR_CONFIG = [
@@ -86,6 +88,7 @@ const SIDEBAR_CONFIG = [
     { vista: 'asistencia', label: 'Asistencia' },
     { vista: 'vehiculos', label: 'Vehículos' },
     { vista: 'dvir', label: 'Inspecciones DVIR' },
+    { vista: 'diesel', label: 'Control de Diésel' },
     { vista: 'seguridad', label: 'Módulo de Seguridad' },
   ]},
   { titulo: 'Catálogos', items: [
@@ -738,7 +741,9 @@ function App() {
                               ? 'Permisos'
                               : activeView === 'dvir'
                                 ? 'Inspecciones DVIR'
-                                : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                                : activeView === 'diesel'
+                                  ? 'Control de Diésel'
+                                  : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -767,7 +772,9 @@ function App() {
                             ? 'Administración > Permisos'
                             : activeView === 'dvir'
                               ? 'Herramientas > Inspecciones DVIR'
-                              : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                              : activeView === 'diesel'
+                                ? 'Herramientas > Control de Diésel'
+                                : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   if (window.location.pathname === '/solicitud-vehiculo') {
     return <SolicitudVehiculoPublica />
@@ -1007,6 +1014,8 @@ function App() {
           <section className="panel card"><AsistenciaGeneracion /></section>
         ) : activeView === 'dvir' ? (
           <DVIRModule usuario={usuario} />
+        ) : activeView === 'diesel' ? (
+          <ControlDieselModule usuario={usuario} />
         ) : activeView === 'aprobaciones' ? (
             <section className="panel card">
               <div className="panel-header space-between">

@@ -753,3 +753,12 @@ export function resolverDefecto(puntoId, resuelto) {
     body: JSON.stringify({ resuelto }),
   })
 }
+
+// ── Control Diésel ─────────────────────────────────────────────────────────────
+export function getDieselCargas(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  return fetchJson(`diesel/cargas${q ? '?' + q : ''}`, { headers: authHeaders() })
+}
+export function eliminarCargaDiesel(id) {
+  return fetchJson(`diesel/cargas/${id}`, { method: 'DELETE', headers: authHeaders() })
+}
