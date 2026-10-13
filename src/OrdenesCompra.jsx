@@ -1530,7 +1530,8 @@ export default function OrdenesCompra({
   const isAdmin = currentUserRol === 'admin'
   const isAutorizador = currentUserRol === 'autorizador1' || currentUserRol === 'autorizador2'
   const puedeRecepcionar = currentUserRol === 'admin'
-  const puedeGenerarSolicitud = ['admin', 'jefe_mantenimiento'].includes(currentUserRol)
+  // Cualquier rol con acceso al módulo puede generar solicitudes de fondos; los autorizadores solo las aprueban
+  const puedeGenerarSolicitud = !isAutorizador
 
   const [filtros, setFiltros] = useState({ texto:'', unidadNegocio:'', estado:'', tipo:'', fechaDesde:'', fechaHasta:'' })
   const hasFiltros = Object.values(filtros).some(Boolean)
@@ -1910,6 +1911,13 @@ export default function OrdenesCompra({
                                 onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
                                 PDF
                               </button>
+                              {!(order.rechazo?.rechazado || order.Rechazado) && (
+                                <button type="button" className="ghost-button"
+                                  style={{ fontSize: '11px', padding: '4px 10px', color: '#15803d', borderColor: '#bbf7d0' }}
+                                  onClick={() => openModal('solicitud', order)}>
+                                  Sol. Fondos
+                                </button>
+                              )}
                               {isAprobada && (
                                 <>
                                   <button type="button" className="ghost-button"
@@ -1918,11 +1926,6 @@ export default function OrdenesCompra({
                                     Factura
                                   </button>
                                   <button type="button" className="ghost-button"
-                                    style={{ fontSize: '11px', padding: '4px 10px', color: '#15803d', borderColor: '#bbf7d0' }}
-                                    onClick={() => openModal('solicitud', order)}>
-                                    Sol. Fondos
-                                  </button>
-                                      <button type="button" className="ghost-button"
                                     style={{ fontSize: '11px', padding: '4px 10px', color: '#16a34a', borderColor: '#bbf7d0' }}
                                     onClick={() => openModal('evaluacion-compras', order)}>
                                     Eval. Compras
@@ -2189,13 +2192,15 @@ export default function OrdenesCompra({
                               onClick={() => openModal('factura', order)}>
                               Factura
                             </button>
+                            {!(order.rechazo?.rechazado || order.Rechazado) && (
+                              <button type="button" className="ghost-button"
+                                style={{ fontSize:'11px', padding:'3px 8px', color:'#15803d', borderColor:'#bbf7d0' }}
+                                onClick={() => openModal('solicitud', order, !puedeGenerarSolicitud)}>
+                                Sol. Fondos
+                              </button>
+                            )}
                             {isAprobada && (
                               <>
-                                <button type="button" className="ghost-button"
-                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#15803d', borderColor:'#bbf7d0' }}
-                                  onClick={() => openModal('solicitud', order, !puedeGenerarSolicitud)}>
-                                  Sol. Fondos
-                                </button>
                                 <button type="button" className="ghost-button"
                                   style={{ fontSize:'11px', padding:'3px 8px', color:'#1d4ed8', borderColor:'#bfdbfe' }}
                                   onClick={() => openModal('evaluacion-compras', order)}>
