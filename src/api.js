@@ -731,3 +731,24 @@ export function getAccesoAlumnos(fecha) {
 export function registrarAcceso(matricula, tipoAcceso) {
   return fetchJson('acceso-alumnos', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ matricula, tipoAcceso }) })
 }
+
+// ─── DVIR ────────────────────────────────────────────────────────────────────
+export function getDVIRVehiculos() {
+  return fetchJson('dvir/vehiculos', { headers: authHeaders() })
+}
+export function crearDVIRVehiculo(data) {
+  return fetchJson('dvir/vehiculos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) })
+}
+export function eliminarDVIRVehiculo(id) {
+  return fetchJson(`dvir/vehiculos/${id}`, { method: 'DELETE', headers: authHeaders() })
+}
+export function getDVIRLista(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  return fetchJson(`dvir${q ? '?' + q : ''}`, { headers: authHeaders() })
+}
+export function getDVIRDetalle(id) {
+  return fetchJson(`dvir/${id}`, { headers: authHeaders() })
+}
+export function eliminarDVIR(id) {
+  return fetchJson(`dvir/${id}`, { method: 'DELETE', headers: authHeaders() })
+}
