@@ -280,49 +280,152 @@ function SeccionEditor({ sec, onChange, onDelete, canDelete }) {
   )
 }
 
+// ── Helpers de respuestas ────────────────────────────────────────────────────
+function esImagen(valor) {
+  return typeof valor === 'string' && (valor.startsWith('http') && (valor.includes('cloudinary') || /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(valor)))
+}
+
+function notaResumen(valores) {
+  const v = (valores || []).find(v => v.TipoRespuesta === 'texto' && v.Valor && !esImagen(v.Valor))
+  return v?.Valor ?? ''
+}
+
+// ── Panel de detalle de una respuesta ────────────────────────────────────────
+function RespuestaDetalle({ r, onClose }) {
+  if (!r) return null
+  return (
+    <div style={{
+      position: 'fixed', top: 0, right: 0, bottom: 0, width: 520,
+      background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
+      zIndex: 200, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '18px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
+            {r.FormularioNombre}
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{r.OperadorNombre}</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+            {new Date(r.FechaEnvio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}
+          </div>
+        </div>
+        <button type="button" onClick={onClose}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1, padding: 0 }}>
+          ×
+        </button>
+      </div>
+
+      {/* Cuerpo */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
+          Detalles del formulario
+        </div>
+        {(r.valores || []).map((v, i) => (
+          <div key={i} style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{v.Texto}</div>
+            {esImagen(v.Valor) ? (
+              <img src={v.Valor} alt={v.Texto}
+                style={{ width: '100%', borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'cover', maxHeight: 200, cursor: 'pointer' }}
+                onClick={() => window.open(v.Valor, '_blank')} />
+            ) : (
+              <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 500 }}>{v.Valor ?? '—'}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Vista de respuestas ───────────────────────────────────────────────────────
 function RespuestasView({ formId, onBack }) {
   const [respuestas, setRespuestas] = useState([])
   const [loading, setLoading] = useState(true)
+  const [detalle, setDetalle] = useState(null)
+  const [hoverId, setHoverId] = useState(null)
 
   useEffect(() => {
     getFormularioRespuestas(formId).then(setRespuestas).catch(console.error).finally(() => setLoading(false))
   }, [formId])
 
+  const cols = { enviado: '28%', recibido: '22%', tipo: '22%', notas: '28%' }
+
   if (loading) return <div style={{ padding: 24, color: '#64748b' }}>Cargando respuestas...</div>
 
   return (
-    <div>
-      <button type="button" onClick={onBack}
-        style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontSize: 13, marginBottom: 12, padding: 0 }}>
-        ← Volver al formulario
-      </button>
-      <h3 style={{ margin: '0 0 16px', color: '#1e293b' }}>
-        Respuestas recibidas ({respuestas.length})
-      </h3>
-      {respuestas.length === 0 && (
-        <div style={{ color: '#94a3b8', fontSize: 13 }}>Sin respuestas aún.</div>
-      )}
-      {respuestas.map(r => (
-        <div key={r.RespuestaId} style={{
-          background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
-          padding: 16, marginBottom: 12,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontWeight: 600, color: '#1e293b', fontSize: 13 }}>{r.OperadorNombre}</span>
-            <span style={{ color: '#64748b', fontSize: 12 }}>
-              {new Date(r.FechaEnvio).toLocaleString('es-MX')}
-            </span>
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+        <button type="button" onClick={onBack}
+          style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontSize: 13, padding: 0 }}>
+          ← Volver al formulario
+        </button>
+        <span style={{ color: '#1e293b', fontWeight: 700, fontSize: 15 }}>
+          Respuestas recibidas ({respuestas.length})
+        </span>
+      </div>
+
+      {respuestas.length === 0 ? (
+        <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', paddingTop: 32 }}>Sin respuestas aún.</div>
+      ) : (
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+          {/* Encabezado tabla */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: `${cols.enviado} ${cols.recibido} ${cols.tipo} ${cols.notas}`,
+            padding: '10px 16px', background: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0', gap: 8,
+          }}>
+            {['Enviado por', 'Recibido el', 'Tipo de formulario', 'Notas'].map(h => (
+              <div key={h} style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {h}
+              </div>
+            ))}
           </div>
-          {(r.valores || []).map((v, vi) => (
-            <div key={vi} style={{ marginBottom: 6, fontSize: 12 }}>
-              <span style={{ color: '#475569', fontWeight: 500 }}>{v.Texto}: </span>
-              <span style={{ color: '#1e293b' }}>{v.Valor ?? '—'}</span>
+
+          {/* Filas */}
+          {respuestas.map(r => (
+            <div key={r.RespuestaId}
+              onClick={() => setDetalle(d => d?.RespuestaId === r.RespuestaId ? null : r)}
+              onMouseEnter={() => setHoverId(r.RespuestaId)}
+              onMouseLeave={() => setHoverId(null)}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `${cols.enviado} ${cols.recibido} ${cols.tipo} ${cols.notas}`,
+                padding: '12px 16px', gap: 8,
+                borderBottom: '1px solid #f1f5f9',
+                cursor: 'pointer',
+                background: detalle?.RespuestaId === r.RespuestaId
+                  ? '#eff6ff'
+                  : hoverId === r.RespuestaId
+                    ? '#f8fafc'
+                    : '#fff',
+                transition: 'background 0.12s',
+              }}>
+              <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {r.OperadorNombre}
+              </div>
+              <div style={{ fontSize: 13, color: '#475569' }}>
+                {new Date(r.FechaEnvio).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div style={{ fontSize: 13, color: '#3B82F6' }}>
+                {r.FormularioNombre}
+              </div>
+              <div style={{ fontSize: 13, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {notaResumen(r.valores)}
+              </div>
             </div>
           ))}
         </div>
-      ))}
-    </div>
+      )}
+
+      {/* Panel de detalle (slide-in) */}
+      {detalle && <RespuestaDetalle r={detalle} onClose={() => setDetalle(null)} />}
+      {/* Overlay para cerrar */}
+      {detalle && (
+        <div onClick={() => setDetalle(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 199, background: 'rgba(0,0,0,0.2)' }} />
+      )}
+    </>
   )
 }
 
