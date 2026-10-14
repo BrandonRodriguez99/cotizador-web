@@ -751,3 +751,9 @@ export function deleteFormulario(id) {
 export function getFormularioRespuestas(id) {
   return fetchJson(`formularios/${id}/respuestas`, { headers: authHeaders() })
 }
+export function getTodasRespuestas() {
+  return fetchJson('formularios/respuestas/todas', { headers: authHeaders() })
+}
+export function deleteRespuesta(id) {
+  return fetchJson(`formularios/respuestas/${id}`, { method: 'DELETE', headers: authHeaders() })
+}

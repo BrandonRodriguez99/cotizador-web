@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   getFormularios, getFormulario, createFormulario, updateFormulario,
-  toggleFormularioActivo, deleteFormulario, getTodasRespuestas,
+  toggleFormularioActivo, deleteFormulario, getTodasRespuestas, deleteRespuesta,
 } from './api'
 
 const TIPOS = [
@@ -14,13 +14,11 @@ const TIPOS = [
   { value: 'media',           label: 'Media (foto)' },
   { value: 'firma',           label: 'Firma' },
 ]
-const TIPO_LABEL = Object.fromEntries(TIPOS.map(t => [t.value, t.label]))
 
 function uid() { return Math.random().toString(36).slice(2) }
 function emptySeccion() { return { _id: uid(), titulo: 'Sección nueva', preguntas: [] } }
 function emptyPregunta() { return { _id: uid(), texto: '', tipoRespuesta: 'si_no_na', requerida: false, opciones: [] } }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function esImagen(valor) {
   return typeof valor === 'string' &&
     valor.startsWith('http') &&
@@ -34,12 +32,7 @@ function fmtDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
-function startOfDay(date) {
-  const d = new Date(date); d.setHours(0,0,0,0); return d
-}
-function isoDate(date) {
-  return date.toISOString().slice(0, 10)
-}
+function isoDate(date) { return date.toISOString().slice(0, 10) }
 
 // ── Preview móvil ─────────────────────────────────────────────────────────────
 function PreviewRespuesta({ tipo, opciones }) {
@@ -83,7 +76,7 @@ function MobilePreview({ form }) {
     <div style={{ width: 300, flexShrink: 0, background: '#f1f5f9', borderRadius: 16, padding: '0 0 24px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
       <div style={{ background: '#0F172A', padding: '10px 16px 6px', display: 'flex', justifyContent: 'space-between' }}>
         <span style={{ color: '#fff', fontSize: 11, fontWeight: 600 }}>9:55</span>
-        <span style={{ color: '#94a3b8', fontSize: 11 }}>▶ ◼ ▐▐ 🔋</span>
+        <span style={{ color: '#94a3b8', fontSize: 11 }}>🔋</span>
       </div>
       <div style={{ background: '#1E293B', padding: '12px 16px' }}>
         <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 600, letterSpacing: 1 }}>FORMULARIO</div>
@@ -200,7 +193,15 @@ function SeccionEditor({ sec, onChange, onDelete, canDelete }) {
 }
 
 // ── Panel de detalle de respuesta ─────────────────────────────────────────────
-function RespuestaDetalle({ r, onClose }) {
+function RespuestaDetalle({ r, onClose, onDelete }) {
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!window.confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return
+    setDeleting(true)
+    await onDelete(r.RespuestaId)
+  }
+
   if (!r) return null
   return (
     <>
@@ -212,8 +213,14 @@ function RespuestaDetalle({ r, onClose }) {
             <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{r.OperadorNombre}</div>
             <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{fmtDate(r.FechaEnvio)}</div>
           </div>
-          <button type="button" onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" onClick={handleDelete} disabled={deleting}
+              style={{ border: '1px solid #fca5a5', borderRadius: 6, padding: '5px 12px', fontSize: 12, background: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', color: '#dc2626', opacity: deleting ? 0.6 : 1 }}>
+              {deleting ? 'Eliminando...' : 'Eliminar'}
+            </button>
+            <button type="button" onClick={onClose}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
+          </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
@@ -238,13 +245,11 @@ function RespuestaDetalle({ r, onClose }) {
 }
 
 // ── Tab 1: Documentos enviados ────────────────────────────────────────────────
-function TabDocumentos({ formularios }) {
+function TabDocumentos() {
   const [respuestas, setRespuestas] = useState([])
   const [loading, setLoading] = useState(true)
   const [detalle, setDetalle] = useState(null)
   const [hoverId, setHoverId] = useState(null)
-
-  // Filtros
   const [busqueda, setBusqueda] = useState('')
   const [filtroForm, setFiltroForm] = useState('')
   const [rangoPreset, setRangoPreset] = useState('30d')
@@ -252,21 +257,32 @@ function TabDocumentos({ formularios }) {
   const [fechaHasta, setFechaHasta] = useState(isoDate(new Date()))
   const [showDatePicker, setShowDatePicker] = useState(false)
 
-  useEffect(() => {
+  const cargar = useCallback(() => {
+    setLoading(true)
     getTodasRespuestas().then(setRespuestas).catch(console.error).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { cargar() }, [cargar])
 
   function aplicarPreset(preset) {
     setRangoPreset(preset)
     const hoy = new Date()
     const desde = new Date()
     if (preset === '1h') desde.setHours(desde.getHours() - 1)
-    else if (preset === 'hoy') startOfDay(desde)
+    else if (preset === 'hoy') { desde.setHours(0, 0, 0, 0) }
     else if (preset === '7d') desde.setDate(desde.getDate() - 7)
     else if (preset === '30d') desde.setDate(desde.getDate() - 30)
     setFechaDesde(isoDate(desde))
     setFechaHasta(isoDate(hoy))
     setShowDatePicker(false)
+  }
+
+  async function handleDelete(rid) {
+    try {
+      await deleteRespuesta(rid)
+      setDetalle(null)
+      cargar()
+    } catch (e) { alert('Error al eliminar: ' + e.message) }
   }
 
   const filtered = useMemo(() => {
@@ -287,17 +303,14 @@ function TabDocumentos({ formularios }) {
   }, [respuestas, busqueda, filtroForm, fechaDesde, fechaHasta])
 
   const nombresFormularios = useMemo(() => [...new Set(respuestas.map(r => r.FormularioNombre))].sort(), [respuestas])
-
   const presetLabel = { '1h': 'Última hora', 'hoy': 'Hoy', '7d': 'Últimos 7 días', '30d': 'Últimos 30 días', 'custom': 'Personalizado' }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Barra de filtros */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Rango de fechas */}
         <div style={{ position: 'relative' }}>
           <button type="button" onClick={() => setShowDatePicker(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #e2e8f0', borderRadius: 7, padding: '6px 12px', background: '#fff', fontSize: 13, cursor: 'pointer', color: '#475569' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #e2e8f0', borderRadius: 7, padding: '7px 12px', background: '#fff', fontSize: 13, cursor: 'pointer', color: '#475569' }}>
             📅 {presetLabel[rangoPreset] || `${fechaDesde} → ${fechaHasta}`}
           </button>
           {showDatePicker && (
@@ -311,7 +324,7 @@ function TabDocumentos({ formularios }) {
                 ))}
               </div>
               <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#475569' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#475569', marginBottom: 10 }}>
                   <input type="date" value={fechaDesde} onChange={e => { setFechaDesde(e.target.value); setRangoPreset('custom') }}
                     style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 8px', fontSize: 13 }} />
                   <span>→</span>
@@ -319,7 +332,7 @@ function TabDocumentos({ formularios }) {
                     style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 8px', fontSize: 13 }} />
                 </div>
                 <button type="button" onClick={() => setShowDatePicker(false)}
-                  style={{ marginTop: 10, width: '100%', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: 6, padding: '7px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  style={{ width: '100%', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: 6, padding: '7px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   Aplicar
                 </button>
               </div>
@@ -327,34 +340,30 @@ function TabDocumentos({ formularios }) {
           )}
         </div>
 
-        {/* Filtro por formulario */}
         <select value={filtroForm} onChange={e => setFiltroForm(e.target.value)}
-          style={{ border: '1px solid #e2e8f0', borderRadius: 7, padding: '6px 10px', fontSize: 13, background: '#fff', color: '#475569', cursor: 'pointer' }}>
+          style={{ border: '1px solid #e2e8f0', borderRadius: 7, padding: '7px 10px', fontSize: 13, background: '#fff', color: '#475569', cursor: 'pointer' }}>
           <option value="">Tipo de formulario</option>
           {nombresFormularios.map(n => <option key={n} value={n}>{n}</option>)}
         </select>
 
-        {/* Buscador */}
         <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
-          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 14 }}>🔍</span>
+          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 13 }}>🔍</span>
           <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
-            placeholder="Buscar documentos..."
-            style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 7, padding: '6px 12px 6px 30px', fontSize: 13, boxSizing: 'border-box', background: '#fff' }} />
+            placeholder="Buscar por nombre u operador..."
+            style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 7, padding: '7px 12px 7px 30px', fontSize: 13, boxSizing: 'border-box', background: '#fff' }} />
         </div>
 
-        <span style={{ fontSize: 13, color: '#64748b', marginLeft: 'auto' }}>
+        <span style={{ fontSize: 13, color: '#64748b', whiteSpace: 'nowrap' }}>
           {filtered.length} de {respuestas.length}
         </span>
       </div>
 
-      {/* Tabla */}
       {loading ? (
         <div style={{ color: '#64748b', padding: 24 }}>Cargando...</div>
       ) : (
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
-          {/* Cabecera */}
-          <div style={{ display: 'grid', gridTemplateColumns: '30% 22% 22% 26%', padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', gap: 8 }}>
-            {['Enviado por','Recibido el ▼','Tipo de formulario','Notas'].map(h => (
+          <div style={{ display: 'grid', gridTemplateColumns: '28% 20% 24% 28%', padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            {['Enviado por','Recibido el','Tipo de formulario','Notas'].map(h => (
               <div key={h} style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</div>
             ))}
           </div>
@@ -369,26 +378,26 @@ function TabDocumentos({ formularios }) {
               onMouseEnter={() => setHoverId(r.RespuestaId)}
               onMouseLeave={() => setHoverId(null)}
               style={{
-                display: 'grid', gridTemplateColumns: '30% 22% 22% 26%', padding: '12px 16px', gap: 8,
+                display: 'grid', gridTemplateColumns: '28% 20% 24% 28%', padding: '12px 16px',
                 borderBottom: '1px solid #f1f5f9', cursor: 'pointer',
                 background: detalle?.RespuestaId === r.RespuestaId ? '#eff6ff' : hoverId === r.RespuestaId ? '#f8fafc' : '#fff',
                 transition: 'background 0.1s',
               }}>
               <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.OperadorNombre}</div>
               <div style={{ fontSize: 13, color: '#475569' }}>{fmtDate(r.FechaEnvio)}</div>
-              <div style={{ fontSize: 13, color: '#3B82F6' }}>{r.FormularioNombre}</div>
+              <div style={{ fontSize: 13, color: '#3B82F6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.FormularioNombre}</div>
               <div style={{ fontSize: 13, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{notaResumen(r.valores)}</div>
             </div>
           ))}
         </div>
       )}
 
-      {detalle && <RespuestaDetalle r={detalle} onClose={() => setDetalle(null)} />}
+      {detalle && <RespuestaDetalle r={detalle} onClose={() => setDetalle(null)} onDelete={handleDelete} />}
     </div>
   )
 }
 
-// ── Tab 2: Tipos de formularios (editor) ──────────────────────────────────────
+// ── Tab 2: Tipos de formularios ───────────────────────────────────────────────
 function TabFormularios({ usuario }) {
   const [lista, setLista] = useState([])
   const [loading, setLoading] = useState(true)
@@ -448,10 +457,8 @@ function TabFormularios({ usuario }) {
 
   async function toggleActivo(id, activo, e) {
     e.stopPropagation()
-    try {
-      await toggleFormularioActivo(id, !activo)
-      cargarLista()
-    } catch (e) { setError(e.message) }
+    try { await toggleFormularioActivo(id, !activo); cargarLista() }
+    catch (e) { setError(e.message) }
   }
 
   async function eliminar(id, e) {
@@ -468,9 +475,11 @@ function TabFormularios({ usuario }) {
   const updateSeccion = (i, sec) => setSelected(s => { const ss = [...s.secciones]; ss[i] = sec; return { ...s, secciones: ss } })
   const deleteSeccion = (i) => setSelected(s => { const ss = [...s.secciones]; ss.splice(i, 1); return { ...s, secciones: ss } })
 
-  const btn = (color = '#3B82F6') => ({ background: color, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' })
+  const btn = (color = '#3B82F6') => ({
+    background: color, color: '#fff', border: 'none', borderRadius: 7,
+    padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+  })
 
-  // ── Vista lista (sin formulario seleccionado) ──────────────────────────────
   if (!selected) return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {isAdmin && (
@@ -481,8 +490,8 @@ function TabFormularios({ usuario }) {
       {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 7, padding: '8px 12px', fontSize: 13 }}>{error}</div>}
 
       <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Nombre del tipo de formulario ▲</div>
+        <div style={{ padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Nombre del tipo de formulario</div>
         </div>
 
         {loading && <div style={{ padding: '24px 16px', color: '#94a3b8', fontSize: 13 }}>Cargando...</div>}
@@ -496,12 +505,12 @@ function TabFormularios({ usuario }) {
           <div key={f.FormularioId}
             onMouseEnter={() => setHoverId(f.FormularioId)}
             onMouseLeave={() => setHoverId(null)}
-            style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '13px 16px', borderBottom: '1px solid #f1f5f9', background: hoverId === f.FormularioId ? '#f8fafc' : '#fff', transition: 'background 0.1s', alignItems: 'center' }}>
-            <div>
+            style={{ display: 'flex', padding: '13px 16px', borderBottom: '1px solid #f1f5f9', background: hoverId === f.FormularioId ? '#f8fafc' : '#fff', transition: 'background 0.1s', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 500 }}>{f.Nombre}</div>
               {f.Descripcion && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{f.Descripcion}</div>}
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: f.Activo ? '#dcfce7' : '#f1f5f9', color: f.Activo ? '#16a34a' : '#64748b' }}>
                 {f.Activo ? 'Activo' : 'Inactivo'}
               </span>
@@ -528,11 +537,9 @@ function TabFormularios({ usuario }) {
     </div>
   )
 
-  // ── Editor de formulario ───────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', gap: 20, minWidth: 0 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Toolbar */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="button" style={btn('#64748b')} onClick={() => { setSelected(null); setIsNew(false) }}>← Volver</button>
           {isAdmin && (
@@ -548,7 +555,6 @@ function TabFormularios({ usuario }) {
 
         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 7, padding: '8px 12px', fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
-        {/* Header del formulario */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16 }}>
           <div style={{ marginBottom: 12 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Nombre del formulario *</label>
@@ -571,7 +577,6 @@ function TabFormularios({ usuario }) {
           )}
         </div>
 
-        {/* Secciones */}
         {(selected.secciones || []).map((sec, i) => (
           <SeccionEditor key={sec._id || i} sec={sec}
             onChange={s => updateSeccion(i, s)}
@@ -588,7 +593,6 @@ function TabFormularios({ usuario }) {
         )}
       </div>
 
-      {/* Preview */}
       {showPreview && (
         <MobilePreview form={{
           nombre: selected.nombre || '',
@@ -610,22 +614,17 @@ function TabFormularios({ usuario }) {
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Formularios({ usuario }) {
   const [tab, setTab] = useState('documentos')
-  const [formularios, setFormularios] = useState([])
-
-  useEffect(() => {
-    getFormularios().then(setFormularios).catch(console.error)
-  }, [])
 
   const tabStyle = (active) => ({
-    padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer',
+    padding: '10px 20px', border: 'none', background: 'none', cursor: 'pointer',
     fontSize: 13, fontWeight: active ? 700 : 400,
     color: active ? '#0f172a' : '#64748b',
     borderBottom: active ? '2px solid #0f172a' : '2px solid transparent',
+    transition: 'color 0.1s',
   })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: 20 }}>
         <button type="button" style={tabStyle(tab === 'documentos')} onClick={() => setTab('documentos')}>
           Documentos enviados
@@ -635,10 +634,9 @@ export default function Formularios({ usuario }) {
         </button>
       </div>
 
-      {/* Contenido */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {tab === 'documentos'
-          ? <TabDocumentos formularios={formularios} />
+          ? <TabDocumentos />
           : <TabFormularios usuario={usuario} />
         }
       </div>
