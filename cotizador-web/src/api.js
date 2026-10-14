@@ -728,3 +728,26 @@ export function getAccesoAlumnos(fecha) {
 export function registrarAcceso(matricula, tipoAcceso) {
   return fetchJson('acceso-alumnos', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ matricula, tipoAcceso }) })
 }
+
+// ── Formularios ──────────────────────────────────────────────────────────────
+export function getFormularios() {
+  return fetchJson('formularios', { headers: authHeaders() })
+}
+export function getFormulario(id) {
+  return fetchJson(`formularios/${id}`, { headers: authHeaders() })
+}
+export function createFormulario(body) {
+  return fetchJson('formularios', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) })
+}
+export function updateFormulario(id, body) {
+  return fetchJson(`formularios/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) })
+}
+export function toggleFormularioActivo(id, activo) {
+  return fetchJson(`formularios/${id}/activo`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activo }) })
+}
+export function deleteFormulario(id) {
+  return fetchJson(`formularios/${id}`, { method: 'DELETE', headers: authHeaders() })
+}
+export function getFormularioRespuestas(id) {
+  return fetchJson(`formularios/${id}/respuestas`, { headers: authHeaders() })
+}
