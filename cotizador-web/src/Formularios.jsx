@@ -360,12 +360,22 @@ export default function Formularios({ usuario }) {
   async function abrirFormulario(id) {
     try {
       const f = await getFormulario(id)
-      // Añadir _id temporal a secciones/preguntas/opciones para el editor
+      // Normalizar PascalCase (servidor) → camelCase (editor)
+      f.nombre = f.Nombre || f.nombre || ''
+      f.descripcion = f.Descripcion || f.descripcion || ''
+      f.activo = f.Activo ?? f.activo ?? false
       f.secciones = (f.secciones || []).map(s => ({
         ...s, _id: uid(),
+        titulo: s.Titulo || s.titulo || '',
         preguntas: (s.preguntas || []).map(p => ({
           ...p, _id: uid(),
-          opciones: (p.opciones || []).map(o => ({ ...o, _id: uid() })),
+          texto: p.Texto || p.texto || '',
+          tipoRespuesta: p.TipoRespuesta || p.tipoRespuesta || 'si_no_na',
+          requerida: !!(p.Requerida ?? p.requerida),
+          opciones: (p.opciones || []).map(o => ({
+            ...o, _id: uid(),
+            texto: o.Texto || o.texto || '',
+          })),
         })),
       }))
       setSelected(f)
