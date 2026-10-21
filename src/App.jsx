@@ -42,6 +42,7 @@ import DVIRModule from './DVIRModule'
 import ControlDieselModule from './ControlDieselModule'
 import RegistroProveedores from './RegistroProveedores'
 import SolicitudVehiculoPublica from './SolicitudVehiculoPublica'
+import DVIRPublico from './DVIRPublico'
 import RegistroVisitaPublica from './RegistroVisitaPublica'
 import PermisosPanel from './PermisosPanel'
 import Formularios from './Formularios'
@@ -787,6 +788,9 @@ function App() {
 
   if (window.location.pathname === '/solicitud-vehiculo') {
     return <SolicitudVehiculoPublica />
+  }
+  if (window.location.pathname === '/dvir') {
+    return <DVIRPublico />
   }
   if (window.location.pathname === '/registrar-visita') {
     return <RegistroVisitaPublica />
