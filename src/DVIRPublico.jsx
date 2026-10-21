@@ -134,22 +134,19 @@ export default function DVIRPublico() {
   async function subirFoto(angulo, file) {
     setSubiendoFoto(angulo)
     try {
-      const reader = new FileReader()
-      const base64 = await new Promise((res, rej) => {
-        reader.onload = () => res(reader.result)
-        reader.onerror = rej
-        reader.readAsDataURL(file)
-      })
-      const resp = await fetch(`${API_BASE}/dvir-publico/upload`, {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', 'dvir_preset')
+      formData.append('folder', 'dvir')
+      const resp = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64 }),
+        body: formData,
       })
       const data = await resp.json()
-      if (data.url) {
-        setFotos(prev => ({ ...prev, [angulo]: data.url }))
+      if (data.secure_url) {
+        setFotos(prev => ({ ...prev, [angulo]: data.secure_url }))
       } else {
-        setError(data.error || 'Error al subir foto')
+        setError(data.error?.message || 'Error al subir foto')
       }
     } catch (e) {
       setError('Error al subir foto: ' + e.message)
