@@ -58,11 +58,32 @@ const PUNTOS_INSPECCION = [
   { cat: 'otros', nombre: 'Otro' },
 ]
 
+const PUNTOS_REMOLQUE = [
+  { cat: 'remolque_exterior', nombre: 'Frenos' },
+  { cat: 'remolque_exterior', nombre: 'Conectores de frenos' },
+  { cat: 'remolque_exterior', nombre: 'Dispositivos de acoplamiento' },
+  { cat: 'remolque_exterior', nombre: 'Puertas' },
+  { cat: 'remolque_exterior', nombre: 'Tren de aterrizaje' },
+  { cat: 'remolque_exterior', nombre: 'Luces' },
+  { cat: 'remolque_exterior', nombre: 'Reflectores' },
+  { cat: 'remolque_exterior', nombre: 'Techo' },
+  { cat: 'remolque_exterior', nombre: 'Suspensión' },
+  { cat: 'remolque_exterior', nombre: 'Neumáticos' },
+  { cat: 'remolque_exterior', nombre: 'Llantas de ruedas' },
+  { cat: 'remolque_exterior', nombre: 'Otros' },
+]
+
 const FOTOS_ANGULOS = [
   { key: 'conductor', label: 'Lado conductor' },
   { key: 'delantera', label: 'Parte delantera' },
   { key: 'pasajero', label: 'Lado pasajero' },
   { key: 'atras', label: 'Parte trasera' },
+]
+
+const FOTOS_REMOLQUE = [
+  { key: 'remolque_trasera', label: 'Parte trasera del remolque' },
+  { key: 'remolque_izquierda', label: 'Parte izquierda del remolque' },
+  { key: 'remolque_derecha', label: 'Parte derecha del remolque' },
 ]
 
 const labelStyle = {
@@ -80,9 +101,89 @@ const cardStyle = {
   marginBottom: '20px', border: '1px solid #e5e7eb',
 }
 
+function FotoGrid({ angulos, fotos, subiendoFoto, subirFoto }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: angulos.length <= 3 ? '1fr 1fr 1fr' : '1fr 1fr', gap: '12px' }}>
+      {angulos.map(({ key, label }) => (
+        <div key={key} style={{
+          border: '2px dashed ' + (fotos[key] ? '#059669' : '#d1d5db'),
+          borderRadius: '8px', textAlign: 'center', overflow: 'hidden',
+          background: fotos[key] ? '#f0fdf4' : '#f9fafb', position: 'relative',
+        }}>
+          {fotos[key] ? (
+            <div>
+              <img src={fotos[key]} alt={label} style={{ width: '100%', height: '100px', objectFit: 'cover' }} />
+              <p style={{ fontSize: '11px', color: '#059669', margin: '4px 0', fontWeight: '600' }}>&#10003; {label}</p>
+            </div>
+          ) : (
+            <label style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              height: '100px', cursor: subiendoFoto === key ? 'wait' : 'pointer', color: '#6b7280', fontSize: '12px',
+            }}>
+              {subiendoFoto === key ? 'Subiendo...' : (
+                <>
+                  <span style={{ fontSize: '24px', marginBottom: '4px' }}>&#128247;</span>
+                  {label}
+                </>
+              )}
+              <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                disabled={subiendoFoto === key}
+                onChange={e => { if (e.target.files[0]) subirFoto(key, e.target.files[0]) }} />
+            </label>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function InspeccionList({ puntos, offset, setPuntoEstado, setPuntoComentario, categorias }) {
+  return Object.entries(categorias).map(([catKey, catLabel]) => {
+    const items = puntos
+      .map((p, idx) => ({ ...p, idx: idx + offset }))
+      .filter(p => p.cat === catKey)
+    if (items.length === 0) return null
+    return (
+      <div key={catKey} style={{ ...cardStyle, padding: '16px 20px' }}>
+        <h3 style={{ fontSize: '14px', color: '#374151', margin: '0 0 12px', fontWeight: '600' }}>{catLabel}</h3>
+        {items.map(p => (
+          <div key={p.idx} style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '8px 0', borderBottom: '1px solid #f3f4f6',
+            flexWrap: 'wrap',
+          }}>
+            <span style={{ flex: 1, fontSize: '14px', color: '#111827', minWidth: '120px' }}>{p.nombre}</span>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button onClick={() => setPuntoEstado(p.idx, 'ok')} style={{
+                padding: '4px 12px', border: `1px solid ${p.estado === 'ok' ? '#059669' : '#d1d5db'}`,
+                borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+                background: p.estado === 'ok' ? '#ecfdf5' : '#fff',
+                color: p.estado === 'ok' ? '#059669' : '#6b7280', fontWeight: p.estado === 'ok' ? '600' : '400',
+              }}>OK</button>
+              <button onClick={() => setPuntoEstado(p.idx, 'defecto')} style={{
+                padding: '4px 12px', border: `1px solid ${p.estado === 'defecto' ? '#dc2626' : '#d1d5db'}`,
+                borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+                background: p.estado === 'defecto' ? '#fef2f2' : '#fff',
+                color: p.estado === 'defecto' ? '#dc2626' : '#6b7280', fontWeight: p.estado === 'defecto' ? '600' : '400',
+              }}>Defecto</button>
+            </div>
+            {p.estado === 'defecto' && (
+              <input style={{ ...inputStyle, marginTop: '4px', width: '100%', fontSize: '12px' }}
+                placeholder="Comentario del defecto..."
+                value={p.comentario} onChange={e => setPuntoComentario(p.idx, e.target.value)} />
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  })
+}
+
 export default function DVIRPublico() {
-  const [paso, setPaso] = useState(1)
+  const [tipoDVIR, setTipoDVIR] = useState(null)
+  const [paso, setPaso] = useState(0)
   const [vehiculos, setVehiculos] = useState([])
+  const [semirremolques, setSemirremolques] = useState([])
   const [loading, setLoading] = useState(true)
 
   // Paso 1
@@ -93,14 +194,19 @@ export default function DVIRPublico() {
   const [tipoInspeccion, setTipoInspeccion] = useState('')
   const [odometro, setOdometro] = useState('')
   const [ubicacion, setUbicacion] = useState('')
+  const [semirremolqueId, setSemirremolqueId] = useState(null)
+  const [semirremolqueNombre, setSemirremolqueNombre] = useState('')
 
   // Paso 2 — fotos
   const [fotos, setFotos] = useState({})
   const [subiendoFoto, setSubiendoFoto] = useState(null)
 
-  // Paso 3 — puntos
+  // Paso 3 — puntos vehículo + remolque
   const [puntos, setPuntos] = useState(
     PUNTOS_INSPECCION.map(p => ({ ...p, estado: '', comentario: '' }))
+  )
+  const [puntosRemolque, setPuntosRemolque] = useState(
+    PUNTOS_REMOLQUE.map(p => ({ ...p, estado: '', comentario: '' }))
   )
 
   // Paso 4 — estado final
@@ -111,10 +217,14 @@ export default function DVIRPublico() {
   const [error, setError] = useState('')
   const [exito, setExito] = useState(null)
 
+  const conRemolque = tipoDVIR === 'vehiculo_trailer'
+
   useEffect(() => {
-    fetch(`${API_BASE}/dvir-publico/vehiculos`)
-      .then(r => r.json())
-      .then(data => { setVehiculos(data); setLoading(false) })
+    Promise.all([
+      fetch(`${API_BASE}/dvir-publico/vehiculos`).then(r => r.json()),
+      fetch(`${API_BASE}/dvir-publico/semirremolques`).then(r => r.json()),
+    ])
+      .then(([v, s]) => { setVehiculos(v); setSemirremolques(s); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
@@ -128,6 +238,17 @@ export default function DVIRPublico() {
       setVehiculoId(null)
       setVehiculoNombre('')
       setMatricula('')
+    }
+  }
+
+  function seleccionarSemirremolque(sid) {
+    const s = semirremolques.find(x => x.SemirremolqueId === sid)
+    if (s) {
+      setSemirremolqueId(s.SemirremolqueId)
+      setSemirremolqueNombre(s.Nombre)
+    } else {
+      setSemirremolqueId(null)
+      setSemirremolqueNombre('')
     }
   }
 
@@ -156,10 +277,20 @@ export default function DVIRPublico() {
   }
 
   function setPuntoEstado(idx, estado) {
-    setPuntos(prev => prev.map((p, i) => i === idx ? { ...p, estado } : p))
+    if (idx < PUNTOS_INSPECCION.length) {
+      setPuntos(prev => prev.map((p, i) => i === idx ? { ...p, estado } : p))
+    } else {
+      const ri = idx - PUNTOS_INSPECCION.length
+      setPuntosRemolque(prev => prev.map((p, i) => i === ri ? { ...p, estado } : p))
+    }
   }
   function setPuntoComentario(idx, comentario) {
-    setPuntos(prev => prev.map((p, i) => i === idx ? { ...p, comentario } : p))
+    if (idx < PUNTOS_INSPECCION.length) {
+      setPuntos(prev => prev.map((p, i) => i === idx ? { ...p, comentario } : p))
+    } else {
+      const ri = idx - PUNTOS_INSPECCION.length
+      setPuntosRemolque(prev => prev.map((p, i) => i === ri ? { ...p, comentario } : p))
+    }
   }
 
   function obtenerUbicacion() {
@@ -174,12 +305,17 @@ export default function DVIRPublico() {
     if (!operadorNombre.trim()) return 'Ingresa tu nombre'
     if (!vehiculoId) return 'Selecciona un vehículo'
     if (!tipoInspeccion) return 'Selecciona el tipo de inspección'
+    if (conRemolque && !semirremolqueId) return 'Selecciona un semirremolque'
     return null
   }
 
   function validarPaso3() {
-    const sinRevisar = puntos.filter(p => p.estado === '').length
-    if (sinRevisar > 0) return `Faltan ${sinRevisar} punto(s) por revisar`
+    const sinRevisarV = puntos.filter(p => p.estado === '').length
+    if (sinRevisarV > 0) return `Faltan ${sinRevisarV} punto(s) del vehículo por revisar`
+    if (conRemolque) {
+      const sinRevisarR = puntosRemolque.filter(p => p.estado === '').length
+      if (sinRevisarR > 0) return `Faltan ${sinRevisarR} punto(s) del remolque por revisar`
+    }
     return null
   }
 
@@ -193,22 +329,30 @@ export default function DVIRPublico() {
     setEnviando(true)
     try {
       const fotosArr = Object.entries(fotos).map(([angulo, url]) => ({ angulo, url }))
-      const puntosArr = puntos.map(p => ({
+      const allPuntos = [...puntos]
+      if (conRemolque) allPuntos.push(...puntosRemolque)
+      const puntosArr = allPuntos.map(p => ({
         categoria: p.cat,
         nombre: p.nombre,
         estado: p.estado,
         comentario: p.comentario || null,
         fotoUrl: null,
       }))
+      const body = {
+        vehiculoId, vehiculoNombre, vin: null, ubicacion: ubicacion || null,
+        matricula: matricula || null, odometro: odometro ? parseFloat(odometro) : null,
+        tipoInspeccion, estadoSeguridad, operadorNombre: operadorNombre.trim(),
+        tipoDVIR: conRemolque ? 'vehiculo_trailer' : 'solo_vehiculo',
+        fotos: fotosArr, puntos: puntosArr,
+      }
+      if (conRemolque) {
+        body.semirremolqueId = semirremolqueId
+        body.semirremolqueNombre = semirremolqueNombre
+      }
       const resp = await fetch(`${API_BASE}/dvir-publico`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vehiculoId, vehiculoNombre, vin: null, ubicacion: ubicacion || null,
-          matricula: matricula || null, odometro: odometro ? parseFloat(odometro) : null,
-          tipoInspeccion, estadoSeguridad, operadorNombre: operadorNombre.trim(),
-          fotos: fotosArr, puntos: puntosArr,
-        }),
+        body: JSON.stringify(body),
       })
       const data = await resp.json()
       if (data.ok) {
@@ -224,7 +368,8 @@ export default function DVIRPublico() {
   }
 
   function resetear() {
-    setPaso(1)
+    setTipoDVIR(null)
+    setPaso(0)
     setOperadorNombre('')
     setVehiculoId(null)
     setVehiculoNombre('')
@@ -232,8 +377,11 @@ export default function DVIRPublico() {
     setTipoInspeccion('')
     setOdometro('')
     setUbicacion('')
+    setSemirremolqueId(null)
+    setSemirremolqueNombre('')
     setFotos({})
     setPuntos(PUNTOS_INSPECCION.map(p => ({ ...p, estado: '', comentario: '' })))
+    setPuntosRemolque(PUNTOS_REMOLQUE.map(p => ({ ...p, estado: '', comentario: '' })))
     setEstadoSeguridad('')
     setError('')
     setExito(null)
@@ -255,7 +403,9 @@ export default function DVIRPublico() {
           <h2 style={{ color: '#059669', marginBottom: '8px' }}>Inspección enviada</h2>
           <p style={{ color: '#6b7280', marginBottom: '8px' }}>DVIR #{exito.DVIRId}</p>
           <p style={{ color: '#374151', marginBottom: '24px' }}>
-            {vehiculoNombre}<br />
+            {vehiculoNombre}
+            {conRemolque && <><br /><span style={{ fontSize: '13px', color: '#6b7280' }}>+ {semirremolqueNombre}</span></>}
+            <br />
             <span style={{ color: '#6b7280', fontSize: '13px' }}>
               {tipoInspeccion === 'previo' ? 'Previo al viaje' : 'Posterior al viaje'} &mdash; {estadoSeguridad === 'seguro' ? 'Seguro' : 'No seguro'}
             </span>
@@ -269,8 +419,10 @@ export default function DVIRPublico() {
     )
   }
 
-  const defectos = puntos.filter(p => p.estado === 'defecto').length
-  const revisados = puntos.filter(p => p.estado !== '').length
+  const totalPuntos = conRemolque ? puntos.length + puntosRemolque.length : puntos.length
+  const defectos = puntos.filter(p => p.estado === 'defecto').length + (conRemolque ? puntosRemolque.filter(p => p.estado === 'defecto').length : 0)
+  const revisados = puntos.filter(p => p.estado !== '').length + (conRemolque ? puntosRemolque.filter(p => p.estado !== '').length : 0)
+  const totalPasos = 4
 
   return (
     <div style={{ minHeight: '100vh', background: '#f3f4f6' }}>
@@ -283,14 +435,16 @@ export default function DVIRPublico() {
       </div>
 
       {/* Progress */}
-      <div style={{ display: 'flex', maxWidth: '640px', margin: '0 auto' }}>
-        {[1, 2, 3, 4].map(p => (
-          <div key={p} style={{
-            flex: 1, height: '4px',
-            background: paso >= p ? '#2563eb' : '#e5e7eb',
-          }} />
-        ))}
-      </div>
+      {paso > 0 && (
+        <div style={{ display: 'flex', maxWidth: '640px', margin: '0 auto' }}>
+          {[1, 2, 3, 4].map(p => (
+            <div key={p} style={{
+              flex: 1, height: '4px',
+              background: paso >= p ? '#2563eb' : '#e5e7eb',
+            }} />
+          ))}
+        </div>
+      )}
 
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 16px' }}>
         {error && (
@@ -300,10 +454,37 @@ export default function DVIRPublico() {
           }}>{error}</div>
         )}
 
+        {/* PASO 0 — Tipo de DVIR */}
+        {paso === 0 && (
+          <>
+            <h2 style={{ fontSize: '17px', color: '#111827', marginBottom: '20px' }}>Selecciona el tipo de inspección</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                { val: 'solo_vehiculo', label: 'Solo vehículo', desc: 'Inspección estándar del vehículo' },
+                { val: 'vehiculo_trailer', label: 'Vehículo + semirremolque', desc: 'Inspección del vehículo y el semirremolque' },
+              ].map(opt => (
+                <button key={opt.val} onClick={() => { setTipoDVIR(opt.val); setPaso(1); setError('') }} style={{
+                  padding: '20px 24px', border: '2px solid #d1d5db', borderRadius: '12px',
+                  background: '#fff', cursor: 'pointer', textAlign: 'left',
+                  transition: 'border-color 0.15s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}
+                >
+                  <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827', display: 'block' }}>{opt.label}</span>
+                  <span style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px', display: 'block' }}>{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
         {/* PASO 1 — Datos generales */}
         {paso === 1 && (
           <>
-            <h2 style={{ fontSize: '17px', color: '#111827', marginBottom: '20px' }}>Paso 1 — Datos del vehículo</h2>
+            <h2 style={{ fontSize: '17px', color: '#111827', marginBottom: '20px' }}>
+              Paso 1 — Datos del vehículo{conRemolque ? ' y semirremolque' : ''}
+            </h2>
             <div style={cardStyle}>
               <label style={labelStyle}>Nombre del operador *</label>
               <input style={inputStyle} placeholder="Tu nombre completo"
@@ -315,6 +496,21 @@ export default function DVIRPublico() {
                 <option value="">— Seleccionar vehículo —</option>
                 {vehiculos.map(v => <option key={v.VehiculoId} value={v.VehiculoId}>{v.Nombre}</option>)}
               </select>
+
+              {conRemolque && (
+                <>
+                  <label style={{ ...labelStyle, marginTop: '18px' }}>Semirremolque *</label>
+                  <select style={inputStyle} value={semirremolqueId || ''}
+                    onChange={e => seleccionarSemirremolque(Number(e.target.value))}>
+                    <option value="">— Seleccionar semirremolque —</option>
+                    {semirremolques.map(s => (
+                      <option key={s.SemirremolqueId} value={s.SemirremolqueId}>
+                        {s.Nombre} — {s.Marca} ({s.Año || ''})
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
 
               <label style={{ ...labelStyle, marginTop: '18px' }}>Tipo de inspección *</label>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -347,14 +543,20 @@ export default function DVIRPublico() {
                 }} title="Obtener GPS">&#128205;</button>
               </div>
             </div>
-            <button onClick={() => {
-              const err = validarPaso1()
-              if (err) { setError(err); return }
-              setError(''); setPaso(2)
-            }} style={{
-              width: '100%', padding: '14px', background: '#2563eb', color: '#fff',
-              border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer',
-            }}>Siguiente</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { setPaso(0); setTipoDVIR(null); setError('') }} style={{
+                padding: '14px 20px', background: '#fff', color: '#374151', border: '1px solid #d1d5db',
+                borderRadius: '8px', fontSize: '15px', cursor: 'pointer',
+              }}>Atrás</button>
+              <button onClick={() => {
+                const err = validarPaso1()
+                if (err) { setError(err); return }
+                setError(''); setPaso(2)
+              }} style={{
+                flex: 1, padding: '14px', background: '#2563eb', color: '#fff',
+                border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+              }}>Siguiente</button>
+            </div>
           </>
         )}
 
@@ -365,44 +567,27 @@ export default function DVIRPublico() {
               <button onClick={() => setPaso(1)} style={{
                 background: 'none', border: 'none', color: '#2563eb', fontSize: '22px', cursor: 'pointer', padding: 0,
               }}>&lsaquo;</button>
-              <h2 style={{ fontSize: '17px', color: '#111827', margin: 0 }}>Paso 2 — Fotos del vehículo</h2>
+              <h2 style={{ fontSize: '17px', color: '#111827', margin: 0 }}>Paso 2 — Fotos</h2>
             </div>
+
             <div style={cardStyle}>
+              <h3 style={{ fontSize: '14px', color: '#374151', margin: '0 0 8px', fontWeight: '600' }}>Fotos del vehículo</h3>
               <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0 }}>
                 Toma una foto de cada ángulo del vehículo.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {FOTOS_ANGULOS.map(({ key, label }) => (
-                  <div key={key} style={{
-                    border: '2px dashed ' + (fotos[key] ? '#059669' : '#d1d5db'),
-                    borderRadius: '8px', textAlign: 'center', overflow: 'hidden',
-                    background: fotos[key] ? '#f0fdf4' : '#f9fafb', position: 'relative',
-                  }}>
-                    {fotos[key] ? (
-                      <div>
-                        <img src={fotos[key]} alt={label} style={{ width: '100%', height: '100px', objectFit: 'cover' }} />
-                        <p style={{ fontSize: '11px', color: '#059669', margin: '4px 0', fontWeight: '600' }}>&#10003; {label}</p>
-                      </div>
-                    ) : (
-                      <label style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        height: '100px', cursor: subiendoFoto === key ? 'wait' : 'pointer', color: '#6b7280', fontSize: '13px',
-                      }}>
-                        {subiendoFoto === key ? 'Subiendo...' : (
-                          <>
-                            <span style={{ fontSize: '24px', marginBottom: '4px' }}>&#128247;</span>
-                            {label}
-                          </>
-                        )}
-                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-                          disabled={subiendoFoto === key}
-                          onChange={e => { if (e.target.files[0]) subirFoto(key, e.target.files[0]) }} />
-                      </label>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <FotoGrid angulos={FOTOS_ANGULOS} fotos={fotos} subiendoFoto={subiendoFoto} subirFoto={subirFoto} />
             </div>
+
+            {conRemolque && (
+              <div style={cardStyle}>
+                <h3 style={{ fontSize: '14px', color: '#374151', margin: '0 0 8px', fontWeight: '600' }}>Fotos del semirremolque</h3>
+                <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0 }}>
+                  Toma una foto de cada ángulo del remolque.
+                </p>
+                <FotoGrid angulos={FOTOS_REMOLQUE} fotos={fotos} subiendoFoto={subiendoFoto} subirFoto={subirFoto} />
+              </div>
+            )}
+
             <button onClick={() => { setError(''); setPaso(3) }} style={{
               width: '100%', padding: '14px', background: '#2563eb', color: '#fff',
               border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer',
@@ -420,48 +605,31 @@ export default function DVIRPublico() {
               <h2 style={{ fontSize: '17px', color: '#111827', margin: 0 }}>Paso 3 — Inspección</h2>
             </div>
             <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '16px' }}>
-              {revisados}/{puntos.length} revisados &nbsp;|&nbsp; {defectos} defecto(s)
+              {revisados}/{totalPuntos} revisados &nbsp;|&nbsp; {defectos} defecto(s)
             </p>
 
-            {Object.entries(CATEGORIAS).map(([catKey, catLabel]) => {
-              const items = puntos
-                .map((p, idx) => ({ ...p, idx }))
-                .filter(p => p.cat === catKey)
-              if (items.length === 0) return null
-              return (
-                <div key={catKey} style={{ ...cardStyle, padding: '16px 20px' }}>
-                  <h3 style={{ fontSize: '14px', color: '#374151', margin: '0 0 12px', fontWeight: '600' }}>{catLabel}</h3>
-                  {items.map(p => (
-                    <div key={p.idx} style={{
-                      display: 'flex', alignItems: 'center', gap: '8px',
-                      padding: '8px 0', borderBottom: '1px solid #f3f4f6',
-                      flexWrap: 'wrap',
-                    }}>
-                      <span style={{ flex: 1, fontSize: '14px', color: '#111827', minWidth: '120px' }}>{p.nombre}</span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => setPuntoEstado(p.idx, 'ok')} style={{
-                          padding: '4px 12px', border: `1px solid ${p.estado === 'ok' ? '#059669' : '#d1d5db'}`,
-                          borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-                          background: p.estado === 'ok' ? '#ecfdf5' : '#fff',
-                          color: p.estado === 'ok' ? '#059669' : '#6b7280', fontWeight: p.estado === 'ok' ? '600' : '400',
-                        }}>OK</button>
-                        <button onClick={() => setPuntoEstado(p.idx, 'defecto')} style={{
-                          padding: '4px 12px', border: `1px solid ${p.estado === 'defecto' ? '#dc2626' : '#d1d5db'}`,
-                          borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-                          background: p.estado === 'defecto' ? '#fef2f2' : '#fff',
-                          color: p.estado === 'defecto' ? '#dc2626' : '#6b7280', fontWeight: p.estado === 'defecto' ? '600' : '400',
-                        }}>Defecto</button>
-                      </div>
-                      {p.estado === 'defecto' && (
-                        <input style={{ ...inputStyle, marginTop: '4px', width: '100%', fontSize: '12px' }}
-                          placeholder="Comentario del defecto..."
-                          value={p.comentario} onChange={e => setPuntoComentario(p.idx, e.target.value)} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )
-            })}
+            <h3 style={{ fontSize: '15px', color: '#111827', margin: '0 0 12px', fontWeight: '600' }}>
+              Inspeccionar vehículo ({puntos.filter(p => p.estado !== '').length}/{puntos.length})
+            </h3>
+            <InspeccionList
+              puntos={puntos} offset={0}
+              setPuntoEstado={setPuntoEstado} setPuntoComentario={setPuntoComentario}
+              categorias={CATEGORIAS}
+            />
+
+            {conRemolque && (
+              <>
+                <h3 style={{ fontSize: '15px', color: '#111827', margin: '24px 0 12px', fontWeight: '600' }}>
+                  Inspeccionar remolque ({puntosRemolque.filter(p => p.estado !== '').length}/{puntosRemolque.length})
+                </h3>
+                <InspeccionList
+                  puntos={puntosRemolque} offset={PUNTOS_INSPECCION.length}
+                  setPuntoEstado={setPuntoEstado} setPuntoComentario={setPuntoComentario}
+                  categorias={{ remolque_exterior: 'Exterior — Frente' }}
+                />
+              </>
+            )}
+
             <button onClick={() => {
               const err = validarPaso3()
               if (err) { setError(err); return }
@@ -484,7 +652,9 @@ export default function DVIRPublico() {
             </div>
             <div style={cardStyle}>
               <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0 }}>
-                <strong>{vehiculoNombre}</strong><br />
+                <strong>{vehiculoNombre}</strong>
+                {conRemolque && <><br />+ {semirremolqueNombre}</>}
+                <br />
                 {tipoInspeccion === 'previo' ? 'Previo al viaje' : 'Posterior al viaje'} &mdash; {defectos} defecto(s)
               </p>
               <label style={labelStyle}>Estado general del vehículo *</label>
