@@ -786,15 +786,10 @@ function App() {
                                   ? 'App Móvil > Formularios'
                                   : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
-  if (window.location.pathname === '/solicitud-vehiculo') {
-    return <SolicitudVehiculoPublica />
-  }
-  if (window.location.pathname === '/dvir') {
-    return <DVIRPublico />
-  }
-  if (window.location.pathname === '/registrar-visita') {
-    return <RegistroVisitaPublica />
-  }
+  // Rutas públicas (sin autenticación)
+  if (window.location.pathname === '/solicitud-vehiculo') return <SolicitudVehiculoPublica />
+  if (window.location.pathname === '/dvir') return <DVIRPublico />
+  if (window.location.pathname === '/registrar-visita') return <RegistroVisitaPublica />
 
   if (checkingAuth) {
     return (
