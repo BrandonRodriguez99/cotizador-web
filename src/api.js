@@ -638,6 +638,11 @@ async function uploadToCloudinary(base64, folder) {
 
 export function uploadFotoVehiculo(base64) { return uploadToCloudinary(base64, 'vehiculos') }
 
+export function getSemirremolques() { return fetchJson('seguridad/semirremolques', { headers: authHeaders() }) }
+export function createSemirremolque(data) { return fetchJson('seguridad/semirremolques', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateSemirremolque(id, data) { return fetchJson(`seguridad/semirremolques/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteSemirremolque(id) { return fetchJson(`seguridad/semirremolques/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+
 export function deleteVehiculo(id) { return fetchJson(`seguridad/vehiculos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function deleteExtintor(id) { return fetchJson(`seguridad/extintores/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function deleteVisita(id) { return fetchJson(`seguridad/visitas/${id}`, { method: 'DELETE', headers: authHeaders() }) }

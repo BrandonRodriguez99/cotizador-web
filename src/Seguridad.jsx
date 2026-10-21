@@ -4,6 +4,7 @@ import AsistenciaGeneracion from './AsistenciaGeneracion'
 import {
   getDashboardSeguridad,
   getVehiculos, createVehiculo, updateVehiculo, deleteVehiculo,
+  getSemirremolques, createSemirremolque, updateSemirremolque, deleteSemirremolque,
   getExtintores, createExtintor, updateExtintor, deleteExtintor,
   getRevisionesExtintor, createRevisionExtintor,
   getPuntosRevision, createPuntoRevision, updatePuntoRevision,
@@ -377,6 +378,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [catVehiculos, setCatV]     = useState([])
   const [catExtintores, setCatE]    = useState([])
   const [catPuntos, setCatP]        = useState([])
+  const [catSemis, setCatS]         = useState([])
   const [catForm, setCatForm]       = useState({})
   const [catModal, setCatModal]     = useState(null)
   const [catEditing, setCatEditing] = useState(null)
@@ -384,8 +386,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [areaForm, setAreaForm]     = useState({ Nombre: '' })
 
   async function loadCatalogos() {
-    const [v, e, p] = await Promise.all([getVehiculos(), getExtintores(), getPuntosRevision()])
-    setCatV(v); setCatE(e); setCatP(p)
+    const [v, e, p, s] = await Promise.all([getVehiculos(), getExtintores(), getPuntosRevision(), getSemirremolques()])
+    setCatV(v); setCatE(e); setCatP(p); setCatS(s)
   }
   useEffect(() => { if (tab === 'catalogos') loadCatalogos() }, [tab])
 
@@ -402,6 +404,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
         catEditing ? await updateExtintor(catEditing.ExtintorId, catForm) : await createExtintor(catForm)
       } else if (catModal === 'punto') {
         catEditing ? await updatePuntoRevision(catEditing.PuntoRevisionId, catForm) : await createPuntoRevision(catForm)
+      } else if (catModal === 'semirremolque') {
+        catEditing ? await updateSemirremolque(catEditing.SemirremolqueId, catForm) : await createSemirremolque(catForm)
       }
       setCatModal(null); setCatEditing(null); setCatForm({})
       await loadCatalogos()
@@ -421,6 +425,12 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   async function eliminarCatVehiculo(id) {
     if (!window.confirm('¿Desactivar este vehículo del catálogo?')) return
     try { await deleteVehiculo(id); await loadCatalogos() }
+    catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function eliminarCatSemirremolque(id) {
+    if (!window.confirm('¿Desactivar este semirremolque del catálogo?')) return
+    try { await deleteSemirremolque(id); await loadCatalogos() }
     catch (e) { alert('Error: ' + e.message) }
   }
 
@@ -1289,7 +1299,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
           <div>
             <h2 style={{ margin: '0 0 16px' }}>Catálogos de Seguridad</h2>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-              {[{ id: 'vehiculos', label: 'Vehículos' }, { id: 'extintores', label: 'Extintores' }, { id: 'puntos', label: 'Puntos / Áreas' }].map(t => (
+              {[{ id: 'vehiculos', label: 'Vehículos' }, { id: 'semirremolques', label: 'Semirremolques' }, { id: 'extintores', label: 'Extintores' }, { id: 'puntos', label: 'Puntos / Áreas' }].map(t => (
                 <button key={t.id} type="button" onClick={() => setCatTab(t.id)}
                   className={catTab === t.id ? 'primary-button' : 'ghost-button'}
                   style={{ padding: '6px 16px' }}>{t.label}</button>
@@ -1316,6 +1326,36 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('vehiculo', v)}>Editar</button>
                               <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => eliminarCatVehiculo(v.VehiculoId)}>Desactivar</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* Sub-tab Semirremolques */}
+            {catTab === 'semirremolques' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <h3 style={{ margin: 0 }}>Semirremolques</h3>
+                  <button className="ghost-button" onClick={() => openCat('semirremolque')}>+ Nuevo</button>
+                </div>
+                <div className="table-wrap">
+                  <table className="participants-table">
+                    <thead><tr><th>Nombre</th><th>Empresa</th><th>Marca</th><th>Año</th><th>Activo</th><th>Acc.</th></tr></thead>
+                    <tbody>
+                      {catSemis.map(s => (
+                        <tr key={s.SemirremolqueId}>
+                          <td>{s.Nombre}</td><td>{s.Empresa || '-'}</td><td>{s.Marca || '-'}</td>
+                          <td>{s.Año || '-'}</td>
+                          <td>{s.Activo ? '✓' : '✗'}</td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px' }} onClick={() => openCat('semirremolque', s)}>Editar</button>
+                              <button className="ghost-button" style={{ padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => eliminarCatSemirremolque(s.SemirremolqueId)}>Desactivar</button>
                             </div>
                           </td>
                         </tr>
@@ -1392,7 +1432,7 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
             {catModal && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '440px' }}>
-                  <h3 style={{ margin: '0 0 16px' }}>{catEditing ? 'Editar' : 'Nuevo'} {catModal === 'vehiculo' ? 'Vehículo' : catModal === 'extintor' ? 'Extintor' : 'Punto de Revisión'}</h3>
+                  <h3 style={{ margin: '0 0 16px' }}>{catEditing ? 'Editar' : 'Nuevo'} {catModal === 'vehiculo' ? 'Vehículo' : catModal === 'extintor' ? 'Extintor' : catModal === 'semirremolque' ? 'Semirremolque' : 'Punto de Revisión'}</h3>
 
                   {catModal === 'vehiculo' && (
                     <>
@@ -1427,6 +1467,25 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                         <input type="date" className="form-control" value={catForm.FechaVencimiento ? String(catForm.FechaVencimiento).substring(0, 10) : ''}
                           onChange={e => setCatForm(p => ({ ...p, FechaVencimiento: e.target.value }))} />
                       </div>
+                    </>
+                  )}
+
+                  {catModal === 'semirremolque' && (
+                    <>
+                      {[{ l: 'Nombre *', f: 'Nombre' }, { l: 'Empresa', f: 'Empresa' }, { l: 'Marca', f: 'Marca' }, { l: 'Año', f: 'Año', t: 'number' }].map(i => (
+                        <div key={i.f} style={{ marginBottom: '10px' }}>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>{i.l}</label>
+                          <input type={i.t || 'text'} className="form-control" value={catForm[i.f] || ''}
+                            onChange={e => setCatForm(p => ({ ...p, [i.f]: e.target.value }))} />
+                        </div>
+                      ))}
+                      {catEditing && (
+                        <label style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={catForm.Activo !== false}
+                            onChange={e => setCatForm(p => ({ ...p, Activo: e.target.checked }))} />
+                          <span style={{ fontSize: '13px' }}>Activo</span>
+                        </label>
+                      )}
                     </>
                   )}
 
