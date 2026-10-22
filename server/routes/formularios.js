@@ -154,6 +154,67 @@ async function saveSecciones(pool, formularioId, secciones) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// PUBLIC ENDPOINTS (must be BEFORE /:id to avoid being caught by it)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/formularios/publico/lista — list active forms (public)
+router.get('/publico/lista', async (req, res) => {
+  const pool = await requirePool(res); if (!pool) return;
+  await ensureTables(pool);
+  const result = await pool.request().query(
+    "SELECT FormularioId, Nombre, Descripcion, Slug FROM Formularios WHERE Activo=1 ORDER BY Nombre"
+  );
+  res.json(result.recordset);
+});
+
+// GET /api/formularios/publico/:slug — get form by slug (public)
+router.get('/publico/:slug', async (req, res) => {
+  const pool = await requirePool(res); if (!pool) return;
+  await ensureTables(pool);
+
+  const formRes = await pool.request()
+    .input('slug', sql.NVarChar(200), req.params.slug)
+    .query('SELECT FormularioId FROM Formularios WHERE Slug=@slug AND Activo=1');
+
+  if (!formRes.recordset[0]) return res.status(404).json({ error: 'Formulario no encontrado o inactivo' });
+
+  const form = await loadFullForm(pool, formRes.recordset[0].FormularioId);
+  res.json(form);
+});
+
+// POST /api/formularios/publico/:slug/responder — submit response (public)
+router.post('/publico/:slug/responder', async (req, res) => {
+  const pool = await requirePool(res); if (!pool) return;
+  await ensureTables(pool);
+
+  const formRes = await pool.request()
+    .input('slug', sql.NVarChar(200), req.params.slug)
+    .query('SELECT FormularioId FROM Formularios WHERE Slug=@slug AND Activo=1');
+
+  if (!formRes.recordset[0]) return res.status(404).json({ error: 'Formulario no encontrado o inactivo' });
+
+  const formularioId = formRes.recordset[0].FormularioId;
+  const { nombreUsuario, valores } = req.body;
+
+  const respIns = await pool.request()
+    .input('fid', sql.Int, formularioId)
+    .input('nombre', sql.NVarChar(400), nombreUsuario || 'Anónimo')
+    .query('INSERT INTO FormularioRespuestas (FormularioId,NombreUsuario) OUTPUT INSERTED.RespuestaId VALUES (@fid,@nombre)');
+
+  const respuestaId = respIns.recordset[0].RespuestaId;
+
+  for (const v of (valores || [])) {
+    await pool.request()
+      .input('rid', sql.Int, respuestaId)
+      .input('pid', sql.Int, v.preguntaId)
+      .input('valor', sql.NVarChar(sql.MAX), typeof v.valor === 'string' ? v.valor : JSON.stringify(v.valor))
+      .query('INSERT INTO FormularioRespuestaValores (RespuestaId,PreguntaId,Valor) VALUES (@rid,@pid,@valor)');
+  }
+
+  res.status(201).json({ ok: true, respuestaId });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // AUTHENTICATED ENDPOINTS
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -266,67 +327,6 @@ router.get('/:id/respuestas', autenticar, async (req, res) => {
   }));
 
   res.json(data);
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
-// PUBLIC ENDPOINTS (no auth)
-// ══════════════════════════════════════════════════════════════════════════════
-
-// GET /api/formularios/publico/lista — list active forms (public)
-router.get('/publico/lista', async (req, res) => {
-  const pool = await requirePool(res); if (!pool) return;
-  await ensureTables(pool);
-  const result = await pool.request().query(
-    "SELECT FormularioId, Nombre, Descripcion, Slug FROM Formularios WHERE Activo=1 ORDER BY Nombre"
-  );
-  res.json(result.recordset);
-});
-
-// GET /api/formularios-publico/:slug — get form by slug (public)
-router.get('/publico/:slug', async (req, res) => {
-  const pool = await requirePool(res); if (!pool) return;
-  await ensureTables(pool);
-
-  const formRes = await pool.request()
-    .input('slug', sql.NVarChar(200), req.params.slug)
-    .query('SELECT FormularioId FROM Formularios WHERE Slug=@slug AND Activo=1');
-
-  if (!formRes.recordset[0]) return res.status(404).json({ error: 'Formulario no encontrado o inactivo' });
-
-  const form = await loadFullForm(pool, formRes.recordset[0].FormularioId);
-  res.json(form);
-});
-
-// POST /api/formularios-publico/:slug/responder — submit response (public)
-router.post('/publico/:slug/responder', async (req, res) => {
-  const pool = await requirePool(res); if (!pool) return;
-  await ensureTables(pool);
-
-  const formRes = await pool.request()
-    .input('slug', sql.NVarChar(200), req.params.slug)
-    .query('SELECT FormularioId FROM Formularios WHERE Slug=@slug AND Activo=1');
-
-  if (!formRes.recordset[0]) return res.status(404).json({ error: 'Formulario no encontrado o inactivo' });
-
-  const formularioId = formRes.recordset[0].FormularioId;
-  const { nombreUsuario, valores } = req.body;
-
-  const respIns = await pool.request()
-    .input('fid', sql.Int, formularioId)
-    .input('nombre', sql.NVarChar(400), nombreUsuario || 'Anónimo')
-    .query('INSERT INTO FormularioRespuestas (FormularioId,NombreUsuario) OUTPUT INSERTED.RespuestaId VALUES (@fid,@nombre)');
-
-  const respuestaId = respIns.recordset[0].RespuestaId;
-
-  for (const v of (valores || [])) {
-    await pool.request()
-      .input('rid', sql.Int, respuestaId)
-      .input('pid', sql.Int, v.preguntaId)
-      .input('valor', sql.NVarChar(sql.MAX), typeof v.valor === 'string' ? v.valor : JSON.stringify(v.valor))
-      .query('INSERT INTO FormularioRespuestaValores (RespuestaId,PreguntaId,Valor) VALUES (@rid,@pid,@valor)');
-  }
-
-  res.status(201).json({ ok: true, respuestaId });
 });
 
 export default router;

@@ -95,7 +95,9 @@ export default function CargaDieselPublica() {
   if (enviado) return (
     <div style={wrap}>
       <div style={{ ...card, padding: 40, textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>¡Carga registrada!</div>
         <p style={{ color: '#6b7280', fontSize: 14 }}>La carga de combustible se registró exitosamente.</p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 20 }}>
@@ -189,7 +191,7 @@ export default function CargaDieselPublica() {
               padding: '10px 16px', borderRadius: 8, border: '1px solid #d1d5db',
               background: '#f9fafb', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151',
             }}>
-              {uploading ? 'Subiendo...' : fotoUrl ? '📷 Cambiar foto' : '📷 Tomar foto'}
+              {uploading ? 'Subiendo...' : (<><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 4 }}><path d="M3 7c0-1.1.9-2 2-2h2.2l1.4-2h6.8l1.4 2H19c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7z"/><circle cx="12" cy="12.5" r="4"/></svg>{fotoUrl ? 'Cambiar foto' : 'Tomar foto'}</>)}
             </button>
           </div>
 

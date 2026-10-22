@@ -99,7 +99,9 @@ export default function FormularioPublico() {
   if (error) return (
     <div style={wrap}>
       <div style={{ ...card, padding: 40, textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>😕</div>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
+          <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
         <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>{error}</div>
         <a href="/portal" style={{ color: '#3b82f6', fontSize: 14 }}>← Volver al portal</a>
       </div>
@@ -108,7 +110,9 @@ export default function FormularioPublico() {
   if (enviado) return (
     <div style={wrap}>
       <div style={{ ...card, padding: 40, textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>¡Respuesta enviada!</div>
         <p style={{ color: '#6b7280', fontSize: 14 }}>Tu respuesta ha sido registrada exitosamente.</p>
         <a href="/portal" style={{ color: '#3b82f6', fontSize: 14 }}>← Volver al portal</a>
@@ -254,7 +258,7 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
           padding: '10px 16px', borderRadius: 8, border: '1px solid #d1d5db',
           background: '#f9fafb', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151',
         }}>
-          {uploading ? 'Subiendo...' : value ? 'Cambiar foto' : '📷 Tomar foto'}
+          {uploading ? 'Subiendo...' : value ? 'Cambiar foto' : (<><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 4 }}><path d="M3 7c0-1.1.9-2 2-2h2.2l1.4-2h6.8l1.4 2H19c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7z"/><circle cx="12" cy="12.5" r="4"/></svg>Tomar foto</>)}
         </button>
       </div>
     )

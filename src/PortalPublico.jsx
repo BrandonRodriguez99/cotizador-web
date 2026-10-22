@@ -1,3 +1,18 @@
+const ICONS = {
+  dvir: <><path d="M9 11l3 3L22 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></>,
+  formularios: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></>,
+  diesel: <><path d="M3 22V8l9-6 9 6v14"/><path d="M12 2v20"/><path d="M3 12h18"/></>,
+}
+
+function Icon({ name, color, size = 28 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      {ICONS[name]}
+    </svg>
+  )
+}
+
 export default function PortalPublico() {
   const cards = [
     {
@@ -5,27 +20,24 @@ export default function PortalPublico() {
       subtitle: 'DVIR',
       desc: 'Realiza la inspección diaria de tu vehículo antes de operar.',
       href: '/dvir',
-      icon: '🚛',
+      iconName: 'dvir',
       color: '#3b82f6',
-      bg: '#eff6ff',
     },
     {
       title: 'Formularios',
       subtitle: 'Encuestas y checklists',
       desc: 'Completa formularios asignados por tu supervisor.',
       href: '/formularios-publico',
-      icon: '📋',
+      iconName: 'formularios',
       color: '#8b5cf6',
-      bg: '#f5f3ff',
     },
     {
       title: 'Carga de Diésel',
       subtitle: 'Control de combustible',
       desc: 'Registra la carga de combustible de tu unidad.',
       href: '/carga-diesel',
-      icon: '⛽',
+      iconName: 'diesel',
       color: '#f59e0b',
-      bg: '#fffbeb',
     },
   ]
 
@@ -73,10 +85,11 @@ export default function PortalPublico() {
           >
             <div style={{
               width: 56, height: 56, borderRadius: 14,
-              background: c.bg, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 28, flexShrink: 0,
+              background: '#0f172a', border: '1px solid #334155',
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'center', flexShrink: 0,
             }}>
-              {c.icon}
+              <Icon name={c.iconName} color={c.color} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{
