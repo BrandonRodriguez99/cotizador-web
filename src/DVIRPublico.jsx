@@ -137,7 +137,7 @@ function FotoGrid({ angulos, fotos, subiendoFoto, subirFoto }) {
   )
 }
 
-function InspeccionList({ puntos, offset, setPuntoEstado, setPuntoComentario, categorias }) {
+function InspeccionList({ puntos, offset, setPuntoEstado, setPuntoComentario, subirFotoDefecto, subiendoFotoDefecto, categorias }) {
   return Object.entries(categorias).map(([catKey, catLabel]) => {
     const items = puntos
       .map((p, idx) => ({ ...p, idx: idx + offset }))
@@ -168,9 +168,28 @@ function InspeccionList({ puntos, offset, setPuntoEstado, setPuntoComentario, ca
               }}>Defecto</button>
             </div>
             {p.estado === 'defecto' && (
-              <input style={{ ...inputStyle, marginTop: '4px', width: '100%', fontSize: '12px' }}
-                placeholder="Comentario del defecto..."
-                value={p.comentario} onChange={e => setPuntoComentario(p.idx, e.target.value)} />
+              <div style={{ width: '100%', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <input style={{ ...inputStyle, width: '100%', fontSize: '12px' }}
+                  placeholder="Comentario del defecto..."
+                  value={p.comentario} onChange={e => setPuntoComentario(p.idx, e.target.value)} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{
+                    padding: '4px 12px', border: '1px solid #d1d5db', borderRadius: '6px',
+                    fontSize: '12px', cursor: 'pointer', background: '#fff', color: '#6b7280',
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  }}>
+                    <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                      onChange={e => { if (e.target.files[0]) subirFotoDefecto(p.idx, e.target.files[0]) }} />
+                    {subiendoFotoDefecto === p.idx ? 'Subiendo...' : p.fotoUrl ? 'Cambiar foto' : 'Foto del defecto'}
+                  </label>
+                  {p.fotoUrl && (
+                    <img src={p.fotoUrl} alt="defecto" style={{
+                      height: '40px', width: '40px', objectFit: 'cover', borderRadius: '6px',
+                      border: '1px solid #fecaca',
+                    }} />
+                  )}
+                </div>
+              </div>
             )}
           </div>
         ))}
@@ -203,11 +222,12 @@ export default function DVIRPublico() {
 
   // Paso 3 — puntos vehículo + remolque
   const [puntos, setPuntos] = useState(
-    PUNTOS_INSPECCION.map(p => ({ ...p, estado: '', comentario: '' }))
+    PUNTOS_INSPECCION.map(p => ({ ...p, estado: '', comentario: '', fotoUrl: null }))
   )
   const [puntosRemolque, setPuntosRemolque] = useState(
-    PUNTOS_REMOLQUE.map(p => ({ ...p, estado: '', comentario: '' }))
+    PUNTOS_REMOLQUE.map(p => ({ ...p, estado: '', comentario: '', fotoUrl: null }))
   )
+  const [subiendoFotoDefecto, setSubiendoFotoDefecto] = useState(null)
 
   // Paso 4 — estado final
   const [estadoSeguridad, setEstadoSeguridad] = useState('')
@@ -293,6 +313,34 @@ export default function DVIRPublico() {
     }
   }
 
+  async function subirFotoDefecto(idx, file) {
+    setSubiendoFotoDefecto(idx)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', 'dvir_preset')
+      formData.append('folder', 'dvir')
+      const resp = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', {
+        method: 'POST', body: formData,
+      })
+      const data = await resp.json()
+      if (data.secure_url) {
+        if (idx < PUNTOS_INSPECCION.length) {
+          setPuntos(prev => prev.map((p, i) => i === idx ? { ...p, fotoUrl: data.secure_url } : p))
+        } else {
+          const ri = idx - PUNTOS_INSPECCION.length
+          setPuntosRemolque(prev => prev.map((p, i) => i === ri ? { ...p, fotoUrl: data.secure_url } : p))
+        }
+      } else {
+        setError(data.error?.message || 'Error al subir foto')
+      }
+    } catch (e) {
+      setError('Error al subir foto: ' + e.message)
+    } finally {
+      setSubiendoFotoDefecto(null)
+    }
+  }
+
   function obtenerUbicacion() {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
@@ -336,7 +384,7 @@ export default function DVIRPublico() {
         nombre: p.nombre,
         estado: p.estado,
         comentario: p.comentario || null,
-        fotoUrl: null,
+        fotoUrl: p.fotoUrl || null,
       }))
       const body = {
         vehiculoId, vehiculoNombre, vin: null, ubicacion: ubicacion || null,
@@ -380,8 +428,8 @@ export default function DVIRPublico() {
     setSemirremolqueId(null)
     setSemirremolqueNombre('')
     setFotos({})
-    setPuntos(PUNTOS_INSPECCION.map(p => ({ ...p, estado: '', comentario: '' })))
-    setPuntosRemolque(PUNTOS_REMOLQUE.map(p => ({ ...p, estado: '', comentario: '' })))
+    setPuntos(PUNTOS_INSPECCION.map(p => ({ ...p, estado: '', comentario: '', fotoUrl: null })))
+    setPuntosRemolque(PUNTOS_REMOLQUE.map(p => ({ ...p, estado: '', comentario: '', fotoUrl: null })))
     setEstadoSeguridad('')
     setError('')
     setExito(null)
@@ -614,6 +662,7 @@ export default function DVIRPublico() {
             <InspeccionList
               puntos={puntos} offset={0}
               setPuntoEstado={setPuntoEstado} setPuntoComentario={setPuntoComentario}
+              subirFotoDefecto={subirFotoDefecto} subiendoFotoDefecto={subiendoFotoDefecto}
               categorias={CATEGORIAS}
             />
 
@@ -625,6 +674,7 @@ export default function DVIRPublico() {
                 <InspeccionList
                   puntos={puntosRemolque} offset={PUNTOS_INSPECCION.length}
                   setPuntoEstado={setPuntoEstado} setPuntoComentario={setPuntoComentario}
+                  subirFotoDefecto={subirFotoDefecto} subiendoFotoDefecto={subiendoFotoDefecto}
                   categorias={{ remolque_exterior: 'Exterior — Frente' }}
                 />
               </>
