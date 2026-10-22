@@ -46,6 +46,10 @@ import DVIRPublico from './DVIRPublico'
 import RegistroVisitaPublica from './RegistroVisitaPublica'
 import PermisosPanel from './PermisosPanel'
 import Formularios from './Formularios'
+import PortalPublico from './PortalPublico'
+import FormularioPublico from './FormularioPublico'
+import FormulariosPublico from './FormulariosPublico'
+import CargaDieselPublica from './CargaDieselPublica'
 
 const NAV_ICONS = {
   dashboard:            <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
@@ -787,9 +791,13 @@ function App() {
                                   : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   // Rutas públicas (sin autenticación)
+  if (window.location.pathname === '/portal') return <PortalPublico />
   if (window.location.pathname === '/solicitud-vehiculo') return <SolicitudVehiculoPublica />
   if (window.location.pathname === '/dvir') return <DVIRPublico />
   if (window.location.pathname === '/registrar-visita') return <RegistroVisitaPublica />
+  if (window.location.pathname === '/formularios-publico') return <FormulariosPublico />
+  if (window.location.pathname.startsWith('/formulario/')) return <FormularioPublico />
+  if (window.location.pathname === '/carga-diesel') return <CargaDieselPublica />
 
   if (checkingAuth) {
     return (

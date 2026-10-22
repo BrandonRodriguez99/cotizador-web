@@ -594,6 +594,13 @@ export default function Formularios({ usuario }) {
                   style={{ fontSize: 11, padding: '3px 8px', borderRadius: 5, border: '1px solid #fca5a5', background: '#fff', cursor: 'pointer', color: '#dc2626' }}>
                   Eliminar
                 </button>
+                {f.Slug && (
+                  <button type="button"
+                    onClick={e => { e.stopPropagation(); const url = `${window.location.origin}/formulario/${f.Slug}`; navigator.clipboard.writeText(url).then(() => alert('Enlace copiado: ' + url)).catch(() => prompt('Copia este enlace:', url)) }}
+                    style={{ fontSize: 11, padding: '3px 8px', borderRadius: 5, border: '1px solid #93c5fd', background: '#eff6ff', cursor: 'pointer', color: '#1d4ed8' }}>
+                    Compartir enlace
+                  </button>
+                )}
               </div>
             )}
           </div>
