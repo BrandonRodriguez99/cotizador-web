@@ -11,10 +11,15 @@ const CATEGORIAS = {
   interior_cabina:    'Interior – Cabina del conductor',
   interior_pasajeros: 'Interior – Zona de pasajeros',
   otros:              'Otros',
+  remolque_exterior:  'Semirremolque – Exterior',
 }
 
-const ANGULOS = ['conductor', 'delantera', 'pasajero', 'atras']
-const ANGULO_LABEL = { conductor: 'Lado del conductor', delantera: 'Parte delantera', pasajero: 'Lado del pasajero', atras: 'Atrás' }
+const ANGULOS_VEHICULO = ['conductor', 'delantera', 'pasajero', 'atras']
+const ANGULOS_REMOLQUE = ['remolque_trasera', 'remolque_izquierda', 'remolque_derecha']
+const ANGULO_LABEL = {
+  conductor: 'Lado del conductor', delantera: 'Parte delantera', pasajero: 'Lado del pasajero', atras: 'Atrás',
+  remolque_trasera: 'Trasera del remolque', remolque_izquierda: 'Izquierda del remolque', remolque_derecha: 'Derecha del remolque',
+}
 
 function fmt(dt) {
   if (!dt) return '—'
@@ -168,14 +173,12 @@ function DVIRDetallePanel({ id, onClose, onResolucionCambiada }) {
                 </div>
               </div>
 
-              {/* Fotos walkaround */}
-              {(data.fotos || []).length > 0 && (
-                <div style={{ marginBottom: '22px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
-                    Inspección walkaround
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                    {ANGULOS.map(ang => {
+              {/* Fotos de inspección */}
+              {(data.fotos || []).length > 0 && (() => {
+                const fotosRemolque = (data.fotos || []).filter(f => f.Angulo && f.Angulo.startsWith('remolque_'))
+                const renderFotoGrid = (angulos, cols) => (
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '8px' }}>
+                    {angulos.map(ang => {
                       const foto = data.fotos.find(f => f.Angulo === ang)
                       return (
                         <div key={ang} style={{ textAlign: 'center' }}>
@@ -193,8 +196,24 @@ function DVIRDetallePanel({ id, onClose, onResolucionCambiada }) {
                       )
                     })}
                   </div>
-                </div>
-              )}
+                )
+                return (
+                  <div style={{ marginBottom: '22px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
+                      Inspección{fotosRemolque.length > 0 ? ' — Vehículo' : ''}
+                    </div>
+                    {renderFotoGrid(ANGULOS_VEHICULO, 4)}
+                    {fotosRemolque.length > 0 && (
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
+                          Inspección — Semirremolque
+                        </div>
+                        {renderFotoGrid(ANGULOS_REMOLQUE, 3)}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Defectos con seguimiento de resolución */}
               {data.Defectos > 0 && (
@@ -270,12 +289,24 @@ function DVIRDetallePanel({ id, onClose, onResolucionCambiada }) {
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
                   Todos los puntos ({(data.puntos || []).length})
                 </div>
-                {Object.entries(CATEGORIAS).map(([key, label]) => {
-                  const items = porCategoria[key] || []
-                  if (!items.length) return null
-                  const defCount = items.filter(p => p.Estado === 'defecto').length
-                  return (
-                    <div key={key} style={{ marginBottom: '14px' }}>
+                {(() => {
+                  const hasRemolque = (porCategoria['remolque_exterior'] || []).length > 0
+                  let addedRemolqueDivider = false
+                  return Object.entries(CATEGORIAS).map(([key, label]) => {
+                    const items = porCategoria[key] || []
+                    if (!items.length) return null
+                    const defCount = items.filter(p => p.Estado === 'defecto').length
+                    const showRemolqueDivider = hasRemolque && key.startsWith('remolque_') && !addedRemolqueDivider
+                    if (showRemolqueDivider) addedRemolqueDivider = true
+                    return (
+                      <div key={key}>
+                        {hasRemolque && key === 'exterior_frente' && (
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', paddingBottom: '4px', borderBottom: '2px solid #2563eb' }}>Vehículo</div>
+                        )}
+                        {showRemolqueDivider && (
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '18px', marginBottom: '10px', paddingBottom: '4px', borderBottom: '2px solid #2563eb' }}>Semirremolque</div>
+                        )}
+                        <div style={{ marginBottom: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                         <span style={{ fontWeight: 600, fontSize: '12px', color: '#6b7280' }}>{label}</span>
                         {defCount > 0 && <span style={{ background: '#fef2f2', color: '#b91c1c', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 600 }}>{defCount} defecto{defCount > 1 ? 's' : ''}</span>}
@@ -294,8 +325,10 @@ function DVIRDetallePanel({ id, onClose, onResolucionCambiada }) {
                         ))}
                       </div>
                     </div>
-                  )
-                })}
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </>
           )}
