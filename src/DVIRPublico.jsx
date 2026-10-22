@@ -122,7 +122,11 @@ function FotoGrid({ angulos, fotos, subiendoFoto, subirFoto }) {
             }}>
               {subiendoFoto === key ? 'Subiendo...' : (
                 <>
-                  <span style={{ fontSize: '24px', marginBottom: '4px' }}>&#128247;</span>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '4px' }}>
+                    <path d="M3 7c0-1.1.9-2 2-2h2.2l1.4-2h6.8l1.4 2H19c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7z" stroke="#FF6D00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="12" cy="12.5" r="4" stroke="#FF6D00" strokeWidth="2"/>
+                    <circle cx="17.5" cy="8.5" r="0.5" fill="#FF6D00"/>
+                  </svg>
                   {label}
                 </>
               )}
@@ -180,6 +184,10 @@ function InspeccionList({ puntos, offset, setPuntoEstado, setPuntoComentario, su
                   }}>
                     <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
                       onChange={e => { if (e.target.files[0]) subirFotoDefecto(p.idx, e.target.files[0]) }} />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                      <path d="M3 7c0-1.1.9-2 2-2h2.2l1.4-2h6.8l1.4 2H19c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7z" stroke="#FF6D00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="12" cy="12.5" r="4" stroke="#FF6D00" strokeWidth="2"/>
+                    </svg>
                     {subiendoFotoDefecto === p.idx ? 'Subiendo...' : p.fotoUrl ? 'Cambiar foto' : 'Foto del defecto'}
                   </label>
                   {p.fotoUrl && (

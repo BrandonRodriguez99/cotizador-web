@@ -188,7 +188,7 @@ function DVIRDetallePanel({ id, onClose, onResolucionCambiada }) {
                               style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px', cursor: 'zoom-in', border: '1px solid #e5e7eb' }} />
                           ) : (
                             <div style={{ width: '100%', aspectRatio: '1', background: '#f3f4f6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d1d5db' }}>
-                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 7c0-1.1.9-2 2-2h2.2l1.4-2h6.8l1.4 2H19c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7z" stroke="#FF6D00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12.5" r="4" stroke="#FF6D00" strokeWidth="2"/></svg>
                             </div>
                           )}
                           <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>{ANGULO_LABEL[ang]}</div>
