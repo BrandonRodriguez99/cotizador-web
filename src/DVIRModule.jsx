@@ -317,10 +317,20 @@ function DVIRDetallePanel({ id, onClose, onResolucionCambiada }) {
                             padding: '7px 12px',
                             borderBottom: i < items.length - 1 ? '1px solid #f3f4f6' : 'none',
                             background: p.Estado === 'defecto' ? '#fff5f5' : 'transparent',
-                            display: 'flex', alignItems: 'center', gap: '8px',
                           }}>
-                            {p.Estado === 'ok' ? <IconOk /> : <IconDefecto />}
-                            <span style={{ fontSize: '12px', fontWeight: p.Estado === 'defecto' ? 600 : 400, color: p.Estado === 'defecto' ? '#b91c1c' : '#374151' }}>{p.Nombre}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {p.Estado === 'ok' ? <IconOk /> : <IconDefecto />}
+                              <span style={{ fontSize: '12px', fontWeight: p.Estado === 'defecto' ? 600 : 400, color: p.Estado === 'defecto' ? '#b91c1c' : '#374151' }}>{p.Nombre}</span>
+                            </div>
+                            {p.Estado === 'defecto' && (p.Comentario || p.FotoUrl) && (
+                              <div style={{ marginLeft: '28px', marginTop: '4px' }}>
+                                {p.Comentario && <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#6b7280', fontStyle: 'italic' }}>{p.Comentario}</p>}
+                                {p.FotoUrl && (
+                                  <img src={p.FotoUrl} alt="defecto" onClick={() => setFotoAmpliada(p.FotoUrl)}
+                                    style={{ height: '60px', borderRadius: '6px', objectFit: 'cover', cursor: 'zoom-in', border: '1px solid #fecaca' }} />
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
