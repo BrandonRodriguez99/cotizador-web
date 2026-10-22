@@ -84,6 +84,7 @@ async function ensureTables(pool) {
 }
 
 // ── Helper: load full form with sections + questions ──────────────────────────
+// Uses the original tables: FormSecciones, FormPreguntas, FormOpciones
 async function loadFullForm(pool, formularioId) {
   const formRes = await pool.request()
     .input('id', sql.Int, formularioId)
@@ -94,16 +95,26 @@ async function loadFullForm(pool, formularioId) {
 
   const secs = await pool.request()
     .input('fid', sql.Int, formularioId)
-    .query('SELECT * FROM FormularioSecciones WHERE FormularioId=@fid ORDER BY Orden');
+    .query('SELECT * FROM FormSecciones WHERE FormularioId=@fid ORDER BY Orden');
 
   const secIds = secs.recordset.map(s => s.SeccionId);
   let preguntas = [];
+  let opciones = [];
   if (secIds.length > 0) {
     const ph = secIds.map((_, i) => `@sid${i}`).join(',');
-    const req = pool.request();
-    secIds.forEach((id, i) => req.input(`sid${i}`, sql.Int, id));
-    const pregRes = await req.query(`SELECT * FROM FormularioPreguntas WHERE SeccionId IN (${ph}) ORDER BY Orden`);
+    const req1 = pool.request();
+    secIds.forEach((id, i) => req1.input(`sid${i}`, sql.Int, id));
+    const pregRes = await req1.query(`SELECT * FROM FormPreguntas WHERE SeccionId IN (${ph}) ORDER BY Orden`);
     preguntas = pregRes.recordset;
+
+    const pregIds = preguntas.map(p => p.PreguntaId);
+    if (pregIds.length > 0) {
+      const ph2 = pregIds.map((_, i) => `@pid${i}`).join(',');
+      const req2 = pool.request();
+      pregIds.forEach((id, i) => req2.input(`pid${i}`, sql.Int, id));
+      const opcRes = await req2.query(`SELECT * FROM FormOpciones WHERE PreguntaId IN (${ph2}) ORDER BY Orden`);
+      opciones = opcRes.recordset;
+    }
   }
 
   form.secciones = secs.recordset.map(s => ({
@@ -116,7 +127,7 @@ async function loadFullForm(pool, formularioId) {
         texto: p.Texto,
         tipoRespuesta: p.TipoRespuesta,
         requerida: !!p.Requerida,
-        opciones: p.Opciones ? JSON.parse(p.Opciones) : [],
+        opciones: opciones.filter(o => o.PreguntaId === p.PreguntaId).map(o => o.Texto),
       })),
   }));
 
@@ -124,11 +135,27 @@ async function loadFullForm(pool, formularioId) {
 }
 
 // ── Helper: save sections + questions (for create/update) ─────────────────────
+// Uses the original tables: FormSecciones, FormPreguntas, FormOpciones
 async function saveSecciones(pool, formularioId, secciones) {
-  // Delete old sections (cascade deletes questions)
+  // Get existing section IDs to delete their options and questions first
+  const existingSecs = await pool.request()
+    .input('fid', sql.Int, formularioId)
+    .query('SELECT SeccionId FROM FormSecciones WHERE FormularioId=@fid');
+
+  for (const sec of existingSecs.recordset) {
+    // Delete options for questions in this section
+    await pool.request()
+      .input('sid', sql.Int, sec.SeccionId)
+      .query('DELETE FROM FormOpciones WHERE PreguntaId IN (SELECT PreguntaId FROM FormPreguntas WHERE SeccionId=@sid)');
+    // Delete questions
+    await pool.request()
+      .input('sid', sql.Int, sec.SeccionId)
+      .query('DELETE FROM FormPreguntas WHERE SeccionId=@sid');
+  }
+  // Delete sections
   await pool.request()
     .input('fid', sql.Int, formularioId)
-    .query('DELETE FROM FormularioSecciones WHERE FormularioId=@fid');
+    .query('DELETE FROM FormSecciones WHERE FormularioId=@fid');
 
   for (let si = 0; si < (secciones || []).length; si++) {
     const sec = secciones[si];
@@ -136,19 +163,31 @@ async function saveSecciones(pool, formularioId, secciones) {
       .input('fid', sql.Int, formularioId)
       .input('titulo', sql.NVarChar(400), sec.titulo || `Sección ${si + 1}`)
       .input('orden', sql.Int, si)
-      .query('INSERT INTO FormularioSecciones (FormularioId,Titulo,Orden) OUTPUT INSERTED.SeccionId VALUES (@fid,@titulo,@orden)');
+      .query('INSERT INTO FormSecciones (FormularioId,Titulo,Orden) OUTPUT INSERTED.SeccionId VALUES (@fid,@titulo,@orden)');
     const seccionId = secRes.recordset[0].SeccionId;
 
     for (let pi = 0; pi < (sec.preguntas || []).length; pi++) {
       const preg = sec.preguntas[pi];
-      await pool.request()
+      const pregRes = await pool.request()
         .input('sid', sql.Int, seccionId)
         .input('texto', sql.NVarChar(1000), preg.texto || '')
         .input('tipo', sql.NVarChar(50), preg.tipoRespuesta || 'texto')
         .input('req', sql.Bit, preg.requerida ? 1 : 0)
         .input('orden', sql.Int, pi)
-        .input('opciones', sql.NVarChar(sql.MAX), preg.opciones?.length ? JSON.stringify(preg.opciones) : null)
-        .query('INSERT INTO FormularioPreguntas (SeccionId,Texto,TipoRespuesta,Requerida,Orden,Opciones) VALUES (@sid,@texto,@tipo,@req,@orden,@opciones)');
+        .query('INSERT INTO FormPreguntas (SeccionId,Texto,TipoRespuesta,Requerida,Orden) OUTPUT INSERTED.PreguntaId VALUES (@sid,@texto,@tipo,@req,@orden)');
+      const preguntaId = pregRes.recordset[0].PreguntaId;
+
+      // Save options (stored as separate rows, not JSON)
+      const opts = preg.opciones || [];
+      for (let oi = 0; oi < opts.length; oi++) {
+        const opTexto = typeof opts[oi] === 'string' ? opts[oi] : (opts[oi].texto || opts[oi].Texto || '');
+        if (!opTexto) continue;
+        await pool.request()
+          .input('pid', sql.Int, preguntaId)
+          .input('texto', sql.NVarChar(1000), opTexto)
+          .input('orden', sql.Int, oi)
+          .query('INSERT INTO FormOpciones (PreguntaId,Texto,Orden) VALUES (@pid,@texto,@orden)');
+      }
     }
   }
 }
@@ -212,7 +251,7 @@ router.post('/publico/:slug/responder', async (req, res) => {
   const respIns = await pool.request()
     .input('fid', sql.Int, formularioId)
     .input('nombre', sql.NVarChar(400), nombreUsuario || 'Anónimo')
-    .query('INSERT INTO FormularioRespuestas (FormularioId,NombreUsuario) OUTPUT INSERTED.RespuestaId VALUES (@fid,@nombre)');
+    .query('INSERT INTO FormRespuestas (FormularioId,OperadorNombre) OUTPUT INSERTED.RespuestaId VALUES (@fid,@nombre)');
 
   const respuestaId = respIns.recordset[0].RespuestaId;
 
@@ -221,7 +260,7 @@ router.post('/publico/:slug/responder', async (req, res) => {
       .input('rid', sql.Int, respuestaId)
       .input('pid', sql.Int, v.preguntaId)
       .input('valor', sql.NVarChar(sql.MAX), typeof v.valor === 'string' ? v.valor : JSON.stringify(v.valor))
-      .query('INSERT INTO FormularioRespuestaValores (RespuestaId,PreguntaId,Valor) VALUES (@rid,@pid,@valor)');
+      .query('INSERT INTO FormRespuestaValores (RespuestaId,PreguntaId,Valor) VALUES (@rid,@pid,@valor)');
   }
 
   res.status(201).json({ ok: true, respuestaId });
@@ -248,7 +287,7 @@ router.get('/', autenticar, async (req, res) => {
       .query('UPDATE Formularios SET Slug=@slug WHERE FormularioId=@id');
   }
 
-  const result = await pool.request().query('SELECT FormularioId, Nombre, Descripcion, Activo, Slug, CreatedAt FROM Formularios ORDER BY CreatedAt DESC');
+  const result = await pool.request().query('SELECT FormularioId, Nombre, Descripcion, Activo, Slug, FechaCreacion FROM Formularios ORDER BY FechaCreacion DESC');
   res.json(result.recordset);
 });
 
@@ -273,8 +312,7 @@ router.post('/', autenticar, async (req, res) => {
     .input('nombre', sql.NVarChar(400), nombre.trim())
     .input('desc', sql.NVarChar(1000), descripcion || null)
     .input('slug', sql.NVarChar(200), slug)
-    .input('creado', sql.NVarChar(200), req.usuario?.nombre || null)
-    .query('INSERT INTO Formularios (Nombre,Descripcion,Slug,CreadoPor) OUTPUT INSERTED.FormularioId VALUES (@nombre,@desc,@slug,@creado)');
+    .query('INSERT INTO Formularios (Nombre,Descripcion,Slug) OUTPUT INSERTED.FormularioId VALUES (@nombre,@desc,@slug)');
 
   const formId = ins.recordset[0].FormularioId;
   await saveSecciones(pool, formId, secciones);
@@ -335,7 +373,7 @@ router.get('/:id/respuestas', autenticar, async (req, res) => {
 
   const respuestas = await pool.request()
     .input('fid', sql.Int, formId)
-    .query('SELECT * FROM FormularioRespuestas WHERE FormularioId=@fid ORDER BY FechaEnvio DESC');
+    .query('SELECT * FROM FormRespuestas WHERE FormularioId=@fid ORDER BY FechaEnvio DESC');
 
   const rIds = respuestas.recordset.map(r => r.RespuestaId);
   let valores = [];
@@ -343,7 +381,7 @@ router.get('/:id/respuestas', autenticar, async (req, res) => {
     const ph = rIds.map((_, i) => `@rid${i}`).join(',');
     const req2 = pool.request();
     rIds.forEach((id, i) => req2.input(`rid${i}`, sql.Int, id));
-    const valRes = await req2.query(`SELECT * FROM FormularioRespuestaValores WHERE RespuestaId IN (${ph})`);
+    const valRes = await req2.query(`SELECT * FROM FormRespuestaValores WHERE RespuestaId IN (${ph})`);
     valores = valRes.recordset;
   }
 
