@@ -8,8 +8,8 @@ export default function FormulariosPublico() {
 
   useEffect(() => {
     fetch(`${API}/formularios/publico/lista`)
-      .then(r => r.json())
-      .then(setForms)
+      .then(r => { if (!r.ok) throw new Error('Error'); return r.json() })
+      .then(data => { if (Array.isArray(data)) setForms(data) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])

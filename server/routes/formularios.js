@@ -161,6 +161,19 @@ async function saveSecciones(pool, formularioId, secciones) {
 router.get('/publico/lista', async (req, res) => {
   const pool = await requirePool(res); if (!pool) return;
   await ensureTables(pool);
+
+  // Auto-generate slugs for forms that don't have one yet
+  const missing = await pool.request().query(
+    "SELECT FormularioId, Nombre FROM Formularios WHERE Slug IS NULL OR Slug=''"
+  );
+  for (const row of missing.recordset) {
+    const slug = slugify(row.Nombre || 'formulario');
+    await pool.request()
+      .input('id', sql.Int, row.FormularioId)
+      .input('slug', sql.NVarChar(200), slug)
+      .query('UPDATE Formularios SET Slug=@slug WHERE FormularioId=@id');
+  }
+
   const result = await pool.request().query(
     "SELECT FormularioId, Nombre, Descripcion, Slug FROM Formularios WHERE Activo=1 ORDER BY Nombre"
   );
@@ -222,6 +235,19 @@ router.post('/publico/:slug/responder', async (req, res) => {
 router.get('/', autenticar, async (req, res) => {
   const pool = await requirePool(res); if (!pool) return;
   await ensureTables(pool);
+
+  // Auto-generate slugs for forms that don't have one yet
+  const missing = await pool.request().query(
+    "SELECT FormularioId, Nombre FROM Formularios WHERE Slug IS NULL OR Slug=''"
+  );
+  for (const row of missing.recordset) {
+    const slug = slugify(row.Nombre || 'formulario');
+    await pool.request()
+      .input('id', sql.Int, row.FormularioId)
+      .input('slug', sql.NVarChar(200), slug)
+      .query('UPDATE Formularios SET Slug=@slug WHERE FormularioId=@id');
+  }
+
   const result = await pool.request().query('SELECT FormularioId, Nombre, Descripcion, Activo, Slug, CreatedAt FROM Formularios ORDER BY CreatedAt DESC');
   res.json(result.recordset);
 });
