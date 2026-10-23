@@ -18,6 +18,31 @@ import {
   uploadFotoRondin,
 } from './api'
 
+const ROWS_PER_PAGE = 10
+
+function PaginationV({ total, page, onChange }) {
+  const totalPages = Math.ceil(total / ROWS_PER_PAGE)
+  if (totalPages <= 1) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', padding: '0 4px', fontSize: '13px', color: '#6b7280' }}>
+      <span>{total} registro{total !== 1 ? 's' : ''}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button type="button" disabled={page <= 1} onClick={() => onChange(page - 1)}
+          style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid #d1d5db', background: page <= 1 ? '#f9fafb' : '#fff', cursor: page <= 1 ? 'default' : 'pointer', fontSize: '12px', color: page <= 1 ? '#d1d5db' : '#374151' }}>
+          ← Anterior
+        </button>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: '#374151', minWidth: '60px', textAlign: 'center' }}>
+          {page} / {totalPages}
+        </span>
+        <button type="button" disabled={page >= totalPages} onClick={() => onChange(page + 1)}
+          style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid #d1d5db', background: page >= totalPages ? '#f9fafb' : '#fff', cursor: page >= totalPages ? 'default' : 'pointer', fontSize: '12px', color: page >= totalPages ? '#d1d5db' : '#374151' }}>
+          Siguiente →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const ESTADOS_VEHICULO = {
   pendiente:  { label: 'Pendiente',  color: '#d97706', bg: '#fef3c7' },
   autorizada: { label: 'Autorizada', color: '#16a34a', bg: '#f0fdf4' },
@@ -253,6 +278,12 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [kmForm, setKmForm]               = useState('')
   const [obsForm, setObsForm]             = useState('')
   const [filtroEstado, setFiltroEstado]   = useState('')
+  const [filtroDesdeV, setFiltroDesdeV]   = useState('')
+  const [filtroHastaV, setFiltroHastaV]   = useState('')
+  const [filtroSolicitante, setFiltroSolicitante] = useState('')
+  const [filtroDestino, setFiltroDestino] = useState('')
+  const [filtroAlumno, setFiltroAlumno]   = useState('')
+  const [pageV, setPageV] = useState(1)
   const ANGULOS = [
     { key: 'Frontal',    label: 'Frontal' },
     { key: 'Trasero',    label: 'Trasero' },
@@ -287,6 +318,37 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
       getVehiculos().then(setVehiculos).catch(() => {})
     }
   }, [tab, loadOrdenesV])
+
+  const ordenesVFiltradas = ordenesV.filter(o => {
+    if (filtroDesdeV) {
+      const fecha = o.FechaSalidaEstimada ? String(o.FechaSalidaEstimada).substring(0, 10) : ''
+      if (fecha < filtroDesdeV) return false
+    }
+    if (filtroHastaV) {
+      const fecha = o.FechaSalidaEstimada ? String(o.FechaSalidaEstimada).substring(0, 10) : ''
+      if (fecha > filtroHastaV) return false
+    }
+    if (filtroSolicitante) {
+      if (!(o.Solicitante || '').toLowerCase().includes(filtroSolicitante.toLowerCase())) return false
+    }
+    if (filtroDestino) {
+      if (!(o.Destino || '').toLowerCase().includes(filtroDestino.toLowerCase())) return false
+    }
+    if (filtroAlumno) {
+      const alumnos = Array.isArray(o.Alumnos) ? o.Alumnos : []
+      const match = alumnos.some(a =>
+        (a.Nombre || '').toLowerCase().includes(filtroAlumno.toLowerCase()) ||
+        (a.Matricula || '').toLowerCase().includes(filtroAlumno.toLowerCase())
+      )
+      if (!match) return false
+    }
+    return true
+  })
+
+  const hayFiltrosV = filtroDesdeV || filtroHastaV || filtroSolicitante || filtroDestino || filtroAlumno || filtroEstado
+  const ordenesVPaginadas = ordenesVFiltradas.slice((pageV - 1) * ROWS_PER_PAGE, pageV * ROWS_PER_PAGE)
+
+  useEffect(() => { setPageV(1) }, [filtroEstado, filtroDesdeV, filtroHastaV, filtroSolicitante, filtroDestino, filtroAlumno])
 
   async function crearOrdenVehiculo() {
     if (!ordenVForm.VehiculoId) { alert('Selecciona un vehículo.'); return }
@@ -1009,17 +1071,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
         {/* ══ VEHÍCULOS ═══════════════════════════════════════════════════════ */}
         {tab === 'vehiculos' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0 }}>
-                  {esEncargado || esAdmin || esJefeSeg ? 'Solicitudes de Vehículo' : esSeguridad ? 'Control de Salidas' : 'Mis Solicitudes'}
-                </h2>
-                <select className="form-control" style={{ width: 'auto' }} value={filtroEstado}
-                  onChange={e => setFiltroEstado(e.target.value)}>
-                  <option value="">Todos los estados</option>
-                  {Object.entries(ESTADOS_VEHICULO).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <h2 style={{ margin: 0 }}>
+                {esEncargado || esAdmin || esJefeSeg ? 'Solicitudes de Vehículo' : esSeguridad ? 'Control de Salidas' : 'Mis Solicitudes'}
+              </h2>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {!esSeguridad && (
                   <button className="primary-button" onClick={() => setNuevaOrdenV(true)}>+ Nueva solicitud</button>
@@ -1028,9 +1083,32 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   onClick={() => loadOrdenesV()}>↻ Actualizar</button>
               </div>
             </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
+              <select className="form-control" style={{ maxWidth: '170px' }} value={filtroEstado}
+                onChange={e => setFiltroEstado(e.target.value)}>
+                <option value="">Todos los estados</option>
+                {Object.entries(ESTADOS_VEHICULO).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+              <input type="text" className="form-control" style={{ maxWidth: '160px' }} placeholder="Solicitante..."
+                value={filtroSolicitante} onChange={e => setFiltroSolicitante(e.target.value)} />
+              <input type="text" className="form-control" style={{ maxWidth: '150px' }} placeholder="Destino..."
+                value={filtroDestino} onChange={e => setFiltroDestino(e.target.value)} />
+              <input type="text" className="form-control" style={{ maxWidth: '150px' }} placeholder="Alumno..."
+                value={filtroAlumno} onChange={e => setFiltroAlumno(e.target.value)} />
+              <input type="date" className="form-control" style={{ maxWidth: '150px' }} title="Desde"
+                value={filtroDesdeV} onChange={e => setFiltroDesdeV(e.target.value)} />
+              <input type="date" className="form-control" style={{ maxWidth: '150px' }} title="Hasta"
+                value={filtroHastaV} onChange={e => setFiltroHastaV(e.target.value)} />
+              {hayFiltrosV && (
+                <button className="ghost-button" style={{ fontSize: '13px' }}
+                  onClick={() => { setFiltroEstado(''); setFiltroDesdeV(''); setFiltroHastaV(''); setFiltroSolicitante(''); setFiltroDestino(''); setFiltroAlumno('') }}>
+                  Limpiar
+                </button>
+              )}
+            </div>
 
             {errorOV && <div className="notification error">{errorOV}</div>}
-            {loadingOV ? <p style={{ color: '#6b7280' }}>Cargando...</p> : (
+            {loadingOV ? <p style={{ color: '#6b7280' }}>Cargando...</p> : (<>
               <div className="table-wrap">
                 <table className="participants-table">
                   <thead>
@@ -1047,9 +1125,9 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {ordenesV.length === 0 ? (
-                      <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>Sin solicitudes.</td></tr>
-                    ) : ordenesV.flatMap(o => {
+                    {ordenesVFiltradas.length === 0 ? (
+                      <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>{hayFiltrosV ? 'Sin resultados con los filtros aplicados.' : 'Sin solicitudes.'}</td></tr>
+                    ) : ordenesVPaginadas.flatMap(o => {
                       const alumnos = Array.isArray(o.Alumnos) ? o.Alumnos : []
                       const expandido = expandedAlumnos === o.OrdenVehiculoId
                       return [
@@ -1137,7 +1215,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   </tbody>
                 </table>
               </div>
-            )}
+              <PaginationV total={ordenesVFiltradas.length} page={pageV} onChange={setPageV} />
+            </>)}
 
             {/* Panel lateral de detalle */}
             {detalleOrdenV && (<>
