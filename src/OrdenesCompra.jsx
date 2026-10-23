@@ -423,6 +423,80 @@ function SFCheckbox({ label, checked, onChange }) {
   )
 }
 
+// ── Dropdown de acciones ──────────────────────────────────────────────────────
+function ActionsDropdown({ children }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function close(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button type="button" className="ghost-button"
+        style={{ fontSize: '11px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+        onClick={() => setOpen(o => !o)}>
+        Acciones
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', right: 0, top: '100%', marginTop: '4px',
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50,
+          minWidth: '160px', padding: '4px 0',
+        }}
+        onClick={() => setOpen(false)}>
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DropdownItem({ onClick, color, children }) {
+  return (
+    <button type="button" onClick={onClick}
+      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer', color: color || '#374151', fontWeight: 500, whiteSpace: 'nowrap' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'none' }}>
+      {children}
+    </button>
+  )
+}
+
+const ROWS_PER_PAGE = 10
+
+function Pagination({ total, page, onChange }) {
+  const totalPages = Math.ceil(total / ROWS_PER_PAGE)
+  if (totalPages <= 1) return null
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', padding: '0 4px', fontSize: '13px', color: '#6b7280' }}>
+      <span>{total} registro{total !== 1 ? 's' : ''}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button type="button" disabled={page <= 1} onClick={() => onChange(page - 1)}
+          style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid #d1d5db', background: page <= 1 ? '#f9fafb' : '#fff', cursor: page <= 1 ? 'default' : 'pointer', fontSize: '12px', color: page <= 1 ? '#d1d5db' : '#374151' }}>
+          ← Anterior
+        </button>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: '#374151', minWidth: '60px', textAlign: 'center' }}>
+          {page} / {totalPages}
+        </span>
+        <button type="button" disabled={page >= totalPages} onClick={() => onChange(page + 1)}
+          style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid #d1d5db', background: page >= totalPages ? '#f9fafb' : '#fff', cursor: page >= totalPages ? 'default' : 'pointer', fontSize: '12px', color: page >= totalPages ? '#d1d5db' : '#374151' }}>
+          Siguiente →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Modal: Solicitud de Fondos ─────────────────────────────────────────────────
 function SolicitudFondosModal({ orden, onClose, onSuccess, currentUserRol, readOnly: sfReadOnly = false }) {
   const [loading, setLoading] = useState(true)
@@ -1535,8 +1609,11 @@ export default function OrdenesCompra({
 
   const [filtros, setFiltros] = useState({ texto:'', unidadNegocio:'', estado:'', tipo:'', fechaDesde:'', fechaHasta:'' })
   const hasFiltros = Object.values(filtros).some(Boolean)
-  const setF = (k) => (e) => setFiltros(f => ({ ...f, [k]: e.target.value }))
-  function resetFiltros() { setFiltros({ texto:'', unidadNegocio:'', estado:'', tipo:'', fechaDesde:'', fechaHasta:'' }) }
+  const [pageMis, setPageMis] = useState(1)
+  const [pageHist, setPageHist] = useState(1)
+  const [pageAuth, setPageAuth] = useState(1)
+  const setF = (k) => (e) => { setFiltros(f => ({ ...f, [k]: e.target.value })); setPageMis(1); setPageHist(1); setPageAuth(1) }
+  function resetFiltros() { setFiltros({ texto:'', unidadNegocio:'', estado:'', tipo:'', fechaDesde:'', fechaHasta:'' }); setPageMis(1); setPageHist(1); setPageAuth(1) }
 
   function filtrarOrdenes(lista) {
     return lista.filter(order => {
@@ -1859,6 +1936,7 @@ export default function OrdenesCompra({
                 Aún no tienes órdenes de compra creadas.
               </div>
             ) : (
+              <>
               <div className="table-wrap">
                 <table className="participants-table">
                   <thead>
@@ -1868,7 +1946,7 @@ export default function OrdenesCompra({
                     </tr>
                   </thead>
                   <tbody>
-                    {misOrdenes.map((order) => {
+                    {misOrdenes.slice((pageMis - 1) * ROWS_PER_PAGE, pageMis * ROWS_PER_PAGE).map((order) => {
                       const status = getOrderStatus(order)
                       const approvals = (order.aprobaciones || order.Aprobaciones || []).map(normalizeApproval)
                       const isAprobada = status === 'Aprobada'
@@ -1905,56 +1983,28 @@ export default function OrdenesCompra({
                             )}
                           </td>
                           <td>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '100px' }}>
-                              <button type="button" className="ghost-button"
-                                style={{ fontSize: '11px', padding: '4px 10px' }}
-                                onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
-                                PDF
-                              </button>
+                            <ActionsDropdown>
+                              <DropdownItem onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>PDF</DropdownItem>
                               {!(order.rechazo?.rechazado || order.Rechazado) && (
-                                <button type="button" className="ghost-button"
-                                  style={{ fontSize: '11px', padding: '4px 10px', color: '#15803d', borderColor: '#bbf7d0' }}
-                                  onClick={() => openModal('solicitud', order)}>
-                                  Sol. Fondos
-                                </button>
+                                <DropdownItem onClick={() => openModal('solicitud', order)} color="#15803d">Sol. Fondos</DropdownItem>
                               )}
                               {isAprobada && (
                                 <>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize: '11px', padding: '4px 10px', color: '#1d4ed8', borderColor: '#bfdbfe' }}
-                                    onClick={() => openModal('factura', order)}>
-                                    Factura
-                                  </button>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize: '11px', padding: '4px 10px', color: '#16a34a', borderColor: '#bbf7d0' }}
-                                    onClick={() => openModal('evaluacion-compras', order)}>
-                                    Eval. Compras
-                                  </button>
-                                  <button type="button" className="ghost-button"
-                                    style={{ fontSize: '11px', padding: '4px 10px', color: '#7c3aed', borderColor: '#ddd6fe' }}
-                                    onClick={() => openModal('evaluacion-servicios', order)}>
-                                    Eval. Servicios
-                                  </button>
+                                  <DropdownItem onClick={() => openModal('factura', order)} color="#1d4ed8">Factura</DropdownItem>
+                                  <DropdownItem onClick={() => openModal('evaluacion-compras', order)} color="#16a34a">Eval. Compras</DropdownItem>
+                                  <DropdownItem onClick={() => openModal('evaluacion-servicios', order)} color="#7c3aed">Eval. Servicios</DropdownItem>
                                 </>
                               )}
                               {isAdmin && (
-                                <button type="button" className="ghost-button"
-                                  style={{ fontSize: '11px', padding: '4px 10px', color: '#d97706', borderColor: '#fde68a', fontWeight: 600 }}
-                                  onClick={() => handleEditarOC(order)}>
-                                  Editar
-                                </button>
+                                <DropdownItem onClick={() => handleEditarOC(order)} color="#d97706">Editar</DropdownItem>
                               )}
                               {isAprobada && !order.Recepcionada && puedeRecepcionar && (
-                                <button type="button" className="ghost-button"
-                                  style={{ fontSize: '11px', padding: '4px 10px', color: '#16a34a', borderColor: '#bbf7d0', fontWeight: 700 }}
-                                  onClick={() => openModal('recepcion', order)}>
-                                  Recepción
-                                </button>
+                                <DropdownItem onClick={() => openModal('recepcion', order)} color="#16a34a">Recepción</DropdownItem>
                               )}
                               {order.Recepcionada && (
-                                <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, padding: '4px 0' }}>✓ Recibida</span>
+                                <span style={{ display:'block', padding:'8px 14px', fontSize:'12px', color:'#16a34a', fontWeight:600 }}>✓ Recibida</span>
                               )}
-                            </div>
+                            </ActionsDropdown>
                           </td>
                         </tr>
                       )
@@ -1962,6 +2012,8 @@ export default function OrdenesCompra({
                   </tbody>
                 </table>
               </div>
+              <Pagination total={misOrdenes.length} page={pageMis} onChange={setPageMis} />
+              </>
             )}
           </div>
         )}
@@ -2000,6 +2052,7 @@ export default function OrdenesCompra({
                 No hay órdenes pendientes de autorización para <strong>{selectedApprover}</strong>.
               </div>
             ) : (
+              <>
               <div className="table-wrap">
                 <table className="participants-table">
                   <thead>
@@ -2009,7 +2062,7 @@ export default function OrdenesCompra({
                     </tr>
                   </thead>
                   <tbody>
-                    {ordenesPendientesAutorizacion.map((order) => (
+                    {ordenesPendientesAutorizacion.slice((pageAuth - 1) * ROWS_PER_PAGE, pageAuth * ROWS_PER_PAGE).map((order) => (
                       <tr key={order.OrdenCompraId}>
                         <td><strong>{order.Folio}</strong></td>
                         <td>
@@ -2038,34 +2091,20 @@ export default function OrdenesCompra({
                           </button>
                         </td>
                         <td>
-                          <div style={{ display:'flex', flexDirection:'column', gap:'4px', minWidth:'100px' }}>
-                            <button type="button" className="ghost-button"
-                              style={{ fontSize: '11px', padding: '4px 10px' }}
-                              onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
-                              PDF
-                            </button>
-                            <button type="button" className="ghost-button"
-                              style={{ fontSize: '11px', padding: '4px 10px', color: '#15803d', borderColor: '#bbf7d0' }}
-                              onClick={() => openModal('solicitud', order, !puedeGenerarSolicitud)}>
-                              Sol. Fondos
-                            </button>
-                            <button type="button" className="ghost-button"
-                              style={{ fontSize: '11px', padding: '4px 10px', color: '#1d4ed8', borderColor: '#bfdbfe' }}
-                              onClick={() => openModal('evaluacion-compras', order)}>
-                              Eval. Compras
-                            </button>
-                            <button type="button" className="ghost-button"
-                              style={{ fontSize: '11px', padding: '4px 10px', color: '#7c3aed', borderColor: '#ddd6fe' }}
-                              onClick={() => openModal('evaluacion-servicios', order)}>
-                              Eval. Servicios
-                            </button>
-                          </div>
+                          <ActionsDropdown>
+                            <DropdownItem onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>PDF</DropdownItem>
+                            <DropdownItem onClick={() => openModal('solicitud', order, !puedeGenerarSolicitud)} color="#15803d">Sol. Fondos</DropdownItem>
+                            <DropdownItem onClick={() => openModal('evaluacion-compras', order)} color="#1d4ed8">Eval. Compras</DropdownItem>
+                            <DropdownItem onClick={() => openModal('evaluacion-servicios', order)} color="#7c3aed">Eval. Servicios</DropdownItem>
+                          </ActionsDropdown>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <Pagination total={ordenesPendientesAutorizacion.length} page={pageAuth} onChange={setPageAuth} />
+              </>
             )}
 
             {/* ── Solicitudes de Fondos pendientes ── */}
@@ -2162,7 +2201,7 @@ export default function OrdenesCompra({
                 <tbody>
                   {filtrarOrdenes(ordenes).length === 0 ? (
                     <tr><td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af', padding: '32px' }}>No hay órdenes registradas.</td></tr>
-                  ) : filtrarOrdenes(ordenes).map((order) => {
+                  ) : filtrarOrdenes(ordenes).slice((pageHist - 1) * ROWS_PER_PAGE, pageHist * ROWS_PER_PAGE).map((order) => {
                     const status = getOrderStatus(order)
                     const tipoLabel = (order.Tipo||'compras').toLowerCase()
                     const isAprobada = status === 'Aprobada'
@@ -2181,63 +2220,31 @@ export default function OrdenesCompra({
                         <td>{formatMoney(order.Total)}</td>
                         <td><StatusBadge status={status} /></td>
                         <td>
-                          <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
-                            <button type="button" className="ghost-button"
-                              style={{ fontSize:'11px', padding:'3px 8px' }}
-                              onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>
-                              PDF
-                            </button>
-                            <button type="button" className="ghost-button"
-                              style={{ fontSize:'11px', padding:'3px 8px', color:'#b45309', borderColor:'#fde68a' }}
-                              onClick={() => openModal('factura', order)}>
-                              Factura
-                            </button>
+                          <ActionsDropdown>
+                            <DropdownItem onClick={() => handleDownloadPdf(order.OrdenCompraId, order.Folio)}>PDF</DropdownItem>
+                            <DropdownItem onClick={() => openModal('factura', order)} color="#b45309">Factura</DropdownItem>
                             {!(order.rechazo?.rechazado || order.Rechazado) && (
-                              <button type="button" className="ghost-button"
-                                style={{ fontSize:'11px', padding:'3px 8px', color:'#15803d', borderColor:'#bbf7d0' }}
-                                onClick={() => openModal('solicitud', order, !puedeGenerarSolicitud)}>
-                                Sol. Fondos
-                              </button>
+                              <DropdownItem onClick={() => openModal('solicitud', order, !puedeGenerarSolicitud)} color="#15803d">Sol. Fondos</DropdownItem>
                             )}
                             {isAprobada && (
                               <>
-                                <button type="button" className="ghost-button"
-                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#1d4ed8', borderColor:'#bfdbfe' }}
-                                  onClick={() => openModal('evaluacion-compras', order)}>
-                                  Eval. Compras
-                                </button>
-                                <button type="button" className="ghost-button"
-                                  style={{ fontSize:'11px', padding:'3px 8px', color:'#7c3aed', borderColor:'#ddd6fe' }}
-                                  onClick={() => openModal('evaluacion-servicios', order)}>
-                                  Eval. Servicios
-                                </button>
+                                <DropdownItem onClick={() => openModal('evaluacion-compras', order)} color="#1d4ed8">Eval. Compras</DropdownItem>
+                                <DropdownItem onClick={() => openModal('evaluacion-servicios', order)} color="#7c3aed">Eval. Servicios</DropdownItem>
                               </>
                             )}
                             {isAdmin && (
-                              <button type="button" className="ghost-button"
-                                style={{ fontSize:'11px', padding:'3px 8px', color:'#d97706', borderColor:'#fde68a', fontWeight:600 }}
-                                onClick={() => handleEditarOC(order)}>
-                                Editar
-                              </button>
+                              <DropdownItem onClick={() => handleEditarOC(order)} color="#d97706">Editar</DropdownItem>
                             )}
                             {isAprobada && !order.Recepcionada && puedeRecepcionar && (
-                              <button type="button" className="ghost-button"
-                                style={{ fontSize:'11px', padding:'3px 8px', color:'#16a34a', borderColor:'#bbf7d0', fontWeight:700 }}
-                                onClick={() => openModal('recepcion', order)}>
-                                Recepción
-                              </button>
+                              <DropdownItem onClick={() => openModal('recepcion', order)} color="#16a34a">Recepción</DropdownItem>
                             )}
                             {order.Recepcionada && (
-                              <span style={{ fontSize:'11px', color:'#16a34a', fontWeight:600, padding:'3px 0' }}>✓ Recibida</span>
+                              <span style={{ display:'block', padding:'8px 14px', fontSize:'12px', color:'#16a34a', fontWeight:600 }}>✓ Recibida</span>
                             )}
                             {(isAdmin || isAutorizador) && (
-                              <button type="button" className="ghost-button"
-                                style={{ fontSize:'11px', padding:'3px 8px', color:'#dc2626', borderColor:'#fecaca' }}
-                                onClick={() => handleDeleteOrden(order)}>
-                                Eliminar
-                              </button>
+                              <DropdownItem onClick={() => handleDeleteOrden(order)} color="#dc2626">Eliminar</DropdownItem>
                             )}
-                          </div>
+                          </ActionsDropdown>
                         </td>
                       </tr>
                     )
@@ -2245,6 +2252,7 @@ export default function OrdenesCompra({
                 </tbody>
               </table>
             </div>
+            <Pagination total={filtrarOrdenes(ordenes).length} page={pageHist} onChange={setPageHist} />
           </div>
         )}
 
