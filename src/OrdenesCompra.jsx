@@ -2195,12 +2195,12 @@ export default function OrdenesCompra({
                 <thead>
                   <tr>
                     <th>Folio</th><th>Tipo</th><th>Proveedor</th><th>Creado por</th>
-                    <th>Total</th><th>Estado</th><th>Documentos</th>
+                    <th>Total</th><th>Fecha</th><th>Estado</th><th>Documentos</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtrarOrdenes(ordenes).length === 0 ? (
-                    <tr><td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af', padding: '32px' }}>No hay órdenes registradas.</td></tr>
+                    <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9ca3af', padding: '32px' }}>No hay órdenes registradas.</td></tr>
                   ) : filtrarOrdenes(ordenes).slice((pageHist - 1) * ROWS_PER_PAGE, pageHist * ROWS_PER_PAGE).map((order) => {
                     const status = getOrderStatus(order)
                     const tipoLabel = (order.Tipo||'compras').toLowerCase()
@@ -2218,6 +2218,7 @@ export default function OrdenesCompra({
                         <td>{order.Proveedor}</td>
                         <td>{order.Creador}</td>
                         <td>{formatMoney(order.Total)}</td>
+                        <td>{String(order.Fecha || '').slice(0, 10)}</td>
                         <td><StatusBadge status={status} /></td>
                         <td>
                           <ActionsDropdown>
