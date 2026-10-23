@@ -781,6 +781,24 @@ export function setDieselPrecio(precios) {
   return fetchJson('diesel/precio', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(precios) })
 }
 
+// ─── Academia ────────────────────────────────────────────────────────────────
+export function getAcademiaDashboard() { return fetchJson('academia/dashboard', { headers: authHeaders() }) }
+export function getAcademiaCursos() { return fetchJson('academia/cursos', { headers: authHeaders() }) }
+export function getAcademiaCursoDetalle(id) { return fetchJson(`academia/cursos/${id}`, { headers: authHeaders() }) }
+export function createAcademiaCurso(data) { return fetchJson('academia/cursos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateAcademiaCurso(id, data) { return fetchJson(`academia/cursos/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteAcademiaCurso(id) { return fetchJson(`academia/cursos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function getAcademiaSesiones(cursoId) { return fetchJson(`academia/cursos/${cursoId}/sesiones`, { headers: authHeaders() }) }
+export function createAcademiaSesion(cursoId, data) { return fetchJson(`academia/cursos/${cursoId}/sesiones`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateAcademiaSesion(id, data) { return fetchJson(`academia/sesiones/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteAcademiaSesion(id) { return fetchJson(`academia/sesiones/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function getAcademiaInscritos(cursoId) { return fetchJson(`academia/cursos/${cursoId}/inscritos`, { headers: authHeaders() }) }
+export function inscribirParticipantes(data) { return fetchJson('academia/inscripciones', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function darDeBajaInscripcion(id) { return fetchJson(`academia/inscripciones/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function getAcademiaAsistencias(cursoId) { return fetchJson(`academia/cursos/${cursoId}/asistencias`, { headers: authHeaders() }) }
+export function registrarAsistenciaManual(data) { return fetchJson('academia/asistencia-manual', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function buscarEmpleadosAcademia(q) { return fetchJson(`academia/buscar-empleados?q=${encodeURIComponent(q)}`, { headers: authHeaders() }) }
+
 export function getFormularios() { return fetchJson('formularios', { headers: authHeaders() }) }
 export function getFormulario(id) { return fetchJson(`formularios/${id}`, { headers: authHeaders() }) }
 export function createFormulario(body) { return fetchJson('formularios', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }) }

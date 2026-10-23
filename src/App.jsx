@@ -46,10 +46,12 @@ import DVIRPublico from './DVIRPublico'
 import RegistroVisitaPublica from './RegistroVisitaPublica'
 import PermisosPanel from './PermisosPanel'
 import Formularios from './Formularios'
+import Academia from './Academia'
 import PortalPublico from './PortalPublico'
 import FormularioPublico from './FormularioPublico'
 import FormulariosPublico from './FormulariosPublico'
 import CargaDieselPublica from './CargaDieselPublica'
+import AsistenciaAcademiaPublica from './AsistenciaAcademiaPublica'
 
 const NAV_ICONS = {
   dashboard:            <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
@@ -77,6 +79,7 @@ const NAV_ICONS = {
   dvir:                 <><path d="M9 11l3 3L22 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></>,
   diesel:               <><path d="M3 22V8l9-6 9 6v14"/><path d="M12 2v20"/><path d="M3 12h18"/></>,
   formularios:          <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></>,
+  academia:             <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></>,
 }
 
 const SIDEBAR_CONFIG = [
@@ -97,6 +100,7 @@ const SIDEBAR_CONFIG = [
     { vista: 'dvir', label: 'Inspecciones DVIR' },
     { vista: 'diesel', label: 'Control de Diésel' },
     { vista: 'seguridad', label: 'Módulo de Seguridad' },
+    { vista: 'academia', label: 'Academia' },
   ]},
   { titulo: 'Catálogos', items: [
     { vista: 'cursos', label: 'Cursos' },
@@ -755,7 +759,9 @@ function App() {
                                   ? 'Control de Diésel'
                                   : activeView === 'formularios'
                                     ? 'Formularios'
-                                    : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                                    : activeView === 'academia'
+                                      ? 'Academia'
+                                      : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -788,7 +794,9 @@ function App() {
                                 ? 'Herramientas > Control de Diésel'
                                 : activeView === 'formularios'
                                   ? 'App Móvil > Formularios'
-                                  : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                                  : activeView === 'academia'
+                                    ? 'Herramientas > Academia'
+                                    : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   // Rutas públicas (sin autenticación)
   if (window.location.pathname === '/portal') return <PortalPublico />
@@ -798,6 +806,7 @@ function App() {
   if (window.location.pathname === '/formularios-publico') return <FormulariosPublico />
   if (window.location.pathname.startsWith('/formulario/')) return <FormularioPublico />
   if (window.location.pathname === '/carga-diesel') return <CargaDieselPublica />
+  if (window.location.pathname === '/asistencia-academia') return <AsistenciaAcademiaPublica />
 
   if (checkingAuth) {
     return (
@@ -1041,6 +1050,8 @@ function App() {
             </div>
             <Formularios usuario={usuario} />
           </section>
+        ) : activeView === 'academia' ? (
+          <Academia usuario={usuario} />
         ) : activeView === 'aprobaciones' ? (
             <section className="panel card">
               <div className="panel-header space-between">

@@ -9,6 +9,7 @@ import usuariosRouter from './routes/usuarios.js';
 import formulariosRouter from './routes/formularios.js';
 import dieselRouter from './routes/diesel.js';
 import seguridadRouter from './routes/seguridad.js';
+import academiaRouter, { initAcademiaTables } from './routes/academia.js';
 import { autenticar, soloAdmin } from './middleware/autenticar.js';
 
 dotenv.config();
@@ -33,9 +34,11 @@ app.use('/api/usuarios', autenticar, soloAdmin, usuariosRouter);
 app.use('/api/formularios', formulariosRouter);
 app.use('/api/diesel', dieselRouter);
 app.use('/api/seguridad', seguridadRouter);
+app.use('/api/academia', academiaRouter);
 
 const port = Number(process.env.PORT || 4000);
 app.listen(port, () => {
   console.log(`🚀 Servidor corriendo en puerto ${port}`);
   initAuthTables().catch((err) => console.error('⚠ initAuthTables:', err));
+  initAcademiaTables().catch((err) => console.error('⚠ initAcademiaTables:', err));
 });
