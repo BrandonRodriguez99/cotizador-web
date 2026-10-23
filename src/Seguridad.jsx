@@ -13,7 +13,7 @@ import {
   getVisitas, createVisita, registrarSalidaVisita, deleteVisita,
   getOrdenesVehiculo, createOrdenVehiculo,
   autorizarOrdenVehiculo, rechazarOrdenVehiculo,
-  registrarSalidaVehiculo, registrarLlegadaVehiculo, deleteOrdenVehiculo,
+  registrarSalidaVehiculo, registrarLlegadaVehiculo, deleteOrdenVehiculo, updateKmOrdenVehiculo,
   uploadFotoVehiculo,
   uploadFotoRondin,
 } from './api'
@@ -265,6 +265,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [uploadingFoto, setUploadingFoto] = useState({})
   const [fotoModal, setFotoModal]         = useState(null)
   const [expandedAlumnos, setExpandedAlumnos] = useState(null)
+  const [editingKm, setEditingKm]       = useState(null)
+  const [kmEditForm, setKmEditForm]     = useState({ KmInicial: '', KmFinal: '' })
 
   const loadOrdenesV = useCallback(async () => {
     setLoadingOV(true); setErrorOV('')
@@ -346,6 +348,17 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
         FotoLlegadaLateralDer: fotosLlegada.LateralDer,
       })
       setLlegadaModal(null); setKmForm(''); setObsForm(''); setFotosLlegada(fotoVacía)
+      await loadOrdenesV()
+    } catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function guardarKm(id) {
+    try {
+      const data = {}
+      if (kmEditForm.KmInicial !== '') data.KmInicial = Number(kmEditForm.KmInicial)
+      if (kmEditForm.KmFinal !== '') data.KmFinal = Number(kmEditForm.KmFinal)
+      await updateKmOrdenVehiculo(id, data)
+      setEditingKm(null)
       await loadOrdenesV()
     } catch (e) { alert('Error: ' + e.message) }
   }
@@ -993,9 +1006,13 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   {Object.entries(ESTADOS_VEHICULO).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
               </div>
-              {!esSeguridad && (
-                <button className="primary-button" onClick={() => setNuevaOrdenV(true)}>+ Nueva solicitud</button>
-              )}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {!esSeguridad && (
+                  <button className="primary-button" onClick={() => setNuevaOrdenV(true)}>+ Nueva solicitud</button>
+                )}
+                <button className="ghost-button" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                  onClick={() => loadOrdenesV()}>↻ Actualizar</button>
+              </div>
             </div>
 
             {errorOV && <div className="notification error">{errorOV}</div>}
@@ -1047,7 +1064,41 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                         <td>{o.FechaSalidaEstimada ? `${fmtDate(o.FechaSalidaEstimada)} ${o.HoraSalidaEstimada || ''}`.trim() : '-'}</td>
                         <td><Badge estado={o.Estado} mapa={ESTADOS_VEHICULO} /></td>
                         <td style={{ fontSize: '12px', color: '#6b7280' }}>
-                          {o.KmInicial != null ? `${o.KmInicial}` : '-'} / {o.KmFinal != null ? `${o.KmFinal}` : '-'}
+                          {editingKm === o.OrdenVehiculoId ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '140px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <input type="number" placeholder="Km ida" value={kmEditForm.KmInicial}
+                                  onChange={e => setKmEditForm(p => ({ ...p, KmInicial: e.target.value }))}
+                                  style={{ width: '70px', padding: '2px 4px', fontSize: '12px', border: '1px solid #d1d5db', borderRadius: '4px' }} />
+                                <span>/</span>
+                                <input type="number" placeholder="Km vuelta" value={kmEditForm.KmFinal}
+                                  onChange={e => setKmEditForm(p => ({ ...p, KmFinal: e.target.value }))}
+                                  style={{ width: '70px', padding: '2px 4px', fontSize: '12px', border: '1px solid #d1d5db', borderRadius: '4px' }} />
+                              </div>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button style={{ padding: '1px 6px', fontSize: '11px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                  onClick={() => guardarKm(o.OrdenVehiculoId)}>Guardar</button>
+                                <button style={{ padding: '1px 6px', fontSize: '11px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                  onClick={() => setEditingKm(null)}>Cancelar</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span style={{ cursor: (!esSeguridad || esAdmin || esJefeSeg || esEncargado) ? 'pointer' : 'default' }}
+                              onClick={() => {
+                                if (esSeguridad && !esAdmin && !esJefeSeg && !esEncargado) return
+                                setEditingKm(o.OrdenVehiculoId)
+                                setKmEditForm({
+                                  KmInicial: o.KmInicial != null ? String(o.KmInicial) : '',
+                                  KmFinal: o.KmFinal != null ? String(o.KmFinal) : '',
+                                })
+                              }}
+                              title={(!esSeguridad || esAdmin || esJefeSeg || esEncargado) ? 'Clic para editar kilometraje' : ''}>
+                              {o.KmInicial != null ? `${o.KmInicial}` : '-'} / {o.KmFinal != null ? `${o.KmFinal}` : '-'}
+                              {(!esSeguridad || esAdmin || esJefeSeg || esEncargado) && (
+                                <span style={{ marginLeft: '4px', fontSize: '10px', color: '#9ca3af' }}>(editar)</span>
+                              )}
+                            </span>
+                          )}
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>

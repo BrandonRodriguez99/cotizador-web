@@ -8,6 +8,7 @@ import authRouter, { initAuthTables } from './routes/auth.js';
 import usuariosRouter from './routes/usuarios.js';
 import formulariosRouter from './routes/formularios.js';
 import dieselRouter from './routes/diesel.js';
+import seguridadRouter from './routes/seguridad.js';
 import { autenticar, soloAdmin } from './middleware/autenticar.js';
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/usuarios', autenticar, soloAdmin, usuariosRouter);
 app.use('/api/formularios', formulariosRouter);
 app.use('/api/diesel', dieselRouter);
+app.use('/api/seguridad', seguridadRouter);
 
 const port = Number(process.env.PORT || 4000);
 app.listen(port, () => {
