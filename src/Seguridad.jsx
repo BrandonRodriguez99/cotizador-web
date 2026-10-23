@@ -265,8 +265,10 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [uploadingFoto, setUploadingFoto] = useState({})
   const [fotoModal, setFotoModal]         = useState(null)
   const [expandedAlumnos, setExpandedAlumnos] = useState(null)
-  const [editingKm, setEditingKm]       = useState(null)
-  const [kmEditForm, setKmEditForm]     = useState({ KmInicial: '', KmFinal: '' })
+  const [detalleOrdenV, setDetalleOrdenV] = useState(null)
+  const [detalleForm, setDetalleForm]     = useState({})
+  const [guardandoDetalle, setGuardandoDetalle] = useState(false)
+  const [fotoAmpliadaV, setFotoAmpliadaV] = useState(null)
 
   const loadOrdenesV = useCallback(async () => {
     setLoadingOV(true); setErrorOV('')
@@ -352,15 +354,27 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     } catch (e) { alert('Error: ' + e.message) }
   }
 
-  async function guardarKm(id) {
+  async function guardarDetalleOrden() {
+    if (!detalleOrdenV) return
+    setGuardandoDetalle(true)
     try {
       const data = {}
-      if (kmEditForm.KmInicial !== '') data.KmInicial = Number(kmEditForm.KmInicial)
-      if (kmEditForm.KmFinal !== '') data.KmFinal = Number(kmEditForm.KmFinal)
-      await updateKmOrdenVehiculo(id, data)
-      setEditingKm(null)
+      if (detalleForm.KmInicial !== undefined) data.KmInicial = detalleForm.KmInicial !== '' ? Number(detalleForm.KmInicial) : null
+      if (detalleForm.KmFinal !== undefined) data.KmFinal = detalleForm.KmFinal !== '' ? Number(detalleForm.KmFinal) : null
+      await updateKmOrdenVehiculo(detalleOrdenV.OrdenVehiculoId, data)
       await loadOrdenesV()
+      setDetalleOrdenV(prev => prev ? { ...prev, KmInicial: data.KmInicial ?? prev.KmInicial, KmFinal: data.KmFinal ?? prev.KmFinal } : null)
+      alert('Kilometraje actualizado correctamente.')
     } catch (e) { alert('Error: ' + e.message) }
+    finally { setGuardandoDetalle(false) }
+  }
+
+  function abrirDetalleOrden(orden) {
+    setDetalleOrdenV(orden)
+    setDetalleForm({
+      KmInicial: orden.KmInicial != null ? String(orden.KmInicial) : '',
+      KmFinal: orden.KmFinal != null ? String(orden.KmFinal) : '',
+    })
   }
 
   async function eliminarRondin(id) {
@@ -1039,12 +1053,19 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                       const alumnos = Array.isArray(o.Alumnos) ? o.Alumnos : []
                       const expandido = expandedAlumnos === o.OrdenVehiculoId
                       return [
-                      <tr key={o.OrdenVehiculoId}>
+                      <tr key={o.OrdenVehiculoId}
+                        style={{
+                          cursor: 'pointer',
+                          background: detalleOrdenV?.OrdenVehiculoId === o.OrdenVehiculoId ? '#eff6ff' : 'transparent',
+                          borderLeft: detalleOrdenV?.OrdenVehiculoId === o.OrdenVehiculoId ? '3px solid #3b82f6' : '3px solid transparent',
+                          transition: 'background 0.12s',
+                        }}
+                        onClick={() => abrirDetalleOrden(o)}>
                         <td style={{ fontWeight: '600', color: '#1e3a5f' }}>{o.Folio || '-'}</td>
                         <td>{o.Solicitante || '-'}</td>
                         <td>{o.VehiculoNombre || '-'}</td>
                         <td>{o.Destino || '-'}</td>
-                        <td>
+                        <td onClick={e => e.stopPropagation()}>
                           {alumnos.length > 0 ? (
                             <button
                               onClick={() => setExpandedAlumnos(expandido ? null : o.OrdenVehiculoId)}
@@ -1064,43 +1085,9 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                         <td>{o.FechaSalidaEstimada ? `${fmtDate(o.FechaSalidaEstimada)} ${o.HoraSalidaEstimada || ''}`.trim() : '-'}</td>
                         <td><Badge estado={o.Estado} mapa={ESTADOS_VEHICULO} /></td>
                         <td style={{ fontSize: '12px', color: '#6b7280' }}>
-                          {editingKm === o.OrdenVehiculoId ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '140px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <input type="number" placeholder="Km ida" value={kmEditForm.KmInicial}
-                                  onChange={e => setKmEditForm(p => ({ ...p, KmInicial: e.target.value }))}
-                                  style={{ width: '70px', padding: '2px 4px', fontSize: '12px', border: '1px solid #d1d5db', borderRadius: '4px' }} />
-                                <span>/</span>
-                                <input type="number" placeholder="Km vuelta" value={kmEditForm.KmFinal}
-                                  onChange={e => setKmEditForm(p => ({ ...p, KmFinal: e.target.value }))}
-                                  style={{ width: '70px', padding: '2px 4px', fontSize: '12px', border: '1px solid #d1d5db', borderRadius: '4px' }} />
-                              </div>
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                <button style={{ padding: '1px 6px', fontSize: '11px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                                  onClick={() => guardarKm(o.OrdenVehiculoId)}>Guardar</button>
-                                <button style={{ padding: '1px 6px', fontSize: '11px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                                  onClick={() => setEditingKm(null)}>Cancelar</button>
-                              </div>
-                            </div>
-                          ) : (
-                            <span style={{ cursor: (!esSeguridad || esAdmin || esJefeSeg || esEncargado) ? 'pointer' : 'default' }}
-                              onClick={() => {
-                                if (esSeguridad && !esAdmin && !esJefeSeg && !esEncargado) return
-                                setEditingKm(o.OrdenVehiculoId)
-                                setKmEditForm({
-                                  KmInicial: o.KmInicial != null ? String(o.KmInicial) : '',
-                                  KmFinal: o.KmFinal != null ? String(o.KmFinal) : '',
-                                })
-                              }}
-                              title={(!esSeguridad || esAdmin || esJefeSeg || esEncargado) ? 'Clic para editar kilometraje' : ''}>
-                              {o.KmInicial != null ? `${o.KmInicial}` : '-'} / {o.KmFinal != null ? `${o.KmFinal}` : '-'}
-                              {(!esSeguridad || esAdmin || esJefeSeg || esEncargado) && (
-                                <span style={{ marginLeft: '4px', fontSize: '10px', color: '#9ca3af' }}>(editar)</span>
-                              )}
-                            </span>
-                          )}
+                          {o.KmInicial != null ? `${o.KmInicial}` : '-'} / {o.KmFinal != null ? `${o.KmFinal}` : '-'}
                         </td>
-                        <td>
+                        <td onClick={e => e.stopPropagation()}>
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             {(esEncargado || esAdmin) && o.Estado === 'pendiente' && (<>
                               <button className="primary-button" style={{ padding: '3px 8px', fontSize: '12px', background: '#16a34a', borderColor: '#16a34a' }}
@@ -1151,6 +1138,194 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                 </table>
               </div>
             )}
+
+            {/* Panel lateral de detalle */}
+            {detalleOrdenV && (<>
+              <div onClick={() => setDetalleOrdenV(null)}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 900, backdropFilter: 'blur(1px)' }} />
+              <div style={{
+                position: 'fixed', top: 0, right: 0, bottom: 0,
+                width: 'min(580px, 100vw)', background: '#fff',
+                boxShadow: '-6px 0 32px rgba(0,0,0,0.14)', zIndex: 901,
+                display: 'flex', flexDirection: 'column',
+                animation: 'slideInRight 0.22s ease',
+              }}>
+                <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '12px', color: '#9ca3af', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Orden de Vehículo</div>
+                      <h2 style={{ margin: '2px 0 0', fontSize: '20px', fontWeight: 700 }}>{detalleOrdenV.Folio || `#${detalleOrdenV.OrdenVehiculoId}`}</h2>
+                      <p style={{ margin: '3px 0 0', color: '#6b7280', fontSize: '13px' }}>
+                        {detalleOrdenV.FechaCreacion ? fmt(detalleOrdenV.FechaCreacion) : ''} {detalleOrdenV.Solicitante ? `· ${detalleOrdenV.Solicitante}` : ''}
+                      </p>
+                    </div>
+                    <button onClick={() => setDetalleOrdenV(null)} title="Cerrar"
+                      style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: 'transparent', cursor: 'pointer', fontSize: '18px', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      X
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '22px' }}>
+                    {[
+                      ['Solicitante', detalleOrdenV.Solicitante || '—'],
+                      ['Vehículo', detalleOrdenV.VehiculoNombre || '—'],
+                      ['Destino', detalleOrdenV.Destino || '—'],
+                      ['Motivo', detalleOrdenV.Motivo || '—'],
+                      ['Pasajeros', detalleOrdenV.Pasajeros || '—'],
+                      ['Salida estimada', detalleOrdenV.FechaSalidaEstimada ? `${fmtDate(detalleOrdenV.FechaSalidaEstimada)} ${detalleOrdenV.HoraSalidaEstimada || ''}`.trim() : '—'],
+                    ].map(([label, val]) => (
+                      <div key={label} style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px' }}>
+                        <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>{label}</div>
+                        <div style={{ fontWeight: 600, fontSize: '13px' }}>{val}</div>
+                      </div>
+                    ))}
+                    <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px' }}>
+                      <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Estado</div>
+                      <Badge estado={detalleOrdenV.Estado} mapa={ESTADOS_VEHICULO} />
+                    </div>
+                    {detalleOrdenV.AutorizadoPor && (
+                      <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px' }}>
+                        <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Autorizado por</div>
+                        <div style={{ fontWeight: 600, fontSize: '13px' }}>{detalleOrdenV.AutorizadoPor}</div>
+                      </div>
+                    )}
+                    {detalleOrdenV.MotivoRechazo && (
+                      <div style={{ background: '#fef2f2', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1' }}>
+                        <div style={{ fontSize: '11px', color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Motivo de rechazo</div>
+                        <div style={{ fontWeight: 600, fontSize: '13px', color: '#b91c1c' }}>{detalleOrdenV.MotivoRechazo}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {detalleOrdenV.HoraSalidaReal && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '22px' }}>
+                      <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px' }}>
+                        <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Salida real</div>
+                        <div style={{ fontWeight: 600, fontSize: '13px' }}>{fmt(detalleOrdenV.HoraSalidaReal)}</div>
+                        {detalleOrdenV.RegistradoPorSalida && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>por {detalleOrdenV.RegistradoPorSalida}</div>}
+                      </div>
+                      {detalleOrdenV.HoraLlegada && (
+                        <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px' }}>
+                          <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Llegada</div>
+                          <div style={{ fontWeight: 600, fontSize: '13px' }}>{fmt(detalleOrdenV.HoraLlegada)}</div>
+                          {detalleOrdenV.RegistradoPorLlegada && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>por {detalleOrdenV.RegistradoPorLlegada}</div>}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {detalleOrdenV.Observaciones && (
+                    <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px', marginBottom: '22px' }}>
+                      <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Observaciones</div>
+                      <div style={{ fontSize: '13px', color: '#374151' }}>{detalleOrdenV.Observaciones}</div>
+                    </div>
+                  )}
+
+                  {(detalleOrdenV.Alumnos || []).length > 0 && (
+                    <div style={{ marginBottom: '22px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
+                        Alumnos ({detalleOrdenV.Alumnos.length})
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {detalleOrdenV.Alumnos.map((a, i) => (
+                          <span key={i} style={{ background: '#dcfce7', color: '#15803d', borderRadius: '999px', padding: '3px 12px', fontSize: '12px', fontWeight: 600 }}>
+                            {a.Nombre} {a.Matricula ? <span style={{ fontWeight: 400, opacity: 0.7 }}>{a.Matricula}</span> : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ marginBottom: '22px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>
+                      Kilometraje
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#6b7280', marginBottom: '4px' }}>Km Inicial (ida)</label>
+                        {(!esSeguridad || esAdmin || esJefeSeg || esEncargado) ? (
+                          <input type="number" className="form-control" placeholder="Ej: 125000"
+                            value={detalleForm.KmInicial}
+                            onChange={e => setDetalleForm(p => ({ ...p, KmInicial: e.target.value }))}
+                            style={{ fontSize: '14px' }} />
+                        ) : (
+                          <div style={{ fontWeight: 700, fontSize: '18px', color: '#1e3a5f' }}>{detalleOrdenV.KmInicial != null ? detalleOrdenV.KmInicial : '—'}</div>
+                        )}
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#6b7280', marginBottom: '4px' }}>Km Final (vuelta)</label>
+                        {(!esSeguridad || esAdmin || esJefeSeg || esEncargado) ? (
+                          <input type="number" className="form-control" placeholder="Ej: 125350"
+                            value={detalleForm.KmFinal}
+                            onChange={e => setDetalleForm(p => ({ ...p, KmFinal: e.target.value }))}
+                            style={{ fontSize: '14px' }} />
+                        ) : (
+                          <div style={{ fontWeight: 700, fontSize: '18px', color: '#1e3a5f' }}>{detalleOrdenV.KmFinal != null ? detalleOrdenV.KmFinal : '—'}</div>
+                        )}
+                      </div>
+                    </div>
+                    {detalleForm.KmInicial && detalleForm.KmFinal && Number(detalleForm.KmFinal) > Number(detalleForm.KmInicial) && (
+                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#6b7280', background: '#f0fdf4', padding: '6px 12px', borderRadius: '6px' }}>
+                        Recorrido: <strong style={{ color: '#15803d' }}>{(Number(detalleForm.KmFinal) - Number(detalleForm.KmInicial)).toLocaleString('es-MX')} km</strong>
+                      </div>
+                    )}
+                  </div>
+
+                  {[
+                    { titulo: 'Fotos de Salida', keys: ['FotoSalidaFrontal', 'FotoSalidaTrasero', 'FotoSalidaLateralIzq', 'FotoSalidaLateralDer'], labels: ['Frontal', 'Trasero', 'Lat. Izquierdo', 'Lat. Derecho'] },
+                    { titulo: 'Fotos de Llegada', keys: ['FotoLlegadaFrontal', 'FotoLlegadaTrasero', 'FotoLlegadaLateralIzq', 'FotoLlegadaLateralDer'], labels: ['Frontal', 'Trasero', 'Lat. Izquierdo', 'Lat. Derecho'] },
+                  ].map(grupo => {
+                    const hayFotos = grupo.keys.some(k => detalleOrdenV[k])
+                    if (!hayFotos) return null
+                    return (
+                      <div key={grupo.titulo} style={{ marginBottom: '22px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>{grupo.titulo}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                          {grupo.keys.map((k, i) => (
+                            <div key={k} style={{ textAlign: 'center' }}>
+                              {detalleOrdenV[k] ? (
+                                <img src={detalleOrdenV[k]} alt={grupo.labels[i]}
+                                  onClick={() => setFotoAmpliadaV(detalleOrdenV[k])}
+                                  style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: '8px', cursor: 'zoom-in', border: '1px solid #e5e7eb' }} />
+                              ) : (
+                                <div style={{ width: '100%', aspectRatio: '4/3', background: '#f3f4f6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d1d5db', color: '#9ca3af', fontSize: '11px' }}>Sin foto</div>
+                              )}
+                              <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>{grupo.labels[i]}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {(!esSeguridad || esAdmin || esJefeSeg || esEncargado) && (
+                  <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
+                    <button className="primary-button" style={{ width: '100%', padding: '10px', fontSize: '14px' }}
+                      disabled={guardandoDetalle}
+                      onClick={guardarDetalleOrden}>
+                      {guardandoDetalle ? 'Guardando...' : 'Guardar cambios'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {fotoAmpliadaV && (
+                <div onClick={() => setFotoAmpliadaV(null)}
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={fotoAmpliadaV} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '8px', objectFit: 'contain' }} />
+                </div>
+              )}
+
+              <style>{`
+                @keyframes slideInRight {
+                  from { transform: translateX(100%); opacity: 0; }
+                  to   { transform: translateX(0);    opacity: 1; }
+                }
+              `}</style>
+            </>)}
 
             {/* Modal nueva solicitud */}
             {nuevaOrdenV && (
