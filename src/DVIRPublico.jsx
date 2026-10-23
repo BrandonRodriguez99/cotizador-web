@@ -485,7 +485,7 @@ export default function DVIRPublico() {
       {/* Header */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '16px 24px' }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-          <p style={{ color: '#6b7280', fontSize: '12px', margin: 0, letterSpacing: '0.05em' }}>UDAT360</p>
+          <p style={{ color: '#6b7280', fontSize: '12px', margin: 0, letterSpacing: '0.05em' }}>SIGA</p>
           <h1 style={{ margin: '4px 0 0', fontSize: '20px', color: '#111827' }}>Inspección DVIR</h1>
         </div>
       </div>

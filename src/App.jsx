@@ -822,7 +822,7 @@ function App() {
       <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
         <div className="brand">
           <img src="/logo-udat.png" alt="UDAT" className="sidebar-logo" />
-          <span className="brand-name">UDAT360</span>
+          <span className="brand-name">SIGA</span>
         </div>
 
         <nav className="sidebar-nav">
@@ -1036,7 +1036,7 @@ function App() {
           <section className="panel card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <div className="panel-header" style={{ marginBottom: 16 }}>
               <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
-                Crea formularios para la app móvil. Actívalos para que sean visibles en UDAT360.
+                Crea formularios para la app móvil. Actívalos para que sean visibles en SIGA.
               </p>
             </div>
             <Formularios usuario={usuario} />
