@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   createCliente,
   updateCliente,
@@ -104,7 +105,22 @@ export const CATALOG_DEFINITIONS = {
       { header: 'Horas', accessor: 'Horas' },
       { header: 'Costo', accessor: 'Costo' },
       { header: 'Duración (días)', accessor: 'DuracionDefaultDias' },
-      { header: 'Activo', accessor: 'Activo', render: (value) => value === false || value === 0 ? '❌ Inactivo' : '✅ Activo' },
+      { header: 'Activo', accessor: 'Activo', render: (value) => value === false || value === 0
+        ? React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 6 } },
+            React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none' },
+              React.createElement('circle', { cx: 12, cy: 12, r: 10, fill: '#f97316' }),
+              React.createElement('path', { d: 'M8 8l8 8M16 8l-8 8', stroke: '#fff', strokeWidth: 2.2, strokeLinecap: 'round' })
+            ),
+            'Inactivo'
+          )
+        : React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 6 } },
+            React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none' },
+              React.createElement('path', { d: 'M12 1.5c-.6 0-1.1.3-1.4.7L9 3.4l-1.8-.5c-.6-.2-1.2 0-1.6.4L4.3 4.6c-.4.4-.5 1-.4 1.6l.5 1.8-1.2 1.4c-.4.5-.6 1.1-.4 1.7l.5 1.8-1 1.5c-.3.5-.3 1.1 0 1.6l1 1.5-.5 1.8c-.2.6 0 1.2.4 1.7l1.2 1.4-.5 1.8c-.1.6.1 1.2.4 1.6l1.3 1.3c.4.4 1 .6 1.6.4l1.8-.5 1.4 1.2c.5.4 1.1.5 1.7.4L12 22.5c.6 0 1.1-.3 1.4-.7l1.6-1.2 1.8.5c.6.2 1.2 0 1.6-.4l1.3-1.3c.4-.4.5-1 .4-1.6l-.5-1.8 1.2-1.4c.4-.5.6-1.1.4-1.7l-.5-1.8 1-1.5c.3-.5.3-1.1 0-1.6l-1-1.5.5-1.8c.2-.6 0-1.2-.4-1.7l-1.2-1.4.5-1.8c.1-.6-.1-1.2-.4-1.6L18.3 3.3c-.4-.4-1-.6-1.6-.4l-1.8.5L13.4 2.2c-.3-.4-.8-.7-1.4-.7z', fill: '#2563eb' }),
+              React.createElement('path', { d: 'M8.5 12.5l2.5 2.5 4.5-5', stroke: '#fff', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round' })
+            ),
+            'Activo'
+          )
+      },
     ],
     fields: [
       { name: 'Nombre', label: 'Nombre del curso', required: true },
