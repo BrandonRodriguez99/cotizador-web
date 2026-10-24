@@ -11,6 +11,7 @@ import {
   updateAcademiaSesion,
   deleteAcademiaSesion,
   getAcademiaInscritos,
+  verificarInscripciones,
   inscribirParticipantes,
   darDeBajaInscripcion,
   getAcademiaAsistencias,
@@ -59,6 +60,8 @@ export default function Academia({ usuario }) {
   const [empleadosSeleccionados, setEmpleadosSeleccionados] = useState([])
   const [inscritosLista, setInscritosLista] = useState([])
   const [loadingInscritos, setLoadingInscritos] = useState(false)
+  const [verificacionResult, setVerificacionResult] = useState(null)
+  const [modalVerificacionOpen, setModalVerificacionOpen] = useState(false)
 
   // asistencias
   const [filtroNombreCurso, setFiltroNombreCurso] = useState('')
@@ -175,11 +178,32 @@ export default function Academia({ usuario }) {
   async function handleInscribir() {
     if (!cursoInscripcion || empleadosSeleccionados.length === 0) return
     try {
-      await inscribirParticipantes({ CursoAcademiaId: Number(cursoInscripcion), participantes: empleadosSeleccionados })
+      const verif = await verificarInscripciones({ CursoAcademiaId: Number(cursoInscripcion), participantes: empleadosSeleccionados })
+      if (verif.bloqueados.length > 0 || verif.advertencias.length > 0) {
+        setVerificacionResult(verif)
+        setModalVerificacionOpen(true)
+        return
+      }
+      await ejecutarInscripcion(empleadosSeleccionados, [])
+    } catch (err) {
+      window.alert('Error: ' + err.message)
+    }
+  }
+
+  async function ejecutarInscripcion(participantes, inscripcionesPrevias) {
+    try {
+      await inscribirParticipantes({
+        CursoAcademiaId: Number(cursoInscripcion),
+        participantes,
+        confirmarReinscripcion: inscripcionesPrevias.length > 0,
+        inscripcionesPrevias
+      })
       setEmpleadosSeleccionados([])
       setSearchParticipantesInput('')
       setParticipantesDisponibles([])
       setModalParticipantesOpen(false)
+      setModalVerificacionOpen(false)
+      setVerificacionResult(null)
       const r = await getAcademiaInscritos(cursoInscripcion)
       setInscritosLista(r)
       loadCursos()
@@ -187,6 +211,16 @@ export default function Academia({ usuario }) {
     } catch (err) {
       window.alert('Error: ' + err.message)
     }
+  }
+
+  function handleConfirmarReinscripcion() {
+    if (!verificacionResult) return
+    const participantesPermitidos = [
+      ...verificacionResult.nuevos,
+      ...verificacionResult.advertencias
+    ]
+    const previas = verificacionResult.advertencias.map(a => a.inscripcionPreviaId).filter(Boolean)
+    ejecutarInscripcion(participantesPermitidos, previas)
   }
 
   async function handleDarBaja(inscripcionId) {
@@ -625,6 +659,68 @@ export default function Academia({ usuario }) {
               </div>
             )
           })()}
+
+          {/* Modal de verificación de reinscripción */}
+          {modalVerificacionOpen && verificacionResult && (
+            <div className="modal-overlay" onClick={() => setModalVerificacionOpen(false)}>
+              <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '620px' }}>
+                <div className="modal-header">
+                  <h2>Verificación de inscripción</h2>
+                  <button className="icon-button" onClick={() => setModalVerificacionOpen(false)}>✕</button>
+                </div>
+                <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                  {verificacionResult.bloqueados.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <h4 style={{ color: '#dc2626', fontSize: 14, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        No se pueden inscribir ({verificacionResult.bloqueados.length})
+                      </h4>
+                      <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>Ya completaron este curso y no pueden reinscribirse.</p>
+                      {verificacionResult.bloqueados.map((b, i) => (
+                        <div key={i} style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, marginBottom: 6 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{b.NombreCompleto} <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#6b7280' }}>({b.NumeroEmpleado})</span></div>
+                          <div style={{ fontSize: 12, color: '#dc2626', marginTop: 2 }}>{b.razon}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {verificacionResult.advertencias.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <h4 style={{ color: '#d97706', fontSize: 14, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Reinscripción ({verificacionResult.advertencias.length})
+                      </h4>
+                      <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>Estos participantes estaban inscritos pero no completaron el curso. Al confirmar, se darán de baja del curso anterior y se inscribirán en el nuevo.</p>
+                      {verificacionResult.advertencias.map((a, i) => (
+                        <div key={i} style={{ padding: '8px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, marginBottom: 6 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{a.NombreCompleto} <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#6b7280' }}>({a.NumeroEmpleado})</span></div>
+                          <div style={{ fontSize: 12, color: '#d97706', marginTop: 2 }}>{a.razon}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {verificacionResult.nuevos.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <h4 style={{ color: '#16a34a', fontSize: 14, margin: '0 0 8px' }}>
+                        Nuevos ({verificacionResult.nuevos.length})
+                      </h4>
+                      {verificacionResult.nuevos.map((n, i) => (
+                        <div key={i} style={{ padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, marginBottom: 6 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{n.NombreCompleto} <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#6b7280' }}>({n.NumeroEmpleado})</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button type="button" className="secondary-button" onClick={() => setModalVerificacionOpen(false)}>Cancelar</button>
+                  {(verificacionResult.nuevos.length > 0 || verificacionResult.advertencias.length > 0) && (
+                    <button type="button" className="primary-button" onClick={handleConfirmarReinscripcion}>
+                      Inscribir {verificacionResult.nuevos.length + verificacionResult.advertencias.length} participante(s)
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Inscritos list */}
           {cursoInscripcion && (
