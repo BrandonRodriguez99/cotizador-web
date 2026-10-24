@@ -19,6 +19,7 @@ import {
   getCursos,
   getCoaches,
 } from './api'
+import { generarListaAsistenciaPDF } from './generarListaAsistencia'
 
 const TABS = [
   { id: 'cursos', label: 'Cursos' },
@@ -63,6 +64,7 @@ export default function Academia({ usuario }) {
   const [cursoAsistencia, setCursoAsistencia] = useState('')
   const [asistenciasData, setAsistenciasData] = useState(null)
   const [loadingAsistencias, setLoadingAsistencias] = useState(false)
+  const [modalListaAsistOpen, setModalListaAsistOpen] = useState(false)
 
   // qr
   const [filtroNombreCursoQR, setFiltroNombreCursoQR] = useState('')
@@ -749,12 +751,24 @@ export default function Academia({ usuario }) {
               </div>
 
               <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>
-                  Matriz de Asistencia
-                </h3>
-                <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 12px' }}>
-                  {asistenciasData.sesiones.length} sesiones programadas · Mínimo {asistenciasData.porcentajeMin}% de asistencia para constancia
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>
+                      Matriz de Asistencia
+                    </h3>
+                    <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                      {asistenciasData.sesiones.length} sesiones programadas · Mínimo {asistenciasData.porcentajeMin}% de asistencia para constancia
+                    </p>
+                  </div>
+                  <button
+                    className="secondary-button"
+                    style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}
+                    onClick={() => setModalListaAsistOpen(true)}
+                  >
+                    ↓ Descargar Lista de Asistencia
+                  </button>
+                </div>
+                <div style={{ height: 12 }} />
 
                 <div style={{ overflowX: 'auto' }}>
                   <table className="participants-table" style={{ fontSize: 12, minWidth: 800 }}>
@@ -845,6 +859,62 @@ export default function Academia({ usuario }) {
             </div>
           )}
         </div>
+        )
+      })()}
+
+      {/* Modal Descargar Lista de Asistencia */}
+      {modalListaAsistOpen && asistenciasData && (() => {
+        const cursoObj = cursos.find(c => String(c.CursoAcademiaId) === cursoAsistencia)
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setModalListaAsistOpen(false)}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '80vh', overflow: 'auto' }}
+              onClick={e => e.stopPropagation()}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>Descargar Lista de Asistencia</h3>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 16px' }}>
+                Selecciona la sesión para generar el PDF con el formato FRH02-04.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {asistenciasData.sesiones.map(s => {
+                  const asistentes = asistenciasData.asistencias.filter(a => a.SesionId === s.SesionId).length
+                  const total = asistenciasData.inscritos.length
+                  return (
+                    <button key={s.SesionId}
+                      onClick={async () => {
+                        await generarListaAsistenciaPDF({
+                          cursoNombre: cursoObj?.Nombre || '',
+                          generacion: cursoObj?.Generacion || '',
+                          sesion: s,
+                          inscritos: asistenciasData.inscritos,
+                          instructor: cursoObj?.Instructor || '',
+                        })
+                        setModalListaAsistOpen(false)
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                        border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, background: '#fff',
+                        cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s',
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = '#f0f7ff'}
+                      onMouseOut={e => e.currentTarget.style.background = '#fff'}
+                    >
+                      <span style={{ width: 28, height: 28, borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                        S{s.NumeroSesion}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>{fmtFecha(s.Fecha)}{s.HoraInicio ? ` · ${s.HoraInicio}` : ''}</div>
+                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{asistentes} de {total} asistentes</div>
+                      </div>
+                      <span style={{ fontSize: 18, color: '#2563eb' }}>↓</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                <button className="secondary-button" style={{ fontSize: 13 }} onClick={() => setModalListaAsistOpen(false)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
         )
       })()}
 
