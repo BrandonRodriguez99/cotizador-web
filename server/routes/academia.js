@@ -32,6 +32,9 @@ export async function initAcademiaTables() {
       FechaCreacion   DATETIME DEFAULT GETDATE()
     );
 
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('AcademiaCursos') AND name='Generacion')
+      ALTER TABLE AcademiaCursos ADD Generacion NVARCHAR(100) NULL;
+
     IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='AcademiaSesiones')
     CREATE TABLE AcademiaSesiones (
       SesionId        INT IDENTITY PRIMARY KEY,
@@ -134,7 +137,7 @@ router.get('/cursos/:id', autenticar, async (req, res) => {
 router.post('/cursos', autenticar, async (req, res) => {
   try {
     const pool = await requirePool(res); if (!pool) return;
-    const { Nombre, Descripcion, Instructor, Modalidad, Ubicacion, Capacidad, PorcentajeMinAsistencia, sesiones } = req.body;
+    const { Nombre, Descripcion, Instructor, Modalidad, Ubicacion, Capacidad, PorcentajeMinAsistencia, Generacion, sesiones } = req.body;
     const rCurso = await pool.request()
       .input('Nombre', sql.NVarChar, Nombre)
       .input('Descripcion', sql.NVarChar, Descripcion || null)
@@ -143,10 +146,11 @@ router.post('/cursos', autenticar, async (req, res) => {
       .input('Ubicacion', sql.NVarChar, Ubicacion || null)
       .input('Capacidad', sql.Int, Capacidad || 25)
       .input('PctMin', sql.Int, PorcentajeMinAsistencia || 75)
+      .input('Generacion', sql.NVarChar, Generacion || null)
       .input('CreadoPor', sql.NVarChar, req.usuario?.nombre || null)
-      .query(`INSERT INTO AcademiaCursos (Nombre, Descripcion, Instructor, Modalidad, Ubicacion, Capacidad, PorcentajeMinAsistencia, CreadoPor)
+      .query(`INSERT INTO AcademiaCursos (Nombre, Descripcion, Instructor, Modalidad, Ubicacion, Capacidad, PorcentajeMinAsistencia, Generacion, CreadoPor)
               OUTPUT INSERTED.*
-              VALUES (@Nombre, @Descripcion, @Instructor, @Modalidad, @Ubicacion, @Capacidad, @PctMin, @CreadoPor)`);
+              VALUES (@Nombre, @Descripcion, @Instructor, @Modalidad, @Ubicacion, @Capacidad, @PctMin, @Generacion, @CreadoPor)`);
     const curso = rCurso.recordset[0];
 
     if (Array.isArray(sesiones) && sesiones.length > 0) {
@@ -171,7 +175,7 @@ router.post('/cursos', autenticar, async (req, res) => {
 router.put('/cursos/:id', autenticar, async (req, res) => {
   try {
     const pool = await requirePool(res); if (!pool) return;
-    const { Nombre, Descripcion, Instructor, Modalidad, Ubicacion, Capacidad, Estado, PorcentajeMinAsistencia } = req.body;
+    const { Nombre, Descripcion, Instructor, Modalidad, Ubicacion, Capacidad, Estado, PorcentajeMinAsistencia, Generacion } = req.body;
     await pool.request()
       .input('id', sql.Int, req.params.id)
       .input('Nombre', sql.NVarChar, Nombre)
@@ -182,9 +186,10 @@ router.put('/cursos/:id', autenticar, async (req, res) => {
       .input('Capacidad', sql.Int, Capacidad || 25)
       .input('Estado', sql.NVarChar, Estado || 'Activo')
       .input('PctMin', sql.Int, PorcentajeMinAsistencia || 75)
+      .input('Generacion', sql.NVarChar, Generacion || null)
       .query(`UPDATE AcademiaCursos SET Nombre=@Nombre, Descripcion=@Descripcion, Instructor=@Instructor,
               Modalidad=@Modalidad, Ubicacion=@Ubicacion, Capacidad=@Capacidad, Estado=@Estado,
-              PorcentajeMinAsistencia=@PctMin
+              PorcentajeMinAsistencia=@PctMin, Generacion=@Generacion
               WHERE CursoAcademiaId=@id`);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

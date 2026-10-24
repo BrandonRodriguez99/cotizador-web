@@ -32,6 +32,11 @@ function fmtFecha(d) {
   return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function cursoLabel(c) {
+  if (!c) return ''
+  return c.Generacion ? `${c.Nombre} — ${c.Generacion}` : c.Nombre
+}
+
 export default function Academia({ usuario }) {
   const [tab, setTab] = useState('cursos')
   const [cursos, setCursos] = useState([])
@@ -288,7 +293,7 @@ export default function Academia({ usuario }) {
                 ) : cursosFiltrados.map(c => (
                   <tr key={c.CursoAcademiaId} style={{ cursor: 'pointer' }} onClick={() => openDetalle(c.CursoAcademiaId)}>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{c.Nombre}</div>
+                      <div style={{ fontWeight: 600 }}>{cursoLabel(c)}</div>
                       <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.Instructor || 'Sin instructor'}</div>
                     </td>
                     <td>
@@ -320,7 +325,7 @@ export default function Academia({ usuario }) {
                       <div style={{ display: 'flex', gap: 4 }}>
                         <button className="ghost-button" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => { setEditandoCurso(c); setShowNuevoCurso(true) }}>Editar</button>
                         <button className="secondary-button" style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={async () => {
-                          if (!window.confirm(`¿Eliminar el curso "${c.Nombre}"?`)) return
+                          if (!window.confirm(`¿Eliminar el curso "${cursoLabel(c)}"?`)) return
                           try { await deleteAcademiaCurso(c.CursoAcademiaId); loadCursos() } catch (err) { window.alert(err.message) }
                         }}>Eliminar</button>
                       </div>
@@ -352,7 +357,7 @@ export default function Academia({ usuario }) {
                   <option value="">Seleccionar curso...</option>
                   {cursos.filter(c => c.Estado === 'Activo' || c.Estado === 'Próximo').map(c => (
                     <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>
-                      {c.Nombre} ({c.Capacidad - (c.Inscritos || 0)} lugares)
+                      {cursoLabel(c)} ({c.Capacidad - (c.Inscritos || 0)} lugares)
                     </option>
                   ))}
                 </select>
@@ -566,7 +571,7 @@ export default function Academia({ usuario }) {
           {cursoInscripcion && (
             <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>
-                Participantes inscritos — {cursoSel?.Nombre || ''}
+                Participantes inscritos — {cursoSel ? cursoLabel(cursoSel) : ''}
               </h3>
               {loadingInscritos ? <p style={{ color: '#6b7280' }}>Cargando...</p> : (
                 <div className="table-wrap">
@@ -622,7 +627,7 @@ export default function Academia({ usuario }) {
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             <select className="form-control" value={cursoAsistencia} onChange={e => setCursoAsistencia(e.target.value)} style={{ maxWidth: 320, fontSize: 13 }}>
               <option value="">Seleccionar curso...</option>
-              {cursos.map(c => <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>{c.Nombre}</option>)}
+              {cursos.map(c => <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>{cursoLabel(c)}</option>)}
             </select>
           </div>
 
@@ -778,7 +783,7 @@ export default function Academia({ usuario }) {
                 <select className="form-control" value={cursoQR} onChange={e => setCursoQR(e.target.value)} style={{ width: '100%', fontSize: 13 }}>
                   <option value="">Seleccionar curso...</option>
                   {cursos.filter(c => c.Estado !== 'Completado').map(c => (
-                    <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>{c.Nombre}</option>
+                    <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>{cursoLabel(c)}</option>
                   ))}
                 </select>
               </div>
@@ -800,7 +805,7 @@ export default function Academia({ usuario }) {
                     alt="QR" style={{ width: 180, height: 180, display: 'block' }} />
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
-                  Sesión {sesionesQR.find(s => s.SesionId === Number(sesionQR))?.NumeroSesion} — {cursos.find(c => c.CursoAcademiaId === Number(cursoQR))?.Nombre}
+                  Sesión {sesionesQR.find(s => s.SesionId === Number(sesionQR))?.NumeroSesion} — {cursoLabel(cursos.find(c => c.CursoAcademiaId === Number(cursoQR)))}
                 </div>
                 <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
                   {fmtFecha(sesionesQR.find(s => s.SesionId === Number(sesionQR))?.Fecha)}
@@ -851,7 +856,7 @@ export default function Academia({ usuario }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Detalle del curso</div>
-                  <h2 style={{ margin: '2px 0 0', fontSize: 18, fontWeight: 700 }}>{detalleCurso.curso.Nombre}</h2>
+                  <h2 style={{ margin: '2px 0 0', fontSize: 18, fontWeight: 700 }}>{cursoLabel(detalleCurso.curso)}</h2>
                   <p style={{ margin: '3px 0 0', color: '#6b7280', fontSize: 13 }}>{detalleCurso.curso.Instructor || 'Sin instructor'} · {detalleCurso.curso.Modalidad}</p>
                 </div>
                 <button onClick={() => setDetalleCurso(null)} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: 'transparent', cursor: 'pointer', fontSize: 18, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -965,6 +970,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   const [descripcion, setDescripcion] = useState(cursoInicial?.Descripcion || '')
   const [instructor, setInstructor] = useState(cursoInicial?.Instructor || '')
   const [modalidad, setModalidad] = useState(cursoInicial?.Modalidad || 'Presencial')
+  const [generacion, setGeneracion] = useState(cursoInicial?.Generacion || '')
   const [ubicacion, setUbicacion] = useState(cursoInicial?.Ubicacion || '')
   const [capacidad, setCapacidad] = useState(String(cursoInicial?.Capacidad || 25))
   const [pctMin, setPctMin] = useState(String(cursoInicial?.PorcentajeMinAsistencia || 75))
@@ -1034,7 +1040,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
     setSaving(true)
     try {
       if (isEdit) {
-        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado })
+        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null })
         for (const s of sesiones) {
           if (s.SesionId) {
             await updateAcademiaSesion(s.SesionId, { Fecha: s.Fecha, HoraInicio: s.HoraInicio, HoraFin: s.HoraFin, Ubicacion: s.Ubicacion })
@@ -1044,7 +1050,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
         }
       } else {
         const sesionesValidas = sesiones.filter(s => s.Fecha)
-        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), sesiones: sesionesValidas })
+        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, sesiones: sesionesValidas })
       }
       onSaved()
     } catch (err) { window.alert('Error: ' + err.message) } finally { setSaving(false) }
@@ -1105,9 +1111,15 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                 <input className="form-control" value={nombre} onChange={e => setNombre(e.target.value)} required style={{ width: '100%' }} />
               )}
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Descripción</label>
-              <textarea className="form-control" value={descripcion} onChange={e => setDescripcion(e.target.value)} rows={2} style={{ width: '100%', resize: 'vertical' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Descripción</label>
+                <textarea className="form-control" value={descripcion} onChange={e => setDescripcion(e.target.value)} rows={2} style={{ width: '100%', resize: 'vertical' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Generación</label>
+                <input className="form-control" value={generacion} onChange={e => setGeneracion(e.target.value)} placeholder="Ej: Gen 1, 2024-B, Grupo A" style={{ width: '100%' }} />
+              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ position: 'relative' }}>
