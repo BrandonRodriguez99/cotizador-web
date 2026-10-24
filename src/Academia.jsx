@@ -718,10 +718,13 @@ export default function Academia({ usuario }) {
                 </p>
 
                 <div style={{ overflowX: 'auto' }}>
-                  <table className="participants-table" style={{ fontSize: 12, minWidth: 600 }}>
+                  <table className="participants-table" style={{ fontSize: 12, minWidth: 800 }}>
                     <thead>
                       <tr>
                         <th style={{ textAlign: 'left', minWidth: 160 }}>Participante</th>
+                        <th style={{ textAlign: 'left', minWidth: 100 }}>Empresa</th>
+                        <th style={{ textAlign: 'left', minWidth: 100 }}>Terminal</th>
+                        <th style={{ textAlign: 'left', minWidth: 140 }}>Correo</th>
                         {asistenciasData.sesiones.map(s => (
                           <th key={s.SesionId} style={{ textAlign: 'center' }}>
                             S{s.NumeroSesion}<br />
@@ -750,6 +753,9 @@ export default function Academia({ usuario }) {
                               <div style={{ fontWeight: 600 }}>{insc.NombreCompleto}</div>
                               <div style={{ fontSize: 11, color: '#9ca3af' }}>{insc.NumeroEmpleado}</div>
                             </td>
+                            <td style={{ textAlign: 'left', fontSize: 11 }}>{insc.Empresa || '-'}</td>
+                            <td style={{ textAlign: 'left', fontSize: 11 }}>{insc.Terminal || '-'}</td>
+                            <td style={{ textAlign: 'left', fontSize: 11 }}>{insc.Correo || '-'}</td>
                             {asistenciasData.sesiones.map(s => {
                               const presente = asistenciasData.asistencias.some(a => a.SesionId === s.SesionId && a.InscripcionId === insc.InscripcionId)
                               const pasada = new Date(s.Fecha) <= new Date()
