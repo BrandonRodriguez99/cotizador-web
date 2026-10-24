@@ -147,6 +147,10 @@ export function getCoaches() {
   return fetchJson('catalogos/coaches');
 }
 
+export function getCoachesTodos() {
+  return fetchJson('catalogos/coaches?todos=1');
+}
+
 export function getModalidades() {
   return fetchJson('catalogos/modalidades');
 }

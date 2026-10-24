@@ -17,6 +17,7 @@ import {
   registrarAsistenciaManual,
   searchParticipantes,
   getCursos,
+  getCoaches,
 } from './api'
 
 const TABS = [
@@ -975,9 +976,19 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   const [cursoSearch, setCursoSearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
 
+  const [catalogCoaches, setCatalogCoaches] = useState([])
+  const [coachSearch, setCoachSearch] = useState('')
+  const [showCoachDropdown, setShowCoachDropdown] = useState(false)
+
   useEffect(() => {
     getCursos().then(setCatalogCursos).catch(() => setCatalogCursos([]))
+    getCoaches().then(setCatalogCoaches).catch(() => setCatalogCoaches([]))
   }, [])
+
+  const coachesFiltrados = catalogCoaches.filter(c => {
+    if (!coachSearch) return true
+    return c.Nombre?.toLowerCase().includes(coachSearch.toLowerCase())
+  })
 
   useEffect(() => {
     if (isEdit && cursoInicial?.CursoAcademiaId) {
@@ -1099,9 +1110,43 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
               <textarea className="form-control" value={descripcion} onChange={e => setDescripcion(e.target.value)} rows={2} style={{ width: '100%', resize: 'vertical' }} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Instructor</label>
-                <input className="form-control" value={instructor} onChange={e => setInstructor(e.target.value)} style={{ width: '100%' }} />
+              <div style={{ position: 'relative' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Instructor (del catálogo)</label>
+                {catalogCoaches.length > 0 ? (
+                  <>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        className="form-control"
+                        value={showCoachDropdown ? coachSearch : instructor}
+                        onChange={e => { setCoachSearch(e.target.value); setInstructor(e.target.value); setShowCoachDropdown(true) }}
+                        onFocus={() => setShowCoachDropdown(true)}
+                        placeholder="Buscar coach..."
+                        style={{ width: '100%' }}
+                      />
+                      {instructor && !showCoachDropdown && (
+                        <button type="button" onClick={() => { setInstructor(''); setCoachSearch(''); setShowCoachDropdown(true) }}
+                          style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 14 }}>✕</button>
+                      )}
+                    </div>
+                    {showCoachDropdown && (
+                      <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', zIndex: 10, background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: 180, overflowY: 'auto', marginTop: 2 }}>
+                        {coachesFiltrados.length === 0 ? (
+                          <div style={{ padding: '12px 14px', fontSize: 13, color: '#9ca3af' }}>Sin resultados</div>
+                        ) : coachesFiltrados.map(c => (
+                          <div key={c.CoachId} onClick={() => { setInstructor(c.Nombre); setCoachSearch(''); setShowCoachDropdown(false) }}
+                            style={{ padding: '8px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <span style={{ fontWeight: 600 }}>{c.Nombre}</span>
+                            {c.Costo > 0 && <span style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>${Number(c.Costo).toFixed(0)}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <input className="form-control" value={instructor} onChange={e => setInstructor(e.target.value)} style={{ width: '100%' }} />
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Modalidad</label>

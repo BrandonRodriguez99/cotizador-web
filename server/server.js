@@ -533,9 +533,22 @@ app.delete('/api/catalogos/cursos/:id', async (req, res) => {
   } catch (err) { console.log('❌ ERROR ELIMINAR CURSO:', err.message); res.status(500).json({ error: 'Error al eliminar curso' }); }
 });
 
+app.get('/api/catalogos/coaches', async (req, res) => {
+  try {
+    if (!ensurePool(res)) return;
+    const todos = req.query.todos === '1';
+    const result = await pool.request().query(
+      todos ? `SELECT * FROM Coaches ORDER BY Nombre` : `SELECT * FROM Coaches WHERE Activo = 1 ORDER BY Nombre`
+    );
+    res.json(result.recordset);
+  } catch (err) {
+    console.log('❌ ERROR COACHES:', err.message);
+    res.status(500).json({ error: 'Error al cargar coaches' });
+  }
+});
+
 const catalogRoutes = [
   { path: 'clientes', table: 'Empresas', idColumn: 'EmpresaId' },
-  { path: 'coaches', table: 'Coaches', idColumn: 'CoachId' },
   { path: 'modalidades', table: 'Modalidades', idColumn: 'ModalidadId' },
   { path: 'conceptos', table: 'ConceptosCosto', idColumn: 'ConceptoCostoId' },
 ];
