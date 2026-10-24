@@ -325,7 +325,7 @@ router.post('/inscripciones', autenticar, async (req, res) => {
         .input('Nombre', sql.NVarChar, p.NombreCompleto)
         .input('Empresa', sql.NVarChar, p.Empresa || null)
         .input('Correo', sql.NVarChar, p.Correo || null)
-        .input('Terminal', sql.NVarChar, p.Terminal || p.UnidadNegocio || null)
+        .input('Terminal', sql.NVarChar, p.Terminal || null)
         .input('InscritoPor', sql.NVarChar, req.usuario?.nombre || null)
         .query(`INSERT INTO AcademiaInscripciones (CursoAcademiaId, NumeroEmpleado, NombreCompleto, Empresa, Correo, Terminal, InscritoPor)
                 OUTPUT INSERTED.*

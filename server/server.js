@@ -734,8 +734,8 @@ app.get('/api/catalogos/participantes', async (req, res) => {
           ISNULL(ApellidoMaterno,'')
         )) AS NombreCompleto,
         ISNULL(UnidadNegocio, '') AS Empresa,
-        ISNULL(UnidadNegocio, '') AS Terminal,
-        ISNULL(Correo, '') AS Correo
+        ISNULL(Terminal, '') AS Terminal,
+        ISNULL(CorreoElectronico, '') AS Correo
       FROM [biUDAT].[STG].[tPlantillaColaboradoresTrayecto]
       WHERE BActivo = 1
     `;
