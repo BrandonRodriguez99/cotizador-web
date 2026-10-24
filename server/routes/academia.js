@@ -375,12 +375,13 @@ router.get('/cursos/:id/asistencias', autenticar, async (req, res) => {
 
     const rInscritos = await pool.request()
       .input('id', sql.Int, cursoId)
-      .query(`SELECT i.*,
+      .query(`SELECT i.InscripcionId, i.CursoAcademiaId, i.NumeroEmpleado, i.NombreCompleto,
+        i.FechaInscripcion, i.InscritoPor, i.Activo,
+        ISNULL(NULLIF(i.Empresa,''), ISNULL(p.Empresa,'')) AS Empresa,
         ISNULL(NULLIF(i.Terminal,''), ISNULL(p.Terminal,'')) AS Terminal,
         ISNULL(NULLIF(i.Plaza,''), ISNULL(p.Plaza,'')) AS Plaza,
         ISNULL(NULLIF(i.Area,''), ISNULL(p.Area,'')) AS Area,
-        ISNULL(NULLIF(i.Correo,''), ISNULL(p.CorreoElectronico,'')) AS Correo,
-        ISNULL(NULLIF(i.Empresa,''), ISNULL(p.Empresa,'')) AS Empresa
+        ISNULL(NULLIF(i.Correo,''), ISNULL(p.CorreoElectronico,'')) AS Correo
       FROM AcademiaInscripciones i
       LEFT JOIN [biUDAT].[STG].[tPlantillaColaboradoresTrayecto] p
         ON p.NumeroEmpleado=i.NumeroEmpleado AND p.BActivo=1
