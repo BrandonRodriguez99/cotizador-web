@@ -63,6 +63,8 @@ export default function Academia({ usuario }) {
   const [loadingAsistencias, setLoadingAsistencias] = useState(false)
 
   // qr
+  const [filtroNombreCursoQR, setFiltroNombreCursoQR] = useState('')
+  const [filtroGeneracionQR, setFiltroGeneracionQR] = useState('')
   const [cursoQR, setCursoQR] = useState('')
   const [sesionQR, setSesionQR] = useState('')
   const [sesionesQR, setSesionesQR] = useState([])
@@ -818,26 +820,58 @@ export default function Academia({ usuario }) {
               Genera un código QR por sesión. Los participantes lo escanean con su celular, ingresan su número de empleado, confirman sus datos y la fecha se valida automáticamente.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Curso</label>
-                <select className="form-control" value={cursoQR} onChange={e => setCursoQR(e.target.value)} style={{ width: '100%', fontSize: 13 }}>
-                  <option value="">Seleccionar curso...</option>
-                  {cursos.filter(c => c.Estado !== 'Completado').map(c => (
-                    <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>{cursoLabel(c)}</option>
-                  ))}
-                </select>
+            {(() => {
+              const cursosNoCompletados = cursos.filter(c => c.Estado !== 'Completado')
+              const nombresUnicosQR = [...new Set(cursosNoCompletados.map(c => c.Nombre))].sort()
+              const cursosDelNombreQR = filtroNombreCursoQR ? cursosNoCompletados.filter(c => c.Nombre === filtroNombreCursoQR) : []
+              const generacionesQR = cursosDelNombreQR.map(c => ({ id: c.CursoAcademiaId, gen: c.Generacion || '' }))
+              return (
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Curso</label>
+                  <select className="form-control" value={filtroNombreCursoQR} onChange={e => {
+                    const nombre = e.target.value
+                    setFiltroNombreCursoQR(nombre)
+                    setFiltroGeneracionQR('')
+                    const matches = nombre ? cursosNoCompletados.filter(c => c.Nombre === nombre) : []
+                    if (matches.length === 1) {
+                      setCursoQR(String(matches[0].CursoAcademiaId))
+                    } else {
+                      setCursoQR('')
+                    }
+                  }} style={{ width: '100%', fontSize: 13 }}>
+                    <option value="">Seleccionar curso...</option>
+                    {nombresUnicosQR.map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+                {filtroNombreCursoQR && generacionesQR.length > 1 && (
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Generación</label>
+                    <select className="form-control" value={filtroGeneracionQR} onChange={e => {
+                      const gen = e.target.value
+                      setFiltroGeneracionQR(gen)
+                      const match = cursosDelNombreQR.find(c => (c.Generacion || '') === gen)
+                      setCursoQR(match ? String(match.CursoAcademiaId) : '')
+                    }} style={{ width: '100%', fontSize: 13 }}>
+                      <option value="">Seleccionar generación...</option>
+                      {generacionesQR.map(g => (
+                        <option key={g.id} value={g.gen}>{g.gen || '(Sin generación)'}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Sesión</label>
+                  <select className="form-control" value={sesionQR} onChange={e => setSesionQR(e.target.value)} style={{ width: '100%', fontSize: 13 }} disabled={!cursoQR}>
+                    <option value="">Seleccionar sesión...</option>
+                    {sesionesQR.map(s => (
+                      <option key={s.SesionId} value={s.SesionId}>Sesión {s.NumeroSesion} — {fmtFecha(s.Fecha)}{s.HoraInicio ? `, ${s.HoraInicio}` : ''}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Sesión</label>
-                <select className="form-control" value={sesionQR} onChange={e => setSesionQR(e.target.value)} style={{ width: '100%', fontSize: 13 }} disabled={!cursoQR}>
-                  <option value="">Seleccionar sesión...</option>
-                  {sesionesQR.map(s => (
-                    <option key={s.SesionId} value={s.SesionId}>Sesión {s.NumeroSesion} — {fmtFecha(s.Fecha)}{s.HoraInicio ? `, ${s.HoraInicio}` : ''}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              )
+            })()}
 
             {sesionQR && (
               <div style={{ textAlign: 'center', padding: 24, border: '2px dashed var(--border, #e5e7eb)', borderRadius: 8 }}>
