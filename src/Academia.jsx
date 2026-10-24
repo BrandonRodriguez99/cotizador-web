@@ -709,6 +709,45 @@ export default function Academia({ usuario }) {
 
           {asistenciasData && !loadingAsistencias && (
             <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginBottom: 16 }}>
+                <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16 }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 10px' }}>Resumen del curso</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div style={{ background: '#f3f4f6', borderRadius: 6, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase' }}>Inscritos</div>
+                      <div style={{ fontWeight: 700 }}>{asistenciasData.inscritos.length}</div>
+                    </div>
+                    <div style={{ background: '#f3f4f6', borderRadius: 6, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase' }}>Sesiones</div>
+                      <div style={{ fontWeight: 700 }}>{asistenciasData.sesiones.length}</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16 }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 10px' }}>Por sesión</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {asistenciasData.sesiones.map(s => {
+                      const asistentes = asistenciasData.asistencias.filter(a => a.SesionId === s.SesionId).length
+                      const total = asistenciasData.inscritos.length
+                      const pct = total > 0 ? Math.round((asistentes / total) * 100) : 0
+                      const pasada = new Date(s.Fecha) <= new Date()
+                      return (
+                        <div key={s.SesionId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--border, #e5e7eb)', borderRadius: 6, fontSize: 12, opacity: pasada ? 1 : 0.5 }}>
+                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+                            {s.NumeroSesion}
+                          </span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600 }}>{fmtFecha(s.Fecha)}{s.HoraInicio ? ` · ${s.HoraInicio}` : ''}</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>{pasada ? `${asistentes} de ${total} asistieron` : 'Pendiente'}</div>
+                          </div>
+                          {pasada && <span style={{ fontFamily: 'monospace', fontWeight: 700, color: pct >= 80 ? '#16a34a' : '#d97706', fontSize: 12 }}>{pct}%</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
               <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>
                   Matriz de Asistencia
@@ -794,46 +833,6 @@ export default function Academia({ usuario }) {
                       })}
                     </tbody>
                   </table>
-                </div>
-              </div>
-
-              {/* Session summary */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
-                <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16 }}>
-                  <h4 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 10px' }}>Resumen del curso</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <div style={{ background: '#f3f4f6', borderRadius: 6, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase' }}>Inscritos</div>
-                      <div style={{ fontWeight: 700 }}>{asistenciasData.inscritos.length}</div>
-                    </div>
-                    <div style={{ background: '#f3f4f6', borderRadius: 6, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase' }}>Sesiones</div>
-                      <div style={{ fontWeight: 700 }}>{asistenciasData.sesiones.length}</div>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16 }}>
-                  <h4 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 10px' }}>Por sesión</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {asistenciasData.sesiones.map(s => {
-                      const asistentes = asistenciasData.asistencias.filter(a => a.SesionId === s.SesionId).length
-                      const total = asistenciasData.inscritos.length
-                      const pct = total > 0 ? Math.round((asistentes / total) * 100) : 0
-                      const pasada = new Date(s.Fecha) <= new Date()
-                      return (
-                        <div key={s.SesionId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--border, #e5e7eb)', borderRadius: 6, fontSize: 12, opacity: pasada ? 1 : 0.5 }}>
-                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
-                            {s.NumeroSesion}
-                          </span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>{fmtFecha(s.Fecha)}{s.HoraInicio ? ` · ${s.HoraInicio}` : ''}</div>
-                            <div style={{ color: '#9ca3af', fontSize: 11 }}>{pasada ? `${asistentes} de ${total} asistieron` : 'Pendiente'}</div>
-                          </div>
-                          {pasada && <span style={{ fontFamily: 'monospace', fontWeight: 700, color: pct >= 80 ? '#16a34a' : '#d97706', fontSize: 12 }}>{pct}%</span>}
-                        </div>
-                      )
-                    })}
-                  </div>
                 </div>
               </div>
             </>
