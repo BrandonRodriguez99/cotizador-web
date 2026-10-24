@@ -805,6 +805,7 @@ export function inscribirParticipantes(data) { return fetchJson('academia/inscri
 export function darDeBajaInscripcion(id) { return fetchJson(`academia/inscripciones/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function getAcademiaAsistencias(cursoId) { return fetchJson(`academia/cursos/${cursoId}/asistencias`, { headers: authHeaders() }) }
 export function registrarAsistenciaManual(data) { return fetchJson('academia/asistencia-manual', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function getAcademiaHistorico() { return fetchJson('academia/historico', { headers: authHeaders() }) }
 export function buscarEmpleadosAcademia(q) { return fetchJson(`academia/buscar-empleados?q=${encodeURIComponent(q)}`, { headers: authHeaders() }) }
 
 export function getFormularios() { return fetchJson('formularios', { headers: authHeaders() }) }

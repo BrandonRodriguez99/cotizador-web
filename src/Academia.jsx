@@ -15,6 +15,7 @@ import {
   darDeBajaInscripcion,
   getAcademiaAsistencias,
   registrarAsistenciaManual,
+  getAcademiaHistorico,
   searchParticipantes,
   getCursos,
   getCoaches,
@@ -26,6 +27,7 @@ const TABS = [
   { id: 'inscripciones', label: 'Inscripciones' },
   { id: 'asistencias', label: 'Asistencias' },
   { id: 'qr', label: 'QR en Aula' },
+  { id: 'historico', label: 'Histórico' },
 ]
 
 function fmtFecha(d) {
@@ -73,6 +75,16 @@ export default function Academia({ usuario }) {
   const [sesionQR, setSesionQR] = useState('')
   const [sesionesQR, setSesionesQR] = useState([])
 
+  // historico
+  const [historicoData, setHistoricoData] = useState([])
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
+  const [filtroHistEmpresa, setFiltroHistEmpresa] = useState('')
+  const [filtroHistTerminal, setFiltroHistTerminal] = useState('')
+  const [filtroHistPlaza, setFiltroHistPlaza] = useState('')
+  const [filtroHistArea, setFiltroHistArea] = useState('')
+  const [filtroHistBuscar, setFiltroHistBuscar] = useState('')
+  const [filtroHistCurso, setFiltroHistCurso] = useState('')
+
   // filters
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroModalidad, setFiltroModalidad] = useState('')
@@ -92,6 +104,15 @@ export default function Academia({ usuario }) {
   }, [])
 
   useEffect(() => { loadCursos() }, [loadCursos])
+
+  useEffect(() => {
+    if (tab !== 'historico') return
+    setLoadingHistorico(true)
+    getAcademiaHistorico()
+      .then(d => setHistoricoData(d))
+      .catch(console.error)
+      .finally(() => setLoadingHistorico(false))
+  }, [tab])
 
   // search participantes (same as NuevaCotizacion)
   useEffect(() => {
@@ -1028,6 +1049,138 @@ export default function Academia({ usuario }) {
           </div>
         </div>
       )}
+
+      {/* ═══ TAB HISTÓRICO ═══ */}
+      {tab === 'historico' && (() => {
+        const filtered = historicoData.filter(r => {
+          if (filtroHistEmpresa && r.Empresa !== filtroHistEmpresa) return false
+          if (filtroHistTerminal && r.Terminal !== filtroHistTerminal) return false
+          if (filtroHistPlaza && r.Plaza !== filtroHistPlaza) return false
+          if (filtroHistArea && r.Area !== filtroHistArea) return false
+          if (filtroHistCurso && r.CursoNombre !== filtroHistCurso) return false
+          if (filtroHistBuscar) {
+            const q = filtroHistBuscar.toLowerCase()
+            if (!(r.NombreCompleto || '').toLowerCase().includes(q) && !(r.NumeroEmpleado || '').includes(q)) return false
+          }
+          return true
+        })
+        const uniqueVals = (key) => [...new Set(historicoData.map(r => r[key]).filter(Boolean))].sort()
+
+        function descargarCSV() {
+          const headers = ['No. Empleado','Nombre','Empresa','Terminal','Plaza','Área','Correo','Curso','Generación','Instructor','Modalidad','Sesiones Asistidas','Total Sesiones','% Asistencia','Constancia']
+          const rows = filtered.map(r => {
+            const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
+            const constancia = r.TotalSesiones > 0 && pct >= r.PorcentajeMinAsistencia ? 'Acreedor' : 'Pendiente'
+            return [r.NumeroEmpleado, r.NombreCompleto, r.Empresa, r.Terminal, r.Plaza, r.Area, r.Correo, r.CursoNombre, r.Generacion, r.Instructor, r.Modalidad, r.SesionesAsistidas, r.TotalSesiones, pct + '%', constancia]
+          })
+          const csv = [headers, ...rows].map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')).join('\n')
+          const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = 'Historico_Academia.csv'
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+
+        return (
+          <div style={{ padding: '16px 0' }}>
+            <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>Histórico de Cursos</h3>
+                  <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>{filtered.length} registro(s){historicoData.length !== filtered.length ? ` de ${historicoData.length}` : ''}</p>
+                </div>
+                <button className="secondary-button" style={{ fontSize: 12, padding: '6px 14px' }} onClick={descargarCSV} disabled={filtered.length === 0}>
+                  ↓ Descargar CSV
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                <input
+                  type="text" placeholder="Buscar por nombre o No. empleado..."
+                  value={filtroHistBuscar} onChange={e => setFiltroHistBuscar(e.target.value)}
+                  style={{ flex: '1 1 200px', minWidth: 180, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
+                />
+                <select value={filtroHistCurso} onChange={e => setFiltroHistCurso(e.target.value)} style={{ minWidth: 140, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                  <option value="">Todos los cursos</option>
+                  {uniqueVals('CursoNombre').map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select value={filtroHistEmpresa} onChange={e => setFiltroHistEmpresa(e.target.value)} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                  <option value="">Todas las empresas</option>
+                  {uniqueVals('Empresa').map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select value={filtroHistTerminal} onChange={e => setFiltroHistTerminal(e.target.value)} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                  <option value="">Todas las terminales</option>
+                  {uniqueVals('Terminal').map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select value={filtroHistPlaza} onChange={e => setFiltroHistPlaza(e.target.value)} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                  <option value="">Todas las plazas</option>
+                  {uniqueVals('Plaza').map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select value={filtroHistArea} onChange={e => setFiltroHistArea(e.target.value)} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                  <option value="">Todas las áreas</option>
+                  {uniqueVals('Area').map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {loadingHistorico ? <p style={{ color: '#6b7280' }}>Cargando histórico...</p> : (
+              <div className="table-wrap">
+                <table className="participants-table" style={{ fontSize: 12 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', minWidth: 160 }}>Participante</th>
+                      <th style={{ textAlign: 'left' }}>Empresa</th>
+                      <th style={{ textAlign: 'left' }}>Terminal</th>
+                      <th style={{ textAlign: 'left' }}>Plaza</th>
+                      <th style={{ textAlign: 'left' }}>Área</th>
+                      <th style={{ textAlign: 'left' }}>Curso</th>
+                      <th style={{ textAlign: 'center' }}>Generación</th>
+                      <th style={{ textAlign: 'center' }}>Asistencia</th>
+                      <th style={{ textAlign: 'center' }}>Constancia</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr><td colSpan={9} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin registros</td></tr>
+                    ) : filtered.map(r => {
+                      const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
+                      const acreedor = r.TotalSesiones > 0 && pct >= r.PorcentajeMinAsistencia
+                      return (
+                        <tr key={r.InscripcionId}>
+                          <td style={{ textAlign: 'left' }}>
+                            <div style={{ fontWeight: 600 }}>{r.NombreCompleto}</div>
+                            <div style={{ fontSize: 11, color: '#9ca3af' }}>{r.NumeroEmpleado}</div>
+                          </td>
+                          <td style={{ fontSize: 11 }}>{r.Empresa || '-'}</td>
+                          <td style={{ fontSize: 11 }}>{r.Terminal || '-'}</td>
+                          <td style={{ fontSize: 11 }}>{r.Plaza || '-'}</td>
+                          <td style={{ fontSize: 11 }}>{r.Area || '-'}</td>
+                          <td style={{ fontSize: 11, fontWeight: 600 }}>{r.CursoNombre}</td>
+                          <td style={{ textAlign: 'center', fontSize: 11 }}>{r.Generacion || '-'}</td>
+                          <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: pct >= r.PorcentajeMinAsistencia ? '#16a34a' : pct > 0 ? '#d97706' : '#6b7280' }}>
+                            {r.SesionesAsistidas}/{r.TotalSesiones} ({pct}%)
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span style={{
+                              display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+                              background: acreedor ? '#f0fdf4' : '#f3f4f6',
+                              color: acreedor ? '#16a34a' : '#9ca3af',
+                            }}>
+                              {acreedor ? 'Acreedor' : 'Pendiente'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ═══ SIDE PANEL: Detalle curso ═══ */}
       {detalleCurso && (
