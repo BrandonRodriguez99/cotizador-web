@@ -87,6 +87,8 @@ export default function Academia({ usuario }) {
   const [filtroHistArea, setFiltroHistArea] = useState('')
   const [filtroHistBuscar, setFiltroHistBuscar] = useState('')
   const [filtroHistCurso, setFiltroHistCurso] = useState('')
+  const [historicoPagina, setHistoricoPagina] = useState(1)
+  const HISTORICO_POR_PAGINA = 25
 
   // filters
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -108,13 +110,17 @@ export default function Academia({ usuario }) {
 
   useEffect(() => { loadCursos() }, [loadCursos])
 
-  useEffect(() => {
-    if (tab !== 'historico') return
+  function loadHistorico() {
     setLoadingHistorico(true)
     getAcademiaHistorico()
       .then(d => setHistoricoData(d))
       .catch(console.error)
       .finally(() => setLoadingHistorico(false))
+  }
+
+  useEffect(() => {
+    if (tab !== 'historico') return
+    loadHistorico()
   }, [tab])
 
   // search participantes (same as NuevaCotizacion)
@@ -207,6 +213,7 @@ export default function Academia({ usuario }) {
       const r = await getAcademiaInscritos(cursoInscripcion)
       setInscritosLista(r)
       loadCursos()
+      loadHistorico()
       window.alert('Participantes inscritos correctamente')
     } catch (err) {
       window.alert('Error: ' + err.message)
@@ -478,6 +485,9 @@ export default function Academia({ usuario }) {
 
             {cursoInscripcion && empleadosSeleccionados.length > 0 && (
               <div style={{ marginTop: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 0 10px' }}>
+                  <button className="primary-button" style={{ fontSize: 13 }} onClick={handleInscribir}>Inscribir {empleadosSeleccionados.length} participante(s)</button>
+                </div>
                 <div className="table-wrap">
                   <table className="participants-table" style={{ fontSize: 13 }}>
                     <thead>
@@ -500,9 +510,6 @@ export default function Academia({ usuario }) {
                       })}
                     </tbody>
                   </table>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0' }}>
-                  <button className="primary-button" style={{ fontSize: 13 }} onClick={handleInscribir}>Inscribir {empleadosSeleccionados.length} participante(s)</button>
                 </div>
               </div>
             )}
@@ -1160,6 +1167,9 @@ export default function Academia({ usuario }) {
           }
           return true
         })
+        const totalPaginas = Math.max(1, Math.ceil(filtered.length / HISTORICO_POR_PAGINA))
+        const paginaActual = Math.min(historicoPagina, totalPaginas)
+        const paginados = filtered.slice((paginaActual - 1) * HISTORICO_POR_PAGINA, paginaActual * HISTORICO_POR_PAGINA)
         const uniqueVals = (key) => [...new Set(historicoData.map(r => r[key]).filter(Boolean))].sort()
 
         function descargarCSV() {
@@ -1195,26 +1205,26 @@ export default function Academia({ usuario }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                 <input
                   type="text" placeholder="Buscar por nombre o No. empleado..."
-                  value={filtroHistBuscar} onChange={e => setFiltroHistBuscar(e.target.value)}
+                  value={filtroHistBuscar} onChange={e => { setFiltroHistBuscar(e.target.value); setHistoricoPagina(1) }}
                   style={{ flex: '1 1 200px', minWidth: 180, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
                 />
-                <select value={filtroHistCurso} onChange={e => setFiltroHistCurso(e.target.value)} style={{ minWidth: 140, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                <select value={filtroHistCurso} onChange={e => { setFiltroHistCurso(e.target.value); setHistoricoPagina(1) }} style={{ minWidth: 140, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
                   <option value="">Todos los cursos</option>
                   {uniqueVals('CursoNombre').map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
-                <select value={filtroHistEmpresa} onChange={e => setFiltroHistEmpresa(e.target.value)} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                <select value={filtroHistEmpresa} onChange={e => { setFiltroHistEmpresa(e.target.value); setHistoricoPagina(1) }} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
                   <option value="">Todas las empresas</option>
                   {uniqueVals('Empresa').map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
-                <select value={filtroHistTerminal} onChange={e => setFiltroHistTerminal(e.target.value)} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                <select value={filtroHistTerminal} onChange={e => { setFiltroHistTerminal(e.target.value); setHistoricoPagina(1) }} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
                   <option value="">Todas las terminales</option>
                   {uniqueVals('Terminal').map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
-                <select value={filtroHistPlaza} onChange={e => setFiltroHistPlaza(e.target.value)} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                <select value={filtroHistPlaza} onChange={e => { setFiltroHistPlaza(e.target.value); setHistoricoPagina(1) }} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
                   <option value="">Todas las plazas</option>
                   {uniqueVals('Plaza').map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
-                <select value={filtroHistArea} onChange={e => setFiltroHistArea(e.target.value)} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                <select value={filtroHistArea} onChange={e => { setFiltroHistArea(e.target.value); setHistoricoPagina(1) }} style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
                   <option value="">Todas las áreas</option>
                   {uniqueVals('Area').map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
@@ -1238,9 +1248,9 @@ export default function Academia({ usuario }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.length === 0 ? (
+                    {paginados.length === 0 ? (
                       <tr><td colSpan={9} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin registros</td></tr>
-                    ) : filtered.map(r => {
+                    ) : paginados.map(r => {
                       const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
                       const acreedor = r.TotalSesiones > 0 && pct >= r.PorcentajeMinAsistencia
                       return (
@@ -1273,6 +1283,38 @@ export default function Academia({ usuario }) {
                   </tbody>
                 </table>
               </div>
+
+              {totalPaginas > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                  <button
+                    className="secondary-button" style={{ fontSize: 12, padding: '4px 10px' }}
+                    disabled={paginaActual <= 1} onClick={() => setHistoricoPagina(paginaActual - 1)}
+                  >Anterior</button>
+                  {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPaginas || Math.abs(p - paginaActual) <= 2)
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...')
+                      acc.push(p)
+                      return acc
+                    }, [])
+                    .map((p, i) => typeof p === 'string'
+                      ? <span key={`e${i}`} style={{ color: '#9ca3af', fontSize: 12 }}>...</span>
+                      : <button key={p} onClick={() => setHistoricoPagina(p)} style={{
+                          fontSize: 12, padding: '4px 10px', borderRadius: 6, border: '1px solid #d1d5db',
+                          background: p === paginaActual ? '#2563eb' : '#fff',
+                          color: p === paginaActual ? '#fff' : '#374151',
+                          cursor: 'pointer', fontWeight: p === paginaActual ? 700 : 400
+                        }}>{p}</button>
+                    )}
+                  <button
+                    className="secondary-button" style={{ fontSize: 12, padding: '4px 10px' }}
+                    disabled={paginaActual >= totalPaginas} onClick={() => setHistoricoPagina(paginaActual + 1)}
+                  >Siguiente</button>
+                  <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>
+                    Página {paginaActual} de {totalPaginas}
+                  </span>
+                </div>
+              )}
             )}
           </div>
         )
