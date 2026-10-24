@@ -15,7 +15,7 @@ import {
   darDeBajaInscripcion,
   getAcademiaAsistencias,
   registrarAsistenciaManual,
-  buscarEmpleadosAcademia,
+  searchParticipantes,
   getCursos,
 } from './api'
 
@@ -42,8 +42,9 @@ export default function Academia({ usuario }) {
 
   // inscripciones
   const [cursoInscripcion, setCursoInscripcion] = useState('')
-  const [busquedaEmpleado, setBusquedaEmpleado] = useState('')
-  const [empleadosResultado, setEmpleadosResultado] = useState([])
+  const [modalParticipantesOpen, setModalParticipantesOpen] = useState(false)
+  const [searchParticipantesInput, setSearchParticipantesInput] = useState('')
+  const [participantesDisponibles, setParticipantesDisponibles] = useState([])
   const [empleadosSeleccionados, setEmpleadosSeleccionados] = useState([])
   const [inscritosLista, setInscritosLista] = useState([])
   const [loadingInscritos, setLoadingInscritos] = useState(false)
@@ -78,17 +79,17 @@ export default function Academia({ usuario }) {
 
   useEffect(() => { loadCursos() }, [loadCursos])
 
-  // search empleados
+  // search participantes (same as NuevaCotizacion)
   useEffect(() => {
-    if (busquedaEmpleado.length < 2) { setEmpleadosResultado([]); return }
+    if (searchParticipantesInput.length < 2) { setParticipantesDisponibles([]); return }
     const t = setTimeout(async () => {
       try {
-        const r = await buscarEmpleadosAcademia(busquedaEmpleado)
-        setEmpleadosResultado(r)
-      } catch { setEmpleadosResultado([]) }
-    }, 350)
+        const r = await searchParticipantes(searchParticipantesInput)
+        setParticipantesDisponibles(r)
+      } catch { setParticipantesDisponibles([]) }
+    }, 300)
     return () => clearTimeout(t)
-  }, [busquedaEmpleado])
+  }, [searchParticipantesInput])
 
   // load inscritos when cursoInscripcion changes
   useEffect(() => {
@@ -116,12 +117,34 @@ export default function Academia({ usuario }) {
     getAcademiaSesiones(cursoQR).then(s => { setSesionesQR(s); setSesionQR(s[0]?.SesionId || '') }).catch(() => setSesionesQR([]))
   }, [cursoQR])
 
+  function getParticipanteKey(p) {
+    return p.EmpleadoId ?? p.NumeroEmpleado ?? p.NombreCompleto
+  }
+
+  function agregarParticipante(participante) {
+    const cursoSel = cursos.find(c => c.CursoAcademiaId === Number(cursoInscripcion))
+    const limite = cursoSel ? cursoSel.Capacidad - (cursoSel.Inscritos || 0) : null
+    if (limite !== null && empleadosSeleccionados.length >= limite) return
+    const key = getParticipanteKey(participante)
+    if (!empleadosSeleccionados.some(p => getParticipanteKey(p) === key)) {
+      setEmpleadosSeleccionados(prev => [...prev, participante])
+      setSearchParticipantesInput('')
+      setParticipantesDisponibles([])
+    }
+  }
+
+  function quitarParticipante(key) {
+    setEmpleadosSeleccionados(prev => prev.filter(p => getParticipanteKey(p) !== key))
+  }
+
   async function handleInscribir() {
     if (!cursoInscripcion || empleadosSeleccionados.length === 0) return
     try {
       await inscribirParticipantes({ CursoAcademiaId: Number(cursoInscripcion), participantes: empleadosSeleccionados })
       setEmpleadosSeleccionados([])
-      setBusquedaEmpleado('')
+      setSearchParticipantesInput('')
+      setParticipantesDisponibles([])
+      setModalParticipantesOpen(false)
       const r = await getAcademiaInscritos(cursoInscripcion)
       setInscritosLista(r)
       loadCursos()
@@ -311,15 +334,20 @@ export default function Academia({ usuario }) {
       )}
 
       {/* ═══ TAB INSCRIPCIONES ═══ */}
-      {tab === 'inscripciones' && (
+      {tab === 'inscripciones' && (() => {
+        const cursoSel = cursos.find(c => c.CursoAcademiaId === Number(cursoInscripcion))
+        const capacidadTotal = cursoSel?.Capacidad || 0
+        const inscritosActuales = cursoSel?.Inscritos || 0
+        const lugaresDisponibles = capacidadTotal - inscritosActuales
+        return (
         <div style={{ padding: '16px 0' }}>
+          {/* Course selector + participant panel */}
           <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>Inscribir participantes a un curso</h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginBottom: 12 }}>
-              <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Inscribir participantes</h3>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Curso *</label>
-                <select className="form-control" value={cursoInscripcion} onChange={e => { setCursoInscripcion(e.target.value); setEmpleadosSeleccionados([]) }} style={{ width: '100%', fontSize: 13 }}>
+                <select className="form-control" value={cursoInscripcion} onChange={e => { setCursoInscripcion(e.target.value); setEmpleadosSeleccionados([]) }} style={{ width: '100%', maxWidth: 400, fontSize: 13 }}>
                   <option value="">Seleccionar curso...</option>
                   {cursos.filter(c => c.Estado === 'Activo' || c.Estado === 'Próximo').map(c => (
                     <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>
@@ -328,57 +356,216 @@ export default function Academia({ usuario }) {
                   ))}
                 </select>
               </div>
+              {cursoInscripcion && (
+                <button
+                  type="button"
+                  className="secondary-button btn-with-icon"
+                  style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end' }}
+                  onClick={() => setModalParticipantesOpen(true)}
+                >
+                  <span className="btn-icon" aria-hidden>✎</span>
+                  Seleccionar Participantes
+                </button>
+              )}
             </div>
 
             {cursoInscripcion && (
-              <>
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Buscar colaborador (nombre, No. empleado o correo)</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input className="form-control" style={{ flex: 1, fontSize: 13 }} placeholder="Ej: Juan Pérez, 10254, juan@empresa.com"
-                      value={busquedaEmpleado} onChange={e => setBusquedaEmpleado(e.target.value)} />
-                  </div>
+              <p style={{ margin: '4px 0 0', fontSize: '13px', color: empleadosSeleccionados.length > 0 ? '#2563eb' : '#6b7280' }}>
+                {empleadosSeleccionados.length > 0
+                  ? `${empleadosSeleccionados.length} colaborador(es) listo(s) para inscribir`
+                  : `${inscritosActuales} de ${capacidadTotal} cupos ocupados — ${lugaresDisponibles} disponible(s)`}
+              </p>
+            )}
+
+            {cursoInscripcion && empleadosSeleccionados.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div className="table-wrap">
+                  <table className="participants-table" style={{ fontSize: 13 }}>
+                    <thead>
+                      <tr><th>#</th><th>Colaborador</th><th>No. Empleado</th><th>Empresa</th><th>Acciones</th></tr>
+                    </thead>
+                    <tbody>
+                      {empleadosSeleccionados.map((p, index) => {
+                        const k = getParticipanteKey(p)
+                        return (
+                          <tr key={k || index}>
+                            <td>{index + 1}</td>
+                            <td style={{ fontWeight: 600 }}>{p.NombreCompleto || '-'}</td>
+                            <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{p.NumeroEmpleado || '-'}</td>
+                            <td>{p.Empresa || '-'}</td>
+                            <td>
+                              <button type="button" className="icon-button" title="Quitar participante" onClick={() => quitarParticipante(k)}>✕</button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-
-                {empleadosResultado.length > 0 && (
-                  <div style={{ border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, overflow: 'hidden', marginBottom: 12, maxHeight: 220, overflowY: 'auto' }}>
-                    <table className="participants-table" style={{ fontSize: 12 }}>
-                      <thead><tr><th style={{ width: 32 }}></th><th>Colaborador</th><th>No. Empleado</th><th>Empresa</th><th>Correo</th></tr></thead>
-                      <tbody>
-                        {empleadosResultado.map(e => {
-                          const sel = empleadosSeleccionados.some(s => s.NumeroEmpleado === e.NumeroEmpleado)
-                          return (
-                            <tr key={e.NumeroEmpleado} style={{ cursor: 'pointer' }} onClick={() => {
-                              if (sel) setEmpleadosSeleccionados(prev => prev.filter(s => s.NumeroEmpleado !== e.NumeroEmpleado))
-                              else setEmpleadosSeleccionados(prev => [...prev, e])
-                            }}>
-                              <td><input type="checkbox" checked={sel} readOnly /></td>
-                              <td style={{ fontWeight: 600 }}>{e.NombreCompleto}</td>
-                              <td style={{ fontFamily: 'monospace' }}>{e.NumeroEmpleado}</td>
-                              <td>{e.Empresa || '-'}</td>
-                              <td style={{ color: '#6b7280' }}>{e.Correo || '-'}</td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {empleadosSeleccionados.length > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                    <span style={{ fontSize: 13, color: '#6b7280' }}>{empleadosSeleccionados.length} colaborador(es) seleccionado(s)</span>
-                    <button className="primary-button" style={{ fontSize: 13 }} onClick={handleInscribir}>Inscribir seleccionados</button>
-                  </div>
-                )}
-              </>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0' }}>
+                  <button className="primary-button" style={{ fontSize: 13 }} onClick={handleInscribir}>Inscribir {empleadosSeleccionados.length} participante(s)</button>
+                </div>
+              </div>
             )}
           </div>
 
+          {/* Modal for participant selection (NuevaCotizacion style) */}
+          {modalParticipantesOpen && (() => {
+            const limite = lugaresDisponibles > 0 ? lugaresDisponibles : null
+            const alLimite = limite !== null && empleadosSeleccionados.length >= limite
+            return (
+              <div className="modal-overlay" onClick={() => setModalParticipantesOpen(false)}>
+                <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '580px' }}>
+                  <div className="modal-header">
+                    <div>
+                      <h2 style={{ marginBottom: '4px' }}>Agregar Participantes</h2>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '13px', color: alLimite ? '#dc2626' : '#6b7280' }}>
+                          {empleadosSeleccionados.length}{limite ? `/${limite}` : ''} participante{empleadosSeleccionados.length !== 1 ? 's' : ''} seleccionado{empleadosSeleccionados.length !== 1 ? 's' : ''}
+                        </span>
+                        {limite && (
+                          <div style={{ flex: 1, maxWidth: '120px', height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${Math.min(100, (empleadosSeleccionados.length / limite) * 100)}%`,
+                              background: alLimite ? '#dc2626' : '#2563eb',
+                              borderRadius: '3px',
+                              transition: 'width 0.2s',
+                            }} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <button type="button" className="modal-close" onClick={() => setModalParticipantesOpen(false)}>✕</button>
+                  </div>
+
+                  <div className="modal-body">
+                    {alLimite && (
+                      <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: '#991b1b' }}>
+                        Cupo completo: ya tienes {limite} participante{limite !== 1 ? 's' : ''} seleccionado{limite !== 1 ? 's' : ''}. Quita alguno para agregar otro.
+                      </div>
+                    )}
+
+                    {!alLimite && (
+                      <div className="form-field form-field-full" style={{ marginBottom: '12px' }}>
+                        <span className="form-field-label">Buscar por nombre o número de empleado</span>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Escriba al menos 2 caracteres..."
+                          value={searchParticipantesInput}
+                          onChange={e => setSearchParticipantesInput(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                    )}
+
+                    {!alLimite && searchParticipantesInput.length >= 2 && (
+                      <div style={{ maxHeight: '260px', overflowY: 'auto', marginBottom: '12px' }}>
+                        {participantesDisponibles.length === 0 ? (
+                          <p style={{ color: '#6b7280', margin: '8px 0', fontSize: '13px' }}>No se encontraron colaboradores.</p>
+                        ) : (
+                          <>
+                            <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                              {participantesDisponibles.length} resultado(s):
+                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {participantesDisponibles.map(participante => {
+                                const pKey = getParticipanteKey(participante)
+                                const isSelected = empleadosSeleccionados.some(p => getParticipanteKey(p) === pKey)
+                                const yaInscrito = inscritosLista.some(i => i.NumeroEmpleado === participante.NumeroEmpleado)
+                                return (
+                                  <div
+                                    key={pKey}
+                                    style={{
+                                      padding: '9px 12px',
+                                      border: `1px solid ${yaInscrito ? '#d1d5db' : isSelected ? '#86efac' : '#e5e7eb'}`,
+                                      borderRadius: '6px',
+                                      backgroundColor: yaInscrito ? '#f3f4f6' : isSelected ? '#f0fdf4' : '#fff',
+                                      cursor: yaInscrito || isSelected ? 'default' : 'pointer',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      opacity: yaInscrito ? 0.6 : 1,
+                                    }}
+                                    onClick={() => !isSelected && !yaInscrito && agregarParticipante(participante)}
+                                  >
+                                    <div>
+                                      <div style={{ fontWeight: '500', fontSize: '13px' }}>{participante.NombreCompleto}</div>
+                                      <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                                        {participante.Empresa && `${participante.Empresa}`}
+                                        {participante.NumeroEmpleado && ` · Emp: ${participante.NumeroEmpleado}`}
+                                      </div>
+                                    </div>
+                                    {yaInscrito
+                                      ? <span style={{ fontSize: '12px', color: '#9ca3af', whiteSpace: 'nowrap' }}>Ya inscrito</span>
+                                      : isSelected
+                                        ? <span style={{ fontSize: '12px', color: '#16a34a', whiteSpace: 'nowrap' }}>✓ Agregado</span>
+                                        : <span style={{ fontSize: '12px', color: '#2563eb', whiteSpace: 'nowrap' }}>+ Agregar</span>
+                                    }
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {!alLimite && searchParticipantesInput.length < 2 && (
+                      <p style={{ fontSize: '13px', color: '#9ca3af', margin: '8px 0 12px' }}>
+                        Escribe al menos 2 caracteres para buscar.
+                      </p>
+                    )}
+
+                    {empleadosSeleccionados.length > 0 && (
+                      <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                        <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px', fontWeight: '600' }}>
+                          Participantes seleccionados:
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
+                          {empleadosSeleccionados.map((p, index) => {
+                            const k = getParticipanteKey(p)
+                            return (
+                              <div
+                                key={k}
+                                style={{
+                                  padding: '7px 12px',
+                                  backgroundColor: '#f9fafb',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  fontSize: '13px',
+                                }}
+                              >
+                                <span><strong style={{ color: '#6b7280', marginRight: '6px' }}>{index + 1}.</strong>{p.NombreCompleto}</span>
+                                <button type="button" className="icon-button" onClick={() => quitarParticipante(k)} title="Quitar">✕</button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="modal-footer">
+                    <button type="button" className="primary-button" onClick={() => setModalParticipantesOpen(false)}>
+                      Listo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Inscritos list */}
           {cursoInscripcion && (
             <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>
-                Participantes inscritos — {cursos.find(c => c.CursoAcademiaId === Number(cursoInscripcion))?.Nombre || ''}
+                Participantes inscritos — {cursoSel?.Nombre || ''}
               </h3>
               {loadingInscritos ? <p style={{ color: '#6b7280' }}>Cargando...</p> : (
                 <div className="table-wrap">
@@ -425,7 +612,8 @@ export default function Academia({ usuario }) {
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {/* ═══ TAB ASISTENCIAS ═══ */}
       {tab === 'asistencias' && (
