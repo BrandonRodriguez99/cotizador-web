@@ -62,6 +62,10 @@ export async function initAcademiaTables() {
 
     IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('AcademiaInscripciones') AND name='Terminal')
       ALTER TABLE AcademiaInscripciones ADD Terminal NVARCHAR(200) NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('AcademiaInscripciones') AND name='Plaza')
+      ALTER TABLE AcademiaInscripciones ADD Plaza NVARCHAR(200) NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('AcademiaInscripciones') AND name='Area')
+      ALTER TABLE AcademiaInscripciones ADD Area NVARCHAR(200) NULL;
 
     IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='AcademiaAsistencias')
     CREATE TABLE AcademiaAsistencias (
@@ -326,10 +330,12 @@ router.post('/inscripciones', autenticar, async (req, res) => {
         .input('Empresa', sql.NVarChar, p.Empresa || null)
         .input('Correo', sql.NVarChar, p.Correo || null)
         .input('Terminal', sql.NVarChar, p.Terminal || null)
+        .input('Plaza', sql.NVarChar, p.Plaza || null)
+        .input('Area', sql.NVarChar, p.Area || null)
         .input('InscritoPor', sql.NVarChar, req.usuario?.nombre || null)
-        .query(`INSERT INTO AcademiaInscripciones (CursoAcademiaId, NumeroEmpleado, NombreCompleto, Empresa, Correo, Terminal, InscritoPor)
+        .query(`INSERT INTO AcademiaInscripciones (CursoAcademiaId, NumeroEmpleado, NombreCompleto, Empresa, Correo, Terminal, Plaza, Area, InscritoPor)
                 OUTPUT INSERTED.*
-                VALUES (@CursoId, @NumEmp, @Nombre, @Empresa, @Correo, @Terminal, @InscritoPor)`);
+                VALUES (@CursoId, @NumEmp, @Nombre, @Empresa, @Correo, @Terminal, @Plaza, @Area, @InscritoPor)`);
       inscritos.push(r.recordset[0]);
     }
 

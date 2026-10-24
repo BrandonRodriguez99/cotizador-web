@@ -20,17 +20,6 @@ function fmtFechaPDF(fecha) {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 }
 
-function centerText(doc, text, x, y, w, h, fontSize) {
-  doc.setFontSize(fontSize || 7)
-  const lines = doc.splitTextToSize(text, w - 4)
-  const lineH = (fontSize || 7) * 0.4
-  const totalH = lines.length * lineH
-  const startY = y + (h - totalH) / 2 + lineH * 0.8
-  lines.forEach((line, i) => {
-    doc.text(line, x + w / 2, startY + i * lineH, { align: 'center' })
-  })
-}
-
 export async function generarListaAsistenciaPDF({ cursoNombre, generacion, sesion, inscritos, instructor }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const logo = await loadLogo()
@@ -41,29 +30,29 @@ export async function generarListaAsistenciaPDF({ cursoNombre, generacion, sesio
   const pageW = 215.9
   const pageH = 279.4
   const usableW = pageW - ml * 2
-
   const tema = generacion ? `${cursoNombre} — ${generacion}` : cursoNombre
 
-  // Layout heights
   const headerH = 18
-  const infoH = 8
+  const infoRowH = 8
   const thH = 9
-  const fixedH = mt + headerH + infoH * 2 + thH + mb
+  const fixedH = mt + headerH + infoRowH * 2 + thH + mb
 
   const numRows = Math.max(inscritos.length, 18)
-  const rowH = Math.min(11, Math.max(6, (pageH - fixedH) / numRows))
+  const rowH = Math.min(11, Math.max(5.5, (pageH - fixedH) / numRows))
 
   doc.setDrawColor(0)
   doc.setLineWidth(0.3)
 
   let y = mt
 
-  // ── HEADER ──
+  // ═══ HEADER ═══
   const logoW = 26
   const rightW = 52
   const titleW = usableW - logoW - rightW
   const labelW = 20
   const valW = rightW - labelW
+  const rx = ml + logoW + titleW
+  const rh = headerH / 3
 
   doc.rect(ml, y, logoW, headerH)
   if (logo) doc.addImage(logo, 'PNG', ml + 3.5, y + 1, 16, 16)
@@ -73,8 +62,6 @@ export async function generarListaAsistenciaPDF({ cursoNombre, generacion, sesio
   doc.setFont('helvetica', 'bold')
   doc.text('Lista de Asistencia', ml + logoW + titleW / 2, y + headerH / 2 + 2, { align: 'center' })
 
-  const rx = ml + logoW + titleW
-  const rh = headerH / 3
   const rlabels = ['Clave', 'Rev.', 'Fecha:']
   const rvals = ['FRH02-04', '03', '07/25']
   for (let i = 0; i < 3; i++) {
@@ -86,19 +73,18 @@ export async function generarListaAsistenciaPDF({ cursoNombre, generacion, sesio
     doc.setFont('helvetica', 'normal')
     doc.text(rvals[i], rx + labelW + 2, y + rh * i + rh / 2 + 1)
   }
-
   y += headerH
 
-  // ── INFO ROW 1 ──
+  // ═══ INFO ROW 1 ═══
   const temaW = 68
   const fechaW = 32
   const horaW = 22
   const respW = usableW - temaW - fechaW - horaW
 
-  doc.rect(ml, y, temaW, infoH)
-  doc.rect(ml + temaW, y, fechaW, infoH)
-  doc.rect(ml + temaW + fechaW, y, horaW, infoH)
-  doc.rect(ml + temaW + fechaW + horaW, y, respW, infoH)
+  doc.rect(ml, y, temaW, infoRowH)
+  doc.rect(ml + temaW, y, fechaW, infoRowH)
+  doc.rect(ml + temaW + fechaW, y, horaW, infoRowH)
+  doc.rect(ml + temaW + fechaW + horaW, y, respW, infoRowH)
 
   doc.setFontSize(6)
   doc.setFont('helvetica', 'bold')
@@ -127,71 +113,83 @@ export async function generarListaAsistenciaPDF({ cursoNombre, generacion, sesio
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
   doc.text(instructor || '', ml + temaW + fechaW + horaW + 2, y + 6.5, { maxWidth: respW - 4 })
+  y += infoRowH
 
-  y += infoH
-
-  // ── INFO ROW 2 ──
-  doc.rect(ml, y, temaW, infoH)
-  doc.rect(ml + temaW, y, usableW - temaW, infoH)
+  // ═══ INFO ROW 2 ═══
+  doc.rect(ml, y, temaW, infoRowH)
+  doc.rect(ml + temaW, y, usableW - temaW, infoRowH)
   doc.setFontSize(6)
   doc.setFont('helvetica', 'bold')
-  doc.text('Empresa:', ml + temaW + 2, y + infoH / 2 + 1)
+  doc.text('Empresa:', ml + temaW + 2, y + infoRowH / 2 + 1)
+  y += infoRowH
 
-  y += infoH
-
-  // ── TABLE HEADER ──
+  // ═══ TABLE HEADER ═══
   const cols = [
-    { header: 'No.', w: 12 },
-    { header: 'Número de empleado', w: 28 },
+    { header: 'No.',                     w: 12 },
+    { header: 'Número de empleado',      w: 28 },
     { header: 'Nombre del Participante', w: 54 },
-    { header: 'Puesto', w: 28 },
+    { header: 'Puesto',                  w: 28 },
     { header: 'Unidad de Negocio - Área', w: 40 },
-    { header: 'Firma', w: usableW - 12 - 28 - 54 - 28 - 40 },
+    { header: 'Firma',                   w: usableW - 12 - 28 - 54 - 28 - 40 },
   ]
 
+  // Draw all header cell backgrounds first
   doc.setFillColor(0, 32, 96)
-  doc.setTextColor(255, 255, 255)
-  doc.setFont('helvetica', 'bold')
-
   let x = ml
   for (const col of cols) {
     doc.rect(x, y, col.w, thH, 'FD')
-    centerText(doc, col.header, x, y, col.w, thH, 7)
+    x += col.w
+  }
+
+  // Draw header text on top — use font size 5.5 so all text fits on one line
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(5.5)
+  x = ml
+  for (const col of cols) {
+    doc.text(col.header, x + col.w / 2, y + thH / 2 + 1, { align: 'center' })
     x += col.w
   }
 
   y += thH
+
+  // ═══ TABLE ROWS ═══
   doc.setTextColor(0, 0, 0)
   doc.setFont('helvetica', 'normal')
 
-  // ── TABLE ROWS ──
   for (let i = 0; i < numRows; i++) {
     const insc = i < inscritos.length ? inscritos[i] : null
+    const cy = y + rowH / 2 + 1
 
     x = ml
     for (let c = 0; c < cols.length; c++) {
       doc.rect(x, y, cols[c].w, rowH)
-
-      doc.setFontSize(7)
-      const cy = y + rowH / 2 + 1
-
-      if (c === 0) {
-        doc.setFont('helvetica', 'bold')
-        doc.text(String(i + 1), x + cols[c].w / 2, cy, { align: 'center' })
-        doc.setFont('helvetica', 'normal')
-      } else if (insc) {
-        let text = ''
-        switch (c) {
-          case 1: text = insc.NumeroEmpleado || ''; break
-          case 2: text = insc.NombreCompleto || ''; break
-          case 3: text = ''; break
-          case 4: text = insc.Terminal || ''; break
-          case 5: text = ''; break
-        }
-        if (text) doc.text(text, x + 2, cy, { maxWidth: cols[c].w - 4 })
-      }
-
       x += cols[c].w
+    }
+
+    // No.
+    x = ml
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.text(String(i + 1), x + cols[0].w / 2, cy, { align: 'center' })
+    doc.setFont('helvetica', 'normal')
+
+    if (insc) {
+      // Número de empleado
+      x = ml + cols[0].w
+      doc.text(insc.NumeroEmpleado || '', x + 2, cy, { maxWidth: cols[1].w - 4 })
+
+      // Nombre del Participante
+      x += cols[1].w
+      doc.text(insc.NombreCompleto || '', x + 2, cy, { maxWidth: cols[2].w - 4 })
+
+      // Puesto (Plaza)
+      x += cols[2].w
+      doc.text(insc.Plaza || '', x + 2, cy, { maxWidth: cols[3].w - 4 })
+
+      // Unidad de Negocio - Área (Area)
+      x += cols[3].w
+      doc.text(insc.Area || '', x + 2, cy, { maxWidth: cols[4].w - 4 })
     }
 
     y += rowH
