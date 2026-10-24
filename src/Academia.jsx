@@ -56,6 +56,8 @@ export default function Academia({ usuario }) {
   const [loadingInscritos, setLoadingInscritos] = useState(false)
 
   // asistencias
+  const [filtroNombreCurso, setFiltroNombreCurso] = useState('')
+  const [filtroGeneracion, setFiltroGeneracion] = useState('')
   const [cursoAsistencia, setCursoAsistencia] = useState('')
   const [asistenciasData, setAsistenciasData] = useState(null)
   const [loadingAsistencias, setLoadingAsistencias] = useState(false)
@@ -622,13 +624,51 @@ export default function Academia({ usuario }) {
       })()}
 
       {/* ═══ TAB ASISTENCIAS ═══ */}
-      {tab === 'asistencias' && (
+      {tab === 'asistencias' && (() => {
+        const nombresUnicos = [...new Set(cursos.map(c => c.Nombre))].sort()
+        const cursosDelNombre = filtroNombreCurso ? cursos.filter(c => c.Nombre === filtroNombreCurso) : []
+        const generaciones = cursosDelNombre.map(c => ({ id: c.CursoAcademiaId, gen: c.Generacion || '' }))
+        return (
         <div style={{ padding: '16px 0' }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <select className="form-control" value={cursoAsistencia} onChange={e => setCursoAsistencia(e.target.value)} style={{ maxWidth: 320, fontSize: 13 }}>
-              <option value="">Seleccionar curso...</option>
-              {cursos.map(c => <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>{cursoLabel(c)}</option>)}
-            </select>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Curso</label>
+              <select className="form-control" value={filtroNombreCurso} onChange={e => {
+                const nombre = e.target.value
+                setFiltroNombreCurso(nombre)
+                setFiltroGeneracion('')
+                const matches = nombre ? cursos.filter(c => c.Nombre === nombre) : []
+                if (matches.length === 1) {
+                  setCursoAsistencia(String(matches[0].CursoAcademiaId))
+                } else {
+                  setCursoAsistencia('')
+                }
+              }} style={{ minWidth: 220, fontSize: 13 }}>
+                <option value="">Seleccionar curso...</option>
+                {nombresUnicos.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            {filtroNombreCurso && generaciones.length > 1 && (
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Generación</label>
+                <select className="form-control" value={filtroGeneracion} onChange={e => {
+                  const gen = e.target.value
+                  setFiltroGeneracion(gen)
+                  const match = cursosDelNombre.find(c => (c.Generacion || '') === gen)
+                  setCursoAsistencia(match ? String(match.CursoAcademiaId) : '')
+                }} style={{ minWidth: 180, fontSize: 13 }}>
+                  <option value="">Seleccionar generación...</option>
+                  {generaciones.map(g => (
+                    <option key={g.id} value={g.gen}>{g.gen || '(Sin generación)'}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {filtroNombreCurso && generaciones.length > 1 && !filtroGeneracion && (
+              <span style={{ fontSize: 12, color: '#d97706', alignSelf: 'center', paddingBottom: 6 }}>
+                Hay {generaciones.length} generaciones — selecciona una
+              </span>
+            )}
           </div>
 
           {loadingAsistencias && <p style={{ color: '#6b7280' }}>Cargando asistencias...</p>}
@@ -762,11 +802,12 @@ export default function Academia({ usuario }) {
           {!cursoAsistencia && !loadingAsistencias && (
             <div style={{ textAlign: 'center', padding: '48px 20px', color: '#9ca3af' }}>
               <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.3 }}>📊</div>
-              <p>Selecciona un curso para ver la matriz de asistencia</p>
+              <p>Selecciona un curso{filtroNombreCurso && cursosDelNombre.length > 1 ? ' y generación' : ''} para ver la matriz de asistencia</p>
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {/* ═══ TAB QR ═══ */}
       {tab === 'qr' && (
