@@ -47,6 +47,8 @@ export default function Academia({ usuario }) {
   const [editandoCurso, setEditandoCurso] = useState(null)
 
   // inscripciones
+  const [filtroNombreCursoInsc, setFiltroNombreCursoInsc] = useState('')
+  const [filtroGeneracionInsc, setFiltroGeneracionInsc] = useState('')
   const [cursoInscripcion, setCursoInscripcion] = useState('')
   const [modalParticipantesOpen, setModalParticipantesOpen] = useState(false)
   const [searchParticipantesInput, setSearchParticipantesInput] = useState('')
@@ -345,6 +347,10 @@ export default function Academia({ usuario }) {
 
       {/* ═══ TAB INSCRIPCIONES ═══ */}
       {tab === 'inscripciones' && (() => {
+        const cursosDisponibles = cursos.filter(c => c.Estado === 'Activo' || c.Estado === 'Próximo')
+        const nombresUnicosInsc = [...new Set(cursosDisponibles.map(c => c.Nombre))].sort()
+        const cursosDelNombreInsc = filtroNombreCursoInsc ? cursosDisponibles.filter(c => c.Nombre === filtroNombreCursoInsc) : []
+        const generacionesInsc = cursosDelNombreInsc.map(c => ({ id: c.CursoAcademiaId, gen: c.Generacion || '', lugares: c.Capacidad - (c.Inscritos || 0) }))
         const cursoSel = cursos.find(c => c.CursoAcademiaId === Number(cursoInscripcion))
         const capacidadTotal = cursoSel?.Capacidad || 0
         const inscritosActuales = cursoSel?.Inscritos || 0
@@ -354,17 +360,43 @@ export default function Academia({ usuario }) {
           {/* Course selector + participant panel */}
           <div style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Inscribir participantes</h3>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Curso *</label>
-                <select className="form-control" value={cursoInscripcion} onChange={e => { setCursoInscripcion(e.target.value); setEmpleadosSeleccionados([]) }} style={{ width: '100%', maxWidth: 400, fontSize: 13 }}>
-                  <option value="">Seleccionar curso...</option>
-                  {cursos.filter(c => c.Estado === 'Activo' || c.Estado === 'Próximo').map(c => (
-                    <option key={c.CursoAcademiaId} value={c.CursoAcademiaId}>
-                      {cursoLabel(c)} ({c.Capacidad - (c.Inscritos || 0)} lugares)
-                    </option>
-                  ))}
-                </select>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', flex: 1, minWidth: 200 }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Inscribir participantes</h3>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Curso *</label>
+                  <select className="form-control" value={filtroNombreCursoInsc} onChange={e => {
+                    const nombre = e.target.value
+                    setFiltroNombreCursoInsc(nombre)
+                    setFiltroGeneracionInsc('')
+                    setEmpleadosSeleccionados([])
+                    const matches = nombre ? cursosDisponibles.filter(c => c.Nombre === nombre) : []
+                    if (matches.length === 1) {
+                      setCursoInscripcion(String(matches[0].CursoAcademiaId))
+                    } else {
+                      setCursoInscripcion('')
+                    }
+                  }} style={{ minWidth: 220, fontSize: 13 }}>
+                    <option value="">Seleccionar curso...</option>
+                    {nombresUnicosInsc.map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+                {filtroNombreCursoInsc && generacionesInsc.length > 1 && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Generación *</label>
+                    <select className="form-control" value={filtroGeneracionInsc} onChange={e => {
+                      const gen = e.target.value
+                      setFiltroGeneracionInsc(gen)
+                      setEmpleadosSeleccionados([])
+                      const match = cursosDelNombreInsc.find(c => (c.Generacion || '') === gen)
+                      setCursoInscripcion(match ? String(match.CursoAcademiaId) : '')
+                    }} style={{ minWidth: 180, fontSize: 13 }}>
+                      <option value="">Seleccionar generación...</option>
+                      {generacionesInsc.map(g => (
+                        <option key={g.id} value={g.gen}>{(g.gen || '(Sin generación)') + ` (${g.lugares} lugares)`}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               {cursoInscripcion && (
                 <button
