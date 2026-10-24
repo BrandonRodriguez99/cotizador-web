@@ -139,6 +139,10 @@ export function getCursos() {
   return fetchJson('catalogos/cursos');
 }
 
+export function getCursosTodos() {
+  return fetchJson('catalogos/cursos?todos=1');
+}
+
 export function getCoaches() {
   return fetchJson('catalogos/coaches');
 }

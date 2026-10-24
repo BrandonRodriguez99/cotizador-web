@@ -110,7 +110,18 @@ export default function CatalogFormModal({
                 {field.label}
                 {field.required && <span className="required-mark"> *</span>}
               </span>
-              {field.type === 'select' && field.options ? (
+              {field.type === 'checkbox' ? (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    name={field.name}
+                    checked={form[field.name] === true || form[field.name] === 1}
+                    onChange={(e) => setForm(prev => ({ ...prev, [field.name]: e.target.checked ? 1 : 0 }))}
+                    style={{ width: 18, height: 18 }}
+                  />
+                  <span style={{ fontSize: 13 }}>{form[field.name] === true || form[field.name] === 1 ? 'Activo' : 'Inactivo'}</span>
+                </label>
+              ) : field.type === 'select' && field.options ? (
                 <select
                   className="form-control"
                   name={field.name}

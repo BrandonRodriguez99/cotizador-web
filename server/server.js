@@ -492,7 +492,10 @@ app.post('/api/usuarios/:id/resetear', autenticar, soloAdmin, async (req, res) =
 app.get('/api/catalogos/cursos', async (req, res) => {
   try {
     if (!ensurePool(res)) return;
-    const result = await pool.request().query(`SELECT * FROM Cursos WHERE Activo = 1 ORDER BY Nombre`);
+    const todos = req.query.todos === '1';
+    const result = await pool.request().query(
+      todos ? `SELECT * FROM Cursos ORDER BY Nombre` : `SELECT * FROM Cursos WHERE Activo = 1 ORDER BY Nombre`
+    );
     res.json(result.recordset);
   } catch (err) {
     console.log('❌ ERROR CURSOS:', err.message);

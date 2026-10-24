@@ -16,6 +16,7 @@ import {
   getAcademiaAsistencias,
   registrarAsistenciaManual,
   buscarEmpleadosAcademia,
+  getCursos,
 } from './api'
 
 const TABS = [
@@ -782,6 +783,14 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   const [sesiones, setSesiones] = useState([])
   const [saving, setSaving] = useState(false)
 
+  const [catalogCursos, setCatalogCursos] = useState([])
+  const [cursoSearch, setCursoSearch] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  useEffect(() => {
+    getCursos().then(setCatalogCursos).catch(() => setCatalogCursos([]))
+  }, [])
+
   useEffect(() => {
     if (isEdit && cursoInicial?.CursoAcademiaId) {
       getAcademiaSesiones(cursoInicial.CursoAcademiaId).then(s => setSesiones(s.map(x => ({
@@ -789,6 +798,31 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
       })))).catch(() => {})
     }
   }, [isEdit, cursoInicial])
+
+  const cursosFiltrados = catalogCursos.filter(c => {
+    if (!cursoSearch) return true
+    const q = cursoSearch.toLowerCase()
+    return c.Nombre?.toLowerCase().includes(q) || c.TipoCurso?.toLowerCase().includes(q)
+  })
+
+  function selectCatalogCurso(c) {
+    setNombre(c.Nombre)
+    setCursoSearch('')
+    setShowDropdown(false)
+    if (c.DuracionDefaultDias && sesiones.length === 0) {
+      const dias = Number(c.DuracionDefaultDias) || 0
+      if (dias > 0) {
+        const nuevas = []
+        const hoy = new Date()
+        for (let i = 0; i < dias; i++) {
+          const fecha = new Date(hoy)
+          fecha.setDate(hoy.getDate() + i)
+          nuevas.push({ Fecha: fecha.toISOString().split('T')[0], HoraInicio: '09:00', HoraFin: '13:00', Ubicacion: ubicacion })
+        }
+        setSesiones(nuevas)
+      }
+    }
+  }
 
   function addSesion() {
     setSesiones(prev => [...prev, { Fecha: '', HoraInicio: '09:00', HoraFin: '13:00', Ubicacion: ubicacion }])
@@ -826,9 +860,49 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
         </div>
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <div style={{ display: 'grid', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Nombre del curso *</label>
-              <input className="form-control" value={nombre} onChange={e => setNombre(e.target.value)} required style={{ width: '100%' }} />
+            <div style={{ position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Curso (del catálogo) *</label>
+              {!isEdit && catalogCursos.length > 0 ? (
+                <>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      className="form-control"
+                      value={showDropdown ? cursoSearch : nombre}
+                      onChange={e => { setCursoSearch(e.target.value); setNombre(e.target.value); setShowDropdown(true) }}
+                      onFocus={() => setShowDropdown(true)}
+                      placeholder="Buscar en catálogo de cursos..."
+                      required
+                      style={{ width: '100%' }}
+                    />
+                    {nombre && !showDropdown && (
+                      <button type="button" onClick={() => { setNombre(''); setCursoSearch(''); setShowDropdown(true) }}
+                        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 14 }}>✕</button>
+                    )}
+                  </div>
+                  {showDropdown && (
+                    <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', zIndex: 10, background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: 220, overflowY: 'auto', marginTop: 2 }}>
+                      {cursosFiltrados.length === 0 ? (
+                        <div style={{ padding: '12px 14px', fontSize: 13, color: '#9ca3af' }}>Sin resultados en el catálogo</div>
+                      ) : cursosFiltrados.map(c => (
+                        <div key={c.CursoId} onClick={() => selectCatalogCurso(c)}
+                          style={{ padding: '8px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{c.Nombre}</div>
+                            <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                              {c.TipoCurso || ''}{c.Horas ? ` · ${c.Horas}h` : ''}{c.DuracionDefaultDias ? ` · ${c.DuracionDefaultDias} día(s)` : ''}
+                            </div>
+                          </div>
+                          {c.Costo > 0 && <span style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>${Number(c.Costo).toFixed(0)}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <input className="form-control" value={nombre} onChange={e => setNombre(e.target.value)} required style={{ width: '100%' }} />
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Descripción</label>

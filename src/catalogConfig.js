@@ -18,6 +18,7 @@ import {
   getCoaches,
   getConceptos,
   getCursos,
+  getCursosTodos,
   getModalidades,
   getProveedores,
   createProveedor,
@@ -92,7 +93,7 @@ export const CATALOG_DEFINITIONS = {
     title: 'Cursos',
     subtitle: 'Catálogo de programas y cursos',
     idField: 'CursoId',
-    fetch: getCursos,
+    fetch: getCursosTodos,
     create: createCurso,
     update: updateCurso,
     delete: deleteCurso,
@@ -103,6 +104,7 @@ export const CATALOG_DEFINITIONS = {
       { header: 'Horas', accessor: 'Horas' },
       { header: 'Costo', accessor: 'Costo' },
       { header: 'Duración (días)', accessor: 'DuracionDefaultDias' },
+      { header: 'Activo', accessor: 'Activo', render: (value) => value === false || value === 0 ? '❌ Inactivo' : '✅ Activo' },
     ],
     fields: [
       { name: 'Nombre', label: 'Nombre del curso', required: true },
@@ -114,6 +116,7 @@ export const CATALOG_DEFINITIONS = {
       { name: 'Horas', label: 'Horas', type: 'number' },
       { name: 'Costo', label: 'Costo ($)', type: 'number' },
       { name: 'DuracionDefaultDias', label: 'Duración por defecto (días)', type: 'number' },
+      { name: 'Activo', label: 'Activo', type: 'checkbox' },
     ],
   },
   coaches: {
@@ -271,7 +274,7 @@ export const CATALOG_DEFINITIONS = {
 export function emptyFormForCatalog(catalogKey) {
   const fields = CATALOG_DEFINITIONS[catalogKey]?.fields || []
   return fields.reduce((acc, field) => {
-    acc[field.name] = ''
+    acc[field.name] = field.type === 'checkbox' ? 1 : ''
     return acc
   }, {})
 }
