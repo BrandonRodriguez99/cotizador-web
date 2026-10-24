@@ -1231,7 +1231,7 @@ export default function Academia({ usuario }) {
               </div>
             </div>
 
-            {loadingHistorico ? <p style={{ color: '#6b7280' }}>Cargando histórico...</p> : (
+            {loadingHistorico ? <p style={{ color: '#6b7280' }}>Cargando histórico...</p> : (<>
               <div className="table-wrap">
                 <table className="participants-table" style={{ fontSize: 12 }}>
                   <thead>
@@ -1315,7 +1315,7 @@ export default function Academia({ usuario }) {
                   </span>
                 </div>
               )}
-            )}
+            </>)}
           </div>
         )
       })()}
