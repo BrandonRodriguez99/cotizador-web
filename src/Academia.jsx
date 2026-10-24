@@ -995,6 +995,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
 
   function selectCatalogCurso(c) {
     setNombre(c.Nombre)
+    setDescripcion(c.Descripcion || '')
     setCursoSearch('')
     setShowDropdown(false)
     if (c.DuracionDefaultDias && sesiones.length === 0) {
@@ -1078,6 +1079,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                           <div>
                             <div style={{ fontWeight: 600 }}>{c.Nombre}</div>
+                            {c.Descripcion && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{c.Descripcion}</div>}
                             <div style={{ fontSize: 11, color: '#9ca3af' }}>
                               {c.TipoCurso || ''}{c.Horas ? ` · ${c.Horas}h` : ''}{c.DuracionDefaultDias ? ` · ${c.DuracionDefaultDias} día(s)` : ''}
                             </div>

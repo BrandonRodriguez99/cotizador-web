@@ -101,6 +101,7 @@ export const CATALOG_DEFINITIONS = {
     columns: [
       { header: 'ID', accessor: 'CursoId' },
       { header: 'Nombre', accessor: 'Nombre' },
+      { header: 'Descripción', accessor: 'Descripcion' },
       { header: 'Tipo', accessor: 'TipoCurso' },
       { header: 'Horas', accessor: 'Horas' },
       { header: 'Costo', accessor: 'Costo' },
@@ -124,6 +125,7 @@ export const CATALOG_DEFINITIONS = {
     ],
     fields: [
       { name: 'Nombre', label: 'Nombre del curso', required: true },
+      { name: 'Descripcion', label: 'Descripción del curso' },
       { name: 'TipoCurso', label: 'Tipo de curso', type: 'select', options: [
         { value: '', label: '-- Seleccionar --' },
         { value: 'Mandatorio', label: 'Mandatorio' },
