@@ -103,7 +103,7 @@ export default function FormularioPublico() {
           <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
         </svg>
         <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>{error}</div>
-        <a href="/portal" style={{ color: '#3b82f6', fontSize: 14 }}>← Volver al portal</a>
+        <a href="/portal" style={{ color: '#f59e0b', fontSize: 14 }}>← Volver al portal</a>
       </div>
     </div>
   )
@@ -115,7 +115,7 @@ export default function FormularioPublico() {
         </svg>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>¡Respuesta enviada!</div>
         <p style={{ color: '#6b7280', fontSize: 14 }}>Tu respuesta ha sido registrada exitosamente.</p>
-        <a href="/portal" style={{ color: '#3b82f6', fontSize: 14 }}>← Volver al portal</a>
+        <a href="/portal" style={{ color: '#f59e0b', fontSize: 14 }}>← Volver al portal</a>
       </div>
     </div>
   )
@@ -125,7 +125,8 @@ export default function FormularioPublico() {
       <div style={card}>
         {/* Header */}
         <div style={{ background: '#1e293b', padding: '24px 24px 20px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#3b82f6', textTransform: 'uppercase', marginBottom: 4 }}>
+          <a href="/portal" style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'none', display: 'inline-block', marginBottom: 12 }}>← Portal</a>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: 4 }}>
             Formulario
           </div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#f1f5f9' }}>
@@ -173,9 +174,9 @@ export default function FormularioPublico() {
 
           <button type="submit" disabled={enviando || uploadingKeys.size > 0} style={{
             width: '100%', padding: '14px', borderRadius: 10, border: 'none',
-            background: '#3b82f6', color: '#fff', fontSize: 16, fontWeight: 700,
+            background: enviando ? '#fbbf24' : '#f59e0b', color: '#fff', fontSize: 16, fontWeight: 700,
             cursor: enviando ? 'not-allowed' : 'pointer',
-            opacity: enviando ? 0.7 : 1,
+            opacity: enviando ? 0.8 : 1,
           }}>
             {enviando ? 'Enviando...' : 'Enviar respuesta'}
           </button>
@@ -195,9 +196,9 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
           <button type="button" key={opt} onClick={() => onChange(opt)} style={{
             flex: 1, padding: '10px', borderRadius: 8, cursor: 'pointer',
             fontSize: 14, fontWeight: 600,
-            border: value === opt ? '2px solid #3b82f6' : '1px solid #d1d5db',
-            background: value === opt ? '#eff6ff' : '#f9fafb',
-            color: value === opt ? '#1d4ed8' : '#374151',
+            border: value === opt ? '2px solid #f59e0b' : '1px solid #d1d5db',
+            background: value === opt ? '#fffbeb' : '#f9fafb',
+            color: value === opt ? '#92400e' : '#374151',
           }}>
             {opt}
           </button>
@@ -213,11 +214,11 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
           <label key={i} style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
-            border: value === opt ? '2px solid #3b82f6' : '1px solid #d1d5db',
-            background: value === opt ? '#eff6ff' : '#f9fafb',
+            border: value === opt ? '2px solid #f59e0b' : '1px solid #d1d5db',
+            background: value === opt ? '#fffbeb' : '#f9fafb',
           }}>
             <input type="radio" name={`opt_${Math.random()}`} checked={value === opt}
-              onChange={() => onChange(opt)} style={{ accentColor: '#3b82f6' }} />
+              onChange={() => onChange(opt)} style={{ accentColor: '#f59e0b' }} />
             <span style={{ fontSize: 14, color: '#1e293b' }}>{opt}</span>
           </label>
         ))}
@@ -230,11 +231,11 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
       <label style={{
         display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
         padding: '10px 12px', borderRadius: 8,
-        border: value ? '2px solid #3b82f6' : '1px solid #d1d5db',
-        background: value ? '#eff6ff' : '#f9fafb',
+        border: value ? '2px solid #f59e0b' : '1px solid #d1d5db',
+        background: value ? '#fffbeb' : '#f9fafb',
       }}>
         <input type="checkbox" checked={!!value} onChange={e => onChange(e.target.checked)}
-          style={{ width: 18, height: 18, accentColor: '#3b82f6' }} />
+          style={{ width: 18, height: 18, accentColor: '#f59e0b' }} />
         <span style={{ fontSize: 14, color: '#1e293b' }}>Marcar</span>
       </label>
     )

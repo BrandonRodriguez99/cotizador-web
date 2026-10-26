@@ -445,31 +445,39 @@ export default function DVIRPublico() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6' }}>
-        <p style={{ color: '#6b7280' }}>Cargando...</p>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+        <p style={{ color: '#94a3b8' }}>Cargando...</p>
       </div>
     )
   }
 
   if (exito) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6' }}>
-        <div style={{ textAlign: 'center', ...cardStyle, maxWidth: '400px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#10003;</div>
-          <h2 style={{ color: '#059669', marginBottom: '8px' }}>Inspección enviada</h2>
-          <p style={{ color: '#6b7280', marginBottom: '8px' }}>DVIR #{exito.DVIRId}</p>
-          <p style={{ color: '#374151', marginBottom: '24px' }}>
-            {vehiculoNombre}
-            {conRemolque && <><br /><span style={{ fontSize: '13px', color: '#6b7280' }}>+ {semirremolqueNombre}</span></>}
-            <br />
-            <span style={{ color: '#6b7280', fontSize: '13px' }}>
-              {tipoInspeccion === 'previo' ? 'Previo al viaje' : 'Posterior al viaje'} &mdash; {estadoSeguridad === 'seguro' ? 'Seguro' : 'No seguro'}
-            </span>
-          </p>
-          <button onClick={resetear} style={{
-            padding: '10px 24px', background: '#2563eb', color: '#fff',
-            border: 'none', borderRadius: '8px', fontSize: '14px', cursor: 'pointer',
-          }}>Nueva inspección</button>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '16px' }}>
+        <div style={{ textAlign: 'center', background: '#fff', borderRadius: 16, overflow: 'hidden', maxWidth: 400, width: '100%' }}>
+          <div style={{ background: '#1e293b', padding: '24px 24px 20px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: 4 }}>DVIR</div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>Inspección enviada</h2>
+          </div>
+          <div style={{ padding: 32 }}>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }}>
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            <p style={{ color: '#6b7280', marginBottom: 6, fontSize: 13 }}>DVIR #{exito.DVIRId}</p>
+            <p style={{ color: '#374151', marginBottom: 24, fontSize: 14, lineHeight: 1.6 }}>
+              <strong>{vehiculoNombre}</strong>
+              {conRemolque && <><br /><span style={{ fontSize: '13px', color: '#6b7280' }}>+ {semirremolqueNombre}</span></>}
+              <br />
+              <span style={{ color: '#6b7280', fontSize: '13px' }}>
+                {tipoInspeccion === 'previo' ? 'Previo al viaje' : 'Posterior al viaje'} &mdash; {estadoSeguridad === 'seguro' ? 'Seguro' : 'No seguro'}
+              </span>
+            </p>
+            <button onClick={resetear} style={{
+              width: '100%', padding: '12px', background: '#f59e0b', color: '#fff',
+              border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            }}>Nueva inspección</button>
+            <a href="/portal" style={{ display: 'block', marginTop: 14, color: '#f59e0b', fontSize: 13, textDecoration: 'none' }}>← Portal</a>
+          </div>
         </div>
       </div>
     )
@@ -481,12 +489,13 @@ export default function DVIRPublico() {
   const totalPasos = 4
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
       {/* Header */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '16px 24px' }}>
+      <div style={{ background: '#1e293b', borderBottom: '1px solid #334155', padding: '20px 24px' }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-          <p style={{ color: '#6b7280', fontSize: '12px', margin: 0, letterSpacing: '0.05em' }}>SIGA</p>
-          <h1 style={{ margin: '4px 0 0', fontSize: '20px', color: '#111827' }}>Inspección DVIR</h1>
+          <a href="/portal" style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'none', display: 'inline-block', marginBottom: 10 }}>← Portal</a>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: 3 }}>SIGA</div>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#f1f5f9' }}>Inspección DVIR</h1>
         </div>
       </div>
 
@@ -496,7 +505,7 @@ export default function DVIRPublico() {
           {[1, 2, 3, 4].map(p => (
             <div key={p} style={{
               flex: 1, height: '4px',
-              background: paso >= p ? '#2563eb' : '#e5e7eb',
+              background: paso >= p ? '#f59e0b' : '#334155',
             }} />
           ))}
         </div>
@@ -513,7 +522,7 @@ export default function DVIRPublico() {
         {/* PASO 0 — Tipo de DVIR */}
         {paso === 0 && (
           <>
-            <h2 style={{ fontSize: '17px', color: '#111827', marginBottom: '20px' }}>Selecciona el tipo de inspección</h2>
+            <h2 style={{ fontSize: '17px', color: '#f1f5f9', marginBottom: '20px', fontWeight: 700 }}>Selecciona el tipo de inspección</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 { val: 'solo_vehiculo', label: 'Solo vehículo', desc: 'Inspección estándar del vehículo' },
@@ -524,7 +533,7 @@ export default function DVIRPublico() {
                   background: '#fff', cursor: 'pointer', textAlign: 'left',
                   transition: 'border-color 0.15s',
                 }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = '#f59e0b'}
                   onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}
                 >
                   <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827', display: 'block' }}>{opt.label}</span>
@@ -538,7 +547,7 @@ export default function DVIRPublico() {
         {/* PASO 1 — Datos generales */}
         {paso === 1 && (
           <>
-            <h2 style={{ fontSize: '17px', color: '#111827', marginBottom: '20px' }}>
+            <h2 style={{ fontSize: '17px', color: '#f1f5f9', marginBottom: '20px', fontWeight: 700 }}>
               Paso 1 — Datos del vehículo{conRemolque ? ' y semirremolque' : ''}
             </h2>
             <div style={cardStyle}>
@@ -572,9 +581,9 @@ export default function DVIRPublico() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 {['previo', 'posterior'].map(t => (
                   <button key={t} onClick={() => setTipoInspeccion(t)} style={{
-                    flex: 1, padding: '10px', border: `2px solid ${tipoInspeccion === t ? '#2563eb' : '#d1d5db'}`,
-                    borderRadius: '8px', background: tipoInspeccion === t ? '#eff6ff' : '#fff',
-                    color: tipoInspeccion === t ? '#2563eb' : '#374151',
+                    flex: 1, padding: '10px', border: `2px solid ${tipoInspeccion === t ? '#f59e0b' : '#d1d5db'}`,
+                    borderRadius: '8px', background: tipoInspeccion === t ? '#fffbeb' : '#fff',
+                    color: tipoInspeccion === t ? '#92400e' : '#374151',
                     fontWeight: tipoInspeccion === t ? '600' : '400',
                     cursor: 'pointer', fontSize: '14px',
                   }}>{t === 'previo' ? 'Previo al viaje' : 'Posterior al viaje'}</button>
@@ -609,8 +618,8 @@ export default function DVIRPublico() {
                 if (err) { setError(err); return }
                 setError(''); setPaso(2)
               }} style={{
-                flex: 1, padding: '14px', background: '#2563eb', color: '#fff',
-                border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+                flex: 1, padding: '14px', background: '#f59e0b', color: '#fff',
+                border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
               }}>Siguiente</button>
             </div>
           </>
@@ -621,9 +630,9 @@ export default function DVIRPublico() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
               <button onClick={() => setPaso(1)} style={{
-                background: 'none', border: 'none', color: '#2563eb', fontSize: '22px', cursor: 'pointer', padding: 0,
+                background: 'none', border: 'none', color: '#f59e0b', fontSize: '22px', cursor: 'pointer', padding: 0,
               }}>&lsaquo;</button>
-              <h2 style={{ fontSize: '17px', color: '#111827', margin: 0 }}>Paso 2 — Fotos</h2>
+              <h2 style={{ fontSize: '17px', color: '#f1f5f9', margin: 0, fontWeight: 700 }}>Paso 2 — Fotos</h2>
             </div>
 
             <div style={cardStyle}>
@@ -645,8 +654,8 @@ export default function DVIRPublico() {
             )}
 
             <button onClick={() => { setError(''); setPaso(3) }} style={{
-              width: '100%', padding: '14px', background: '#2563eb', color: '#fff',
-              border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+              width: '100%', padding: '14px', background: '#f59e0b', color: '#fff',
+              border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
             }}>Siguiente</button>
           </>
         )}
@@ -656,15 +665,15 @@ export default function DVIRPublico() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
               <button onClick={() => setPaso(2)} style={{
-                background: 'none', border: 'none', color: '#2563eb', fontSize: '22px', cursor: 'pointer', padding: 0,
+                background: 'none', border: 'none', color: '#f59e0b', fontSize: '22px', cursor: 'pointer', padding: 0,
               }}>&lsaquo;</button>
-              <h2 style={{ fontSize: '17px', color: '#111827', margin: 0 }}>Paso 3 — Inspección</h2>
+              <h2 style={{ fontSize: '17px', color: '#f1f5f9', margin: 0, fontWeight: 700 }}>Paso 3 — Inspección</h2>
             </div>
-            <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '16px' }}>
+            <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '16px' }}>
               {revisados}/{totalPuntos} revisados &nbsp;|&nbsp; {defectos} defecto(s)
             </p>
 
-            <h3 style={{ fontSize: '15px', color: '#111827', margin: '0 0 12px', fontWeight: '600' }}>
+            <h3 style={{ fontSize: '15px', color: '#f1f5f9', margin: '0 0 12px', fontWeight: '600' }}>
               Inspeccionar vehículo ({puntos.filter(p => p.estado !== '').length}/{puntos.length})
             </h3>
             <InspeccionList
@@ -676,7 +685,7 @@ export default function DVIRPublico() {
 
             {conRemolque && (
               <>
-                <h3 style={{ fontSize: '15px', color: '#111827', margin: '24px 0 12px', fontWeight: '600' }}>
+                <h3 style={{ fontSize: '15px', color: '#f1f5f9', margin: '24px 0 12px', fontWeight: '600' }}>
                   Inspeccionar remolque ({puntosRemolque.filter(p => p.estado !== '').length}/{puntosRemolque.length})
                 </h3>
                 <InspeccionList
@@ -693,8 +702,8 @@ export default function DVIRPublico() {
               if (err) { setError(err); return }
               setError(''); setPaso(4)
             }} style={{
-              width: '100%', padding: '14px', background: '#2563eb', color: '#fff',
-              border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+              width: '100%', padding: '14px', background: '#f59e0b', color: '#fff',
+              border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
             }}>Siguiente</button>
           </>
         )}
@@ -704,9 +713,9 @@ export default function DVIRPublico() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
               <button onClick={() => setPaso(3)} style={{
-                background: 'none', border: 'none', color: '#2563eb', fontSize: '22px', cursor: 'pointer', padding: 0,
+                background: 'none', border: 'none', color: '#f59e0b', fontSize: '22px', cursor: 'pointer', padding: 0,
               }}>&lsaquo;</button>
-              <h2 style={{ fontSize: '17px', color: '#111827', margin: 0 }}>Paso 4 — Estado de seguridad</h2>
+              <h2 style={{ fontSize: '17px', color: '#f1f5f9', margin: 0, fontWeight: 700 }}>Paso 4 — Estado de seguridad</h2>
             </div>
             <div style={cardStyle}>
               <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0 }}>
@@ -737,9 +746,10 @@ export default function DVIRPublico() {
               setError(''); enviar()
             }} style={{
               width: '100%', padding: '14px',
-              background: enviando ? '#93c5fd' : '#2563eb', color: '#fff',
-              border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600',
+              background: enviando ? '#fbbf24' : '#f59e0b', color: '#fff',
+              border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700',
               cursor: enviando ? 'wait' : 'pointer',
+              opacity: enviando ? 0.8 : 1,
             }}>{enviando ? 'Enviando...' : 'Enviar inspección'}</button>
           </>
         )}
