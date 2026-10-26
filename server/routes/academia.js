@@ -109,6 +109,28 @@ router.get('/dashboard', autenticar, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Calendario ───────────────────────────────────────────────────────────────
+
+router.get('/calendario', autenticar, async (req, res) => {
+  try {
+    const pool = await requirePool(res); if (!pool) return;
+    const r = await pool.request().query(`
+      SELECT
+        s.SesionId, s.CursoAcademiaId, s.NumeroSesion,
+        CONVERT(VARCHAR(10), s.Fecha, 23) AS Fecha,
+        s.HoraInicio, s.HoraFin,
+        ISNULL(s.Ubicacion, c.Ubicacion) AS Ubicacion,
+        c.Nombre, c.Generacion, c.Instructor, c.Estado, c.Modalidad, c.Capacidad,
+        (SELECT COUNT(*) FROM AcademiaInscripciones i
+         WHERE i.CursoAcademiaId = c.CursoAcademiaId AND i.Activo = 1) AS Inscritos
+      FROM AcademiaSesiones s
+      JOIN AcademiaCursos c ON c.CursoAcademiaId = s.CursoAcademiaId
+      ORDER BY s.Fecha, s.HoraInicio
+    `);
+    res.json(r.recordset);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Cursos CRUD ──────────────────────────────────────────────────────────────
 
 router.get('/cursos', autenticar, async (req, res) => {
