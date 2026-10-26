@@ -23,13 +23,15 @@ import {
 } from './api'
 import { generarListaAsistenciaPDF } from './generarListaAsistencia'
 
-const TABS = [
-  { id: 'cursos', label: 'Cursos' },
+const TABS_ALL = [
+  { id: 'cursos',        label: 'Cursos' },
   { id: 'inscripciones', label: 'Inscripciones' },
-  { id: 'asistencias', label: 'Asistencias' },
-  { id: 'qr', label: 'QR en Aula' },
-  { id: 'historico', label: 'Histórico' },
+  { id: 'asistencias',   label: 'Asistencias' },
+  { id: 'qr',            label: 'QR en Aula' },
+  { id: 'historico',     label: 'Histórico' },
 ]
+
+const TABS_CAPACITACION = new Set(['inscripciones', 'asistencias', 'historico'])
 
 function fmtFecha(d) {
   if (!d) return '-'
@@ -42,7 +44,11 @@ function cursoLabel(c) {
 }
 
 export default function Academia({ usuario }) {
-  const [tab, setTab] = useState('cursos')
+  const esCapacitacion = usuario?.rol === 'capacitacion'
+  const TABS = esCapacitacion
+    ? TABS_ALL.filter(t => TABS_CAPACITACION.has(t.id))
+    : TABS_ALL
+  const [tab, setTab] = useState(esCapacitacion ? 'inscripciones' : 'cursos')
   const [cursos, setCursos] = useState([])
   const [loading, setLoading] = useState(false)
   const [dashboard, setDashboard] = useState(null)
