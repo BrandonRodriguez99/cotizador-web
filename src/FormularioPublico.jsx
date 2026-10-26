@@ -29,7 +29,22 @@ export default function FormularioPublico() {
     if (!slug) { setError('URL inválida'); setLoading(false); return }
     fetch(`${API}/formularios/publico/${slug}`)
       .then(r => { if (!r.ok) throw new Error('No encontrado'); return r.json() })
-      .then(d => { setForm(d); setLoading(false) })
+      .then(d => {
+        // Normalizar PascalCase (SQL Server) → camelCase (componente)
+        d.secciones = (d.secciones || []).map(s => ({
+          ...s,
+          titulo: s.Titulo || s.titulo || '',
+          preguntas: (s.preguntas || []).map(p => ({
+            ...p,
+            texto: p.Texto || p.texto || '',
+            tipoRespuesta: p.TipoRespuesta || p.tipoRespuesta || 'texto',
+            requerida: !!(p.Requerida ?? p.requerida),
+            opciones: (p.opciones || []).map(o => (typeof o === 'string' ? o : o.Texto || o.texto || '')),
+          })),
+        }))
+        setForm(d)
+        setLoading(false)
+      })
       .catch(() => { setError('Formulario no encontrado o inactivo'); setLoading(false) })
   }, [slug])
 
