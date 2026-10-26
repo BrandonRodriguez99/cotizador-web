@@ -97,6 +97,13 @@ const SIDEBAR_CONFIG = [
     { vista: 'unidadesNegocio', label: 'Unidad de Negocio' },
     { vista: 'areasConsumo', label: 'Áreas de Consumo' },
   ]},
+  { titulo: 'Academia', items: [
+    { vista: 'academiaCursos',        label: 'Cursos' },
+    { vista: 'academiaInscripciones', label: 'Inscripciones' },
+    { vista: 'academiaAsistencias',   label: 'Asistencias' },
+    { vista: 'academiaQR',            label: 'QR en Aula' },
+    { vista: 'academiaHistorico',     label: 'Histórico' },
+  ]},
   { titulo: 'App Móvil', items: [
     { vista: 'formularios', label: 'Formularios' },
   ]},

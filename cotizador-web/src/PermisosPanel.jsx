@@ -4,6 +4,7 @@ import { getPermisos, updatePermisosRol } from './api'
 const ROLES_DEFAULT = [
   'admin', 'autorizador1', 'autorizador2', 'empleado',
   'jefe_mantenimiento', 'mantenimiento', 'seguridad', 'encargado_vehiculos',
+  'academia', 'capacitacion',
 ]
 
 const ROL_LABELS = {
@@ -15,6 +16,8 @@ const ROL_LABELS = {
   mantenimiento: 'Mantenimiento',
   seguridad: 'Seguridad',
   encargado_vehiculos: 'Enc. Vehículos',
+  academia: 'Academia',
+  capacitacion: 'Capacitación',
 }
 
 const SECCIONES = [
@@ -43,6 +46,13 @@ const SECCIONES = [
     { id: 'proveedores', label: 'Proveedores' },
     { id: 'unidadesNegocio', label: 'Und. Neg.' },
     { id: 'areasConsumo', label: 'Áreas' },
+  ]},
+  { titulo: 'Academia', vistas: [
+    { id: 'academiaCursos',        label: 'Cursos' },
+    { id: 'academiaInscripciones', label: 'Inscripciones' },
+    { id: 'academiaAsistencias',   label: 'Asistencias' },
+    { id: 'academiaQR',            label: 'QR en Aula' },
+    { id: 'academiaHistorico',     label: 'Histórico' },
   ]},
   { titulo: 'Administración', vistas: [
     { id: 'usuarios', label: 'Usuarios' },
