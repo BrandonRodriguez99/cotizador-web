@@ -17,6 +17,7 @@ import {
   getAcademiaAsistencias,
   registrarAsistenciaManual,
   getAcademiaHistorico,
+  getAcademiaCalendario,
   searchParticipantes,
   getCursos,
   getCoaches,
@@ -29,9 +30,39 @@ const TABS_ALL = [
   { id: 'asistencias',   label: 'Asistencias' },
   { id: 'qr',            label: 'QR en Aula' },
   { id: 'historico',     label: 'Histórico' },
+  { id: 'calendario',    label: 'Calendario' },
 ]
 
-const TABS_CAPACITACION = new Set(['inscripciones', 'asistencias', 'historico'])
+const TABS_CAPACITACION = new Set(['inscripciones', 'asistencias', 'historico', 'calendario'])
+
+// ── Calendario helpers ────────────────────────────────────────────────────────
+const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+const CURSO_COLORS = [
+  { bg: '#dbeafe', border: '#3b82f6', text: '#1d4ed8' },
+  { bg: '#dcfce7', border: '#22c55e', text: '#15803d' },
+  { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' },
+  { bg: '#fce7f3', border: '#ec4899', text: '#9d174d' },
+  { bg: '#ede9fe', border: '#8b5cf6', text: '#5b21b6' },
+  { bg: '#ffedd5', border: '#f97316', text: '#9a3412' },
+  { bg: '#e0f2fe', border: '#0ea5e9', text: '#0369a1' },
+  { bg: '#f0fdf4', border: '#4ade80', text: '#166534' },
+]
+function cursoColor(id) { return CURSO_COLORS[id % CURSO_COLORS.length] }
+
+function getDiasDelMes(year, month) {
+  const primero = new Date(year, month, 1).getDay()
+  const total = new Date(year, month + 1, 0).getDate()
+  return { primero, total }
+}
+function padISO(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+function fmtHora(h) {
+  if (!h) return ''
+  return h.substring(0, 5)
+}
 
 function fmtFecha(d) {
   if (!d) return '-'
@@ -84,6 +115,14 @@ export default function Academia({ usuario }) {
   const [sesionQR, setSesionQR] = useState('')
   const [sesionesQR, setSesionesQR] = useState([])
 
+  // calendario
+  const hoy = new Date()
+  const [calYear, setCalYear] = useState(hoy.getFullYear())
+  const [calMonth, setCalMonth] = useState(hoy.getMonth())
+  const [sesionesCalendario, setSesionesCalendario] = useState([])
+  const [loadingCal, setLoadingCal] = useState(false)
+  const [calEventoSel, setCalEventoSel] = useState(null)
+
   // historico
   const [historicoData, setHistoricoData] = useState([])
   const [loadingHistorico, setLoadingHistorico] = useState(false)
@@ -128,6 +167,16 @@ export default function Academia({ usuario }) {
     if (tab !== 'historico') return
     loadHistorico()
   }, [tab])
+
+  useEffect(() => {
+    if (tab !== 'calendario') return
+    if (sesionesCalendario.length > 0) return
+    setLoadingCal(true)
+    getAcademiaCalendario()
+      .then(d => setSesionesCalendario(d))
+      .catch(console.error)
+      .finally(() => setLoadingCal(false))
+  }, [tab, sesionesCalendario.length])
 
   // search participantes (same as NuevaCotizacion)
   useEffect(() => {
@@ -1426,6 +1475,167 @@ export default function Academia({ usuario }) {
           </div>
         </>
       )}
+
+      {/* ═══ TAB CALENDARIO ═══ */}
+      {tab === 'calendario' && (() => {
+        const { primero, total } = getDiasDelMes(calYear, calMonth)
+        const hoyISO = padISO(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
+
+        // Index sessions by date
+        const byDate = {}
+        sesionesCalendario.forEach(s => {
+          if (!byDate[s.Fecha]) byDate[s.Fecha] = []
+          byDate[s.Fecha].push(s)
+        })
+
+        // Unique course color mapping
+        const cursoIds = [...new Set(sesionesCalendario.map(s => s.CursoAcademiaId))]
+        const colorMap = {}
+        cursoIds.forEach((id, i) => { colorMap[id] = CURSO_COLORS[i % CURSO_COLORS.length] })
+
+        // Build grid cells: leading blanks + day cells
+        const cells = []
+        for (let i = 0; i < primero; i++) cells.push(null)
+        for (let d = 1; d <= total; d++) cells.push(d)
+
+        function prevMes() {
+          if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) }
+          else setCalMonth(m => m - 1)
+        }
+        function nextMes() {
+          if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) }
+          else setCalMonth(m => m + 1)
+        }
+
+        return (
+          <div style={{ padding: '16px 0' }}>
+            {loadingCal && <p style={{ color: '#9ca3af', fontSize: 13 }}>Cargando sesiones...</p>}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+              <button className="ghost-button" style={{ padding: '6px 14px' }} onClick={prevMes}>‹</button>
+              <span style={{ fontWeight: 700, fontSize: 16, minWidth: 180, textAlign: 'center' }}>
+                {MESES[calMonth]} {calYear}
+              </span>
+              <button className="ghost-button" style={{ padding: '6px 14px' }} onClick={nextMes}>›</button>
+              <button className="ghost-button" style={{ padding: '6px 14px', fontSize: 12 }}
+                onClick={() => { setCalYear(hoy.getFullYear()); setCalMonth(hoy.getMonth()) }}>
+                Hoy
+              </button>
+              <button className="ghost-button" style={{ padding: '6px 12px', fontSize: 12 }}
+                onClick={() => { setSesionesCalendario([]); setLoadingCal(true); getAcademiaCalendario().then(d => setSesionesCalendario(d)).catch(console.error).finally(() => setLoadingCal(false)) }}>
+                ↻ Actualizar
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+              {/* Calendario grid */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 1, background: '#e5e7eb', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+                  {DIAS.map(d => (
+                    <div key={d} style={{ background: '#f9fafb', padding: '8px 4px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{d}</div>
+                  ))}
+                  {cells.map((d, i) => {
+                    if (d === null) return <div key={`b${i}`} style={{ background: '#fafafa', minHeight: 80 }} />
+                    const iso = padISO(calYear, calMonth, d)
+                    const eventos = byDate[iso] || []
+                    const esHoy = iso === hoyISO
+                    return (
+                      <div key={iso} style={{ background: '#fff', minHeight: 80, padding: 4, position: 'relative', borderTop: esHoy ? '2px solid #2563eb' : 'none' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: 24, height: 24, borderRadius: '50%', fontSize: 12, fontWeight: esHoy ? 700 : 400,
+                          background: esHoy ? '#2563eb' : 'transparent', color: esHoy ? '#fff' : '#374151',
+                          marginBottom: 4,
+                        }}>{d}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {eventos.map((ev, ei) => {
+                            const c = colorMap[ev.CursoAcademiaId] || CURSO_COLORS[0]
+                            const sel = calEventoSel?.SesionId === ev.SesionId
+                            return (
+                              <button key={ei} onClick={() => setCalEventoSel(sel ? null : ev)}
+                                style={{
+                                  background: sel ? c.border : c.bg, color: sel ? '#fff' : c.text,
+                                  border: `1px solid ${c.border}`, borderRadius: 4, padding: '2px 5px',
+                                  fontSize: 11, fontWeight: 600, cursor: 'pointer', textAlign: 'left',
+                                  lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                  maxWidth: '100%',
+                                }}>
+                                {fmtHora(ev.HoraInicio) && <span style={{ opacity: 0.8, marginRight: 3 }}>{fmtHora(ev.HoraInicio)}</span>}
+                                {ev.Nombre}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Panel de detalle */}
+              {calEventoSel && (() => {
+                const c = colorMap[calEventoSel.CursoAcademiaId] || CURSO_COLORS[0]
+                return (
+                  <div style={{
+                    width: 300, flexShrink: 0, border: `2px solid ${c.border}`, borderRadius: 12,
+                    overflow: 'hidden', animation: 'slideInRight 0.18s ease',
+                  }}>
+                    <div style={{ background: c.border, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', lineHeight: 1.3 }}>{calEventoSel.Nombre}</div>
+                        {calEventoSel.Generacion && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{calEventoSel.Generacion}</div>}
+                      </div>
+                      <button onClick={() => setCalEventoSel(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 18, padding: 0, lineHeight: 1 }}>✕</button>
+                    </div>
+                    <div style={{ padding: 16, background: '#fff' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                        {[
+                          { label: 'Fecha', value: fmtFecha(calEventoSel.Fecha) },
+                          { label: 'Sesión', value: `#${calEventoSel.NumeroSesion}` },
+                          { label: 'Horario', value: calEventoSel.HoraInicio ? `${fmtHora(calEventoSel.HoraInicio)}${calEventoSel.HoraFin ? ` – ${fmtHora(calEventoSel.HoraFin)}` : ''}` : '—' },
+                          { label: 'Participantes', value: calEventoSel.Inscritos ?? '—' },
+                          { label: 'Estado', value: calEventoSel.Estado },
+                          { label: 'Modalidad', value: calEventoSel.Modalidad || '—' },
+                        ].map(item => (
+                          <div key={item.label} style={{ background: c.bg, borderRadius: 8, padding: '8px 10px' }}>
+                            <div style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{item.label}</div>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: c.text }}>{item.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {calEventoSel.Instructor && (
+                        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+                          <span style={{ fontWeight: 600 }}>Instructor:</span> {calEventoSel.Instructor}
+                        </div>
+                      )}
+                      {calEventoSel.Ubicacion && (
+                        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+                          <span style={{ fontWeight: 600 }}>Ubicación:</span> {calEventoSel.Ubicacion}
+                        </div>
+                      )}
+                      {calEventoSel.Capacidad && (
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>Ocupación</div>
+                          <div style={{ background: '#f3f4f6', borderRadius: 99, height: 6, overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', borderRadius: 99, background: c.border,
+                              width: `${Math.min(100, Math.round(((calEventoSel.Inscritos || 0) / calEventoSel.Capacidad) * 100))}%`,
+                              transition: 'width 0.3s',
+                            }} />
+                          </div>
+                          <div style={{ fontSize: 11, color: '#6b7280', marginTop: 3 }}>
+                            {calEventoSel.Inscritos || 0} / {calEventoSel.Capacidad} participantes
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ═══ MODAL: Nuevo/Editar Curso ═══ */}
       {showNuevoCurso && (
