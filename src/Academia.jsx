@@ -33,7 +33,7 @@ const TABS_ALL = [
   { id: 'calendario',    label: 'Calendario' },
 ]
 
-const TABS_CAPACITACION = new Set(['inscripciones', 'asistencias', 'historico', 'calendario'])
+const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'calendario'])
 
 // ── Calendario helpers ────────────────────────────────────────────────────────
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -332,9 +332,11 @@ export default function Academia({ usuario }) {
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="ghost-button" onClick={loadCursos} style={{ fontSize: 13 }}>Actualizar</button>
-            <button className="primary-button" onClick={() => { setShowNuevoCurso(true); setEditandoCurso(null) }} style={{ fontSize: 13 }}>
-              + Nuevo curso
-            </button>
+            {!esCapacitacion && (
+              <button className="primary-button" onClick={() => { setShowNuevoCurso(true); setEditandoCurso(null) }} style={{ fontSize: 13 }}>
+                + Nuevo curso
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -446,6 +448,7 @@ export default function Academia({ usuario }) {
                         border: '1px solid currentColor', opacity: 0.85,
                       }}>{c.Estado}</span>
                     </td>
+                    {!esCapacitacion && (
                     <td onClick={e => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <button className="ghost-button" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => { setEditandoCurso(c); setShowNuevoCurso(true) }}>Editar</button>
@@ -455,6 +458,7 @@ export default function Academia({ usuario }) {
                         }}>Eliminar</button>
                       </div>
                     </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -1469,8 +1473,12 @@ export default function Academia({ usuario }) {
             </div>
 
             <div style={{ padding: '14px 24px', borderTop: '1px solid #e5e7eb', flexShrink: 0, display: 'flex', gap: 8 }}>
-              <button className="ghost-button" style={{ flex: 1 }} onClick={() => { setCursoInscripcion(String(detalleCurso.curso.CursoAcademiaId)); setTab('inscripciones'); setDetalleCurso(null) }}>Inscribir participantes</button>
-              <button className="primary-button" style={{ flex: 1 }} onClick={() => { setEditandoCurso(detalleCurso.curso); setShowNuevoCurso(true); setDetalleCurso(null) }}>Editar curso</button>
+              {!esCapacitacion && (
+                <button className="ghost-button" style={{ flex: 1 }} onClick={() => { setCursoInscripcion(String(detalleCurso.curso.CursoAcademiaId)); setTab('inscripciones'); setDetalleCurso(null) }}>Inscribir participantes</button>
+              )}
+              {!esCapacitacion && (
+                <button className="primary-button" style={{ flex: 1 }} onClick={() => { setEditandoCurso(detalleCurso.curso); setShowNuevoCurso(true); setDetalleCurso(null) }}>Editar curso</button>
+              )}
             </div>
           </div>
         </>
