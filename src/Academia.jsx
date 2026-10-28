@@ -30,10 +30,11 @@ const TABS_ALL = [
   { id: 'asistencias',   label: 'Asistencias' },
   { id: 'qr',            label: 'QR en Aula' },
   { id: 'historico',     label: 'Histórico' },
+  { id: 'kardex',        label: 'Kardex' },
   { id: 'calendario',    label: 'Calendario' },
 ]
 
-const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'calendario'])
+const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'kardex', 'calendario'])
 
 // ── Calendario helpers ────────────────────────────────────────────────────────
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -136,6 +137,11 @@ export default function Academia({ usuario }) {
   const [historicoPagina, setHistoricoPagina] = useState(1)
   const HISTORICO_POR_PAGINA = 25
 
+  // kardex
+  const [kardexBusqueda, setKardexBusqueda] = useState('')
+  const [kardexEmpleado, setKardexEmpleado] = useState(null)
+  const [kardexFiltroEstado, setKardexFiltroEstado] = useState('')
+
   // filters
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroModalidad, setFiltroModalidad] = useState('')
@@ -165,7 +171,8 @@ export default function Academia({ usuario }) {
   }
 
   useEffect(() => {
-    if (tab !== 'historico') return
+    if (tab !== 'historico' && tab !== 'kardex') return
+    if (historicoData.length > 0) return
     loadHistorico()
   }, [tab])
 
@@ -1707,6 +1714,250 @@ export default function Academia({ usuario }) {
         )
       })()}
 
+      {/* ═══ TAB KARDEX ═══ */}
+      {tab === 'kardex' && (() => {
+        // Empleados únicos del histórico
+        const empleadosMap = {}
+        historicoData.forEach(r => {
+          if (!empleadosMap[r.NumeroEmpleado]) {
+            empleadosMap[r.NumeroEmpleado] = {
+              NumeroEmpleado: r.NumeroEmpleado,
+              NombreCompleto: r.NombreCompleto,
+              Empresa: r.Empresa,
+              Terminal: r.Terminal,
+              Plaza: r.Plaza,
+              Area: r.Area,
+              Correo: r.Correo,
+            }
+          }
+        })
+        const empleados = Object.values(empleadosMap)
+
+        const qBusq = kardexBusqueda.toLowerCase().trim()
+        const sugerencias = qBusq.length >= 2
+          ? empleados.filter(e =>
+              (e.NombreCompleto || '').toLowerCase().includes(qBusq) ||
+              (e.NumeroEmpleado || '').toLowerCase().includes(qBusq)
+            ).slice(0, 8)
+          : []
+
+        // Cursos del empleado seleccionado
+        const cursosEmpleado = kardexEmpleado
+          ? historicoData.filter(r => r.NumeroEmpleado === kardexEmpleado.NumeroEmpleado)
+          : []
+
+        const getEstado = r => {
+          if (!r.TotalSesiones) return 'Sin sesiones'
+          const pct = Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100)
+          if (pct >= (r.PorcentajeMinAsistencia || 75)) return 'Completado'
+          if (r.SesionesAsistidas > 0) return 'En progreso'
+          return 'Pendiente'
+        }
+
+        const estadoColor = { Completado: '#16a34a', 'En progreso': '#d97706', Pendiente: '#6b7280', 'Sin sesiones': '#9ca3af' }
+        const estadoBg = { Completado: '#dcfce7', 'En progreso': '#fef3c7', Pendiente: '#f3f4f6', 'Sin sesiones': '#f9fafb' }
+
+        const cursosFiltrados = kardexFiltroEstado
+          ? cursosEmpleado.filter(r => getEstado(r) === kardexFiltroEstado)
+          : cursosEmpleado
+
+        const completados = cursosEmpleado.filter(r => getEstado(r) === 'Completado').length
+        const enProgreso = cursosEmpleado.filter(r => getEstado(r) === 'En progreso').length
+        const pendientes = cursosEmpleado.filter(r => getEstado(r) === 'Pendiente').length
+        const pctGeneral = cursosEmpleado.length > 0 ? Math.round((completados / cursosEmpleado.length) * 100) : 0
+
+        function descargarKardexCSV() {
+          const headers = ['Curso','Generación','Instructor','Modalidad','Fecha inscripción','Estado','Asistencias','Total sesiones','% Avance']
+          const rows = cursosFiltrados.map(r => {
+            const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
+            return [r.CursoNombre, r.Generacion, r.Instructor, r.Modalidad, r.FechaInscripcion ? String(r.FechaInscripcion).slice(0,10) : '', getEstado(r), r.SesionesAsistidas, r.TotalSesiones, pct + '%']
+          })
+          const csv = [headers, ...rows].map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n')
+          const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+          const a = document.createElement('a')
+          a.href = URL.createObjectURL(blob)
+          a.download = `Kardex_${kardexEmpleado?.NombreCompleto || 'empleado'}.csv`
+          a.click()
+        }
+
+        // Donut SVG helpers
+        const R = 40, C = 2 * Math.PI * R
+        const stroke = C * (pctGeneral / 100)
+
+        return (
+          <div style={{ padding: '16px 0' }}>
+            {/* Búsqueda */}
+            <div style={{ background: 'var(--surface,#f9fafb)', border: '1px solid var(--border,#e5e7eb)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>Kardex de Capacitación</h3>
+              <div style={{ position: 'relative', maxWidth: 420 }}>
+                <input
+                  type="text"
+                  placeholder="Buscar colaborador por nombre o No. empleado..."
+                  value={kardexBusqueda}
+                  onChange={e => { setKardexBusqueda(e.target.value); setKardexEmpleado(null) }}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                />
+                {sugerencias.length > 0 && !kardexEmpleado && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.1)', zIndex: 50, marginTop: 4, overflow: 'hidden' }}>
+                    {sugerencias.map(emp => (
+                      <button key={emp.NumeroEmpleado} onClick={() => { setKardexEmpleado(emp); setKardexBusqueda(emp.NombreCompleto); setKardexFiltroEstado('') }}
+                        style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f3f4f6' }}
+                        onMouseEnter={e => e.currentTarget.style.background='#f9fafb'}
+                        onMouseLeave={e => e.currentTarget.style.background='none'}>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>{emp.NombreCompleto}</div>
+                        <div style={{ fontSize: 12, color: '#6b7280' }}>No. {emp.NumeroEmpleado} · {emp.Empresa} · {emp.Area}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {loadingHistorico && <p style={{ fontSize: 13, color: '#6b7280', margin: '8px 0 0' }}>Cargando datos...</p>}
+            </div>
+
+            {/* Kardex del empleado */}
+            {kardexEmpleado && (
+              <>
+                {/* Tarjeta empleado + resumen */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+                  {/* Info empleado */}
+                  <div style={{ background: '#1e293b', borderRadius: 12, padding: '20px 24px', color: '#f1f5f9' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>{kardexEmpleado.NombreCompleto}</div>
+                        <div style={{ fontSize: 13, color: '#94a3b8', display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
+                          {kardexEmpleado.NumeroEmpleado && <span>No. {kardexEmpleado.NumeroEmpleado}</span>}
+                          {kardexEmpleado.Area && <span>Área: {kardexEmpleado.Area}</span>}
+                          {kardexEmpleado.Plaza && <span>Plaza: {kardexEmpleado.Plaza}</span>}
+                          {kardexEmpleado.Empresa && <span>Empresa: {kardexEmpleado.Empresa}</span>}
+                          {kardexEmpleado.Terminal && <span>Terminal: {kardexEmpleado.Terminal}</span>}
+                        </div>
+                      </div>
+                      <span style={{ background: '#16a34a', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>Activo</span>
+                    </div>
+                  </div>
+
+                  {/* Resumen circular */}
+                  <div style={{ background: 'var(--surface,#f9fafb)', border: '1px solid var(--border,#e5e7eb)', borderRadius: 12, padding: '20px 24px', minWidth: 280 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: '#374151' }}>Resumen de cursos</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                      {/* Donut */}
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <svg width="96" height="96" viewBox="0 0 96 96">
+                          <circle cx="48" cy="48" r={R} fill="none" stroke="#e5e7eb" strokeWidth="10"/>
+                          <circle cx="48" cy="48" r={R} fill="none" stroke="#2563eb" strokeWidth="10"
+                            strokeDasharray={`${stroke} ${C}`} strokeLinecap="round"
+                            transform="rotate(-90 48 48)"/>
+                        </svg>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>{pctGeneral}%</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <Stat label="Asignados" value={cursosEmpleado.length} color="#2563eb"/>
+                        <Stat label="Completados" value={completados} color="#16a34a"/>
+                        <Stat label="En progreso" value={enProgreso} color="#d97706"/>
+                        <Stat label="Pendientes" value={pendientes} color="#6b7280"/>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
+                      {completados} de {cursosEmpleado.length} cursos completados
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabla cursos */}
+                <div style={{ background: 'var(--surface,#f9fafb)', border: '1px solid var(--border,#e5e7eb)', borderRadius: 8, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Historial de cursos</h3>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select value={kardexFiltroEstado} onChange={e => setKardexFiltroEstado(e.target.value)}
+                        style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                        <option value="">Todos los estados</option>
+                        {['Completado','En progreso','Pendiente','Sin sesiones'].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <button className="secondary-button" style={{ fontSize: 12, padding: '6px 14px' }} onClick={descargarKardexCSV}>
+                        ↓ Exportar CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="table-wrap">
+                    <table className="participants-table" style={{ fontSize: 12 }}>
+                      <thead>
+                        <tr>
+                          <th>Curso</th>
+                          <th>Modalidad</th>
+                          <th>Instructor</th>
+                          <th>Fecha inscripción</th>
+                          <th>Estado</th>
+                          <th>Avance</th>
+                          <th>Constancia</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cursosFiltrados.length === 0
+                          ? <tr><td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin cursos{kardexFiltroEstado ? ' con ese estado' : ''}</td></tr>
+                          : cursosFiltrados.map((r, i) => {
+                            const estado = getEstado(r)
+                            const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
+                            const constancia = r.TotalSesiones > 0 && pct >= (r.PorcentajeMinAsistencia || 75)
+                            return (
+                              <tr key={i}>
+                                <td style={{ fontWeight: 600 }}>
+                                  {r.CursoNombre}
+                                  {r.Generacion && <div style={{ fontWeight: 400, color: '#6b7280', fontSize: 11 }}>{r.Generacion}</div>}
+                                </td>
+                                <td>{r.Modalidad || '—'}</td>
+                                <td>{r.Instructor || '—'}</td>
+                                <td>{r.FechaInscripcion ? String(r.FechaInscripcion).slice(0,10) : '—'}</td>
+                                <td>
+                                  <span style={{ background: estadoBg[estado], color: estadoColor[estado], fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap' }}>
+                                    {estado}
+                                  </span>
+                                </td>
+                                <td>
+                                  {r.TotalSesiones > 0 ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <div style={{ flex: 1, height: 6, background: '#e5e7eb', borderRadius: 3, minWidth: 60 }}>
+                                        <div style={{ width: pct + '%', height: '100%', background: estadoColor[estado], borderRadius: 3, transition: 'width .3s' }}/>
+                                      </div>
+                                      <span style={{ fontSize: 11, color: '#6b7280', whiteSpace: 'nowrap' }}>{r.SesionesAsistidas}/{r.TotalSesiones}</span>
+                                    </div>
+                                  ) : <span style={{ color: '#9ca3af' }}>—</span>}
+                                </td>
+                                <td>
+                                  {r.TotalSesiones > 0
+                                    ? <span style={{ color: constancia ? '#16a34a' : '#9ca3af', fontWeight: 600 }}>{constancia ? '✓ Acreedor' : 'Pendiente'}</span>
+                                    : <span style={{ color: '#9ca3af' }}>—</span>}
+                                </td>
+                              </tr>
+                            )
+                          })
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!kardexEmpleado && !loadingHistorico && historicoData.length > 0 && (
+              <div style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af' }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px', display: 'block' }}>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <p style={{ margin: 0, fontSize: 14 }}>Busca un colaborador para ver su kardex</p>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* ═══ MODAL: Nuevo/Editar Curso ═══ */}
       {showNuevoCurso && (
         <NuevoCursoModal
@@ -1720,6 +1971,16 @@ export default function Academia({ usuario }) {
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
       `}</style>
     </section>
+  )
+}
+
+function Stat({ label, value, color }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }}/>
+      <span style={{ fontSize: 12, color: '#6b7280' }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginLeft: 'auto' }}>{value}</span>
+    </div>
   )
 }
 
