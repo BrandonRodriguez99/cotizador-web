@@ -86,6 +86,7 @@ export default function Academia({ usuario }) {
   const [detalleCurso, setDetalleCurso] = useState(null)
   const [showNuevoCurso, setShowNuevoCurso] = useState(false)
   const [editandoCurso, setEditandoCurso] = useState(null)
+  const [convocandoCurso, setConvocandoCurso] = useState(null) // id del curso en proceso
 
   // inscripciones
   const [filtroNombreCursoInsc, setFiltroNombreCursoInsc] = useState('')
@@ -309,6 +310,36 @@ export default function Academia({ usuario }) {
     } catch (err) { window.alert('Error: ' + err.message) }
   }
 
+  async function convocarCurso(e, curso) {
+    e.stopPropagation()
+    if (convocandoCurso === curso.CursoAcademiaId) return
+    setConvocandoCurso(curso.CursoAcademiaId)
+    try {
+      const inscritos = await getAcademiaInscritos(curso.CursoAcademiaId)
+      const correos = inscritos.filter(i => i.Correo).map(i => i.Correo)
+      if (correos.length === 0) {
+        window.alert('Ningún participante tiene correo registrado.')
+        return
+      }
+      const nombre = cursoLabel(curso)
+      const fechas = curso.FechaInicio ? `${fmtFecha(curso.FechaInicio)}${curso.FechaFin ? ` al ${fmtFecha(curso.FechaFin)}` : ''}` : ''
+      const subject = encodeURIComponent(`Convocatoria: ${nombre}`)
+      const body = encodeURIComponent(
+        `Estimados participantes,\n\nQuedan convocados al curso "${nombre}"` +
+        (fechas ? ` programado del ${fechas}` : '') +
+        (curso.Ubicacion ? ` en ${curso.Ubicacion}` : '') +
+        (curso.Instructor ? `\nInstructor: ${curso.Instructor}` : '') +
+        `\nModalidad: ${curso.Modalidad || '—'}` +
+        `\n\nFavor de confirmar su asistencia.\n\nSaludos,\nAcademia UDAT`
+      )
+      window.location.href = `mailto:${correos.join(',')}?subject=${subject}&body=${body}`
+    } catch (err) {
+      window.alert('Error al obtener correos: ' + err.message)
+    } finally {
+      setConvocandoCurso(null)
+    }
+  }
+
   const cursosFiltrados = cursos.filter(c => {
     if (filtroEstado && c.Estado !== filtroEstado) return false
     if (filtroModalidad && c.Modalidad !== filtroModalidad) return false
@@ -448,17 +479,38 @@ export default function Academia({ usuario }) {
                         border: '1px solid currentColor', opacity: 0.85,
                       }}>{c.Estado}</span>
                     </td>
-                    {!esCapacitacion && (
                     <td onClick={e => e.stopPropagation()}>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="ghost-button" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => { setEditandoCurso(c); setShowNuevoCurso(true) }}>Editar</button>
-                        <button className="secondary-button" style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={async () => {
-                          if (!window.confirm(`¿Eliminar el curso "${cursoLabel(c)}"?`)) return
-                          try { await deleteAcademiaCurso(c.CursoAcademiaId); loadCursos() } catch (err) { window.alert(err.message) }
-                        }}>Eliminar</button>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {(c.Inscritos || 0) > 0 && (
+                          <button
+                            title={`Abrir correo para ${c.Inscritos} participante(s)`}
+                            onClick={e => convocarCurso(e, c)}
+                            disabled={convocandoCurso === c.CursoAcademiaId}
+                            style={{
+                              fontSize: 12, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
+                              border: `1px solid ${(c.Inscritos || 0) >= c.Capacidad ? '#f59e0b' : '#d1d5db'}`,
+                              background: (c.Inscritos || 0) >= c.Capacidad ? '#fffbeb' : '#f9fafb',
+                              color: (c.Inscritos || 0) >= c.Capacidad ? '#d97706' : '#6b7280',
+                              fontWeight: (c.Inscritos || 0) >= c.Capacidad ? 700 : 400,
+                              display: 'flex', alignItems: 'center', gap: 4,
+                            }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                            {convocandoCurso === c.CursoAcademiaId ? '...' : 'Convocar'}
+                          </button>
+                        )}
+                        {!esCapacitacion && (
+                          <>
+                            <button className="ghost-button" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => { setEditandoCurso(c); setShowNuevoCurso(true) }}>Editar</button>
+                            <button className="secondary-button" style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={async () => {
+                              if (!window.confirm(`¿Eliminar el curso "${cursoLabel(c)}"?`)) return
+                              try { await deleteAcademiaCurso(c.CursoAcademiaId); loadCursos() } catch (err) { window.alert(err.message) }
+                            }}>Eliminar</button>
+                          </>
+                        )}
                       </div>
                     </td>
-                    )}
                   </tr>
                 ))}
               </tbody>
