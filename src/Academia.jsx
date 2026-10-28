@@ -312,38 +312,10 @@ export default function Academia({ usuario }) {
 
   function convocarCurso(e, curso) {
     e.stopPropagation()
-    const nombre = cursoLabel(curso)
-    const fmtYMD = d => d ? String(d).slice(0, 10).replace(/-/g, '') : ''
-    const fi = fmtYMD(curso.FechaInicio) || '20260101'
-    const ff = fmtYMD(curso.FechaFin || curso.FechaInicio) || fi
-
-    const ics = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//UDAT//Academia//ES',
-      'METHOD:PUBLISH',
-      'CALSCALE:GREGORIAN',
-      'BEGIN:VEVENT',
-      `UID:academia-${curso.CursoAcademiaId}-${Date.now()}@udat.com.mx`,
-      `DTSTART;VALUE=DATE:${fi}`,
-      `DTEND;VALUE=DATE:${ff}`,
-      `SUMMARY:${nombre}`,
-      `DESCRIPTION:Instructor: ${curso.Instructor || 'Por definir'}\\nModalidad: ${curso.Modalidad || '—'}\\nParticipantes: ${curso.Inscritos || 0}/${curso.Capacidad}`,
-      `LOCATION:${(curso.Ubicacion || '').replace(/,/g, '\\,')}`,
-      'STATUS:CONFIRMED',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\r\n')
-
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${nombre.replace(/[/\\?%*:|"<>]/g, '-')}.ics`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const token = localStorage.getItem('cotizador-token') || ''
+    const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api')
+    const url = `${base}/academia/cursos/${curso.CursoAcademiaId}/evento.ics?token=${encodeURIComponent(token)}`
+    window.location.href = url
   }
 
   const cursosFiltrados = cursos.filter(c => {
