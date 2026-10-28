@@ -195,7 +195,7 @@ function App() {
   const [selectedModalidad, setSelectedModalidad] = useState('')
   const [selectedUnidadNegocio, setSelectedUnidadNegocio] = useState('')
   const [selectedEstado, setSelectedEstado] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [activeView, setActiveView] = useState(() => {
     try {
@@ -288,17 +288,21 @@ function App() {
 
   useEffect(() => {
     async function loadCatalogs() {
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
       try {
         setLoading(true)
-        const [clientesRes, cursosRes, coachesRes, modalidadesRes, conceptosRes, estadosRes, proveedoresRes, unidadesNegocioRes] = await Promise.all([
-          getClientes(),
-          getCursos(),
-          getCoaches(),
-          getModalidades(),
-          getConceptos(),
-          getEstados(),
-          getProveedores(),
-          getUnidadesNegocio(),
+        const [clientesRes, cursosRes, coachesRes, modalidadesRes, conceptosRes, estadosRes, proveedoresRes, unidadesNegocioRes] = await Promise.race([
+          Promise.all([
+            getClientes(),
+            getCursos(),
+            getCoaches(),
+            getModalidades(),
+            getConceptos(),
+            getEstados(),
+            getProveedores(),
+            getUnidadesNegocio(),
+          ]),
+          timeout,
         ])
 
         setClientes(clientesRes)
