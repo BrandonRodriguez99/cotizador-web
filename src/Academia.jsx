@@ -1317,11 +1317,11 @@ export default function Academia({ usuario }) {
         const uniqueVals = (key) => [...new Set(historicoData.map(r => r[key]).filter(Boolean))].sort()
 
         function descargarCSV() {
-          const headers = ['No. Empleado','Nombre','Empresa','Terminal','Plaza','Área','Correo','Curso','Generación','Instructor','Modalidad','Sesiones Asistidas','Total Sesiones','% Asistencia','Constancia']
+          const headers = ['No. Empleado','Nombre','Empresa','Terminal','Plaza','Área','Correo','Curso','Generación','Instructor','Modalidad','Sesiones Asistidas','Total Sesiones','% Asistencia','Horas Asistidas','Horas Totales','Constancia']
           const rows = filtered.map(r => {
             const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
             const constancia = r.TotalSesiones > 0 && pct >= r.PorcentajeMinAsistencia ? 'Acreedor' : 'Pendiente'
-            return [r.NumeroEmpleado, r.NombreCompleto, r.Empresa, r.Terminal, r.Plaza, r.Area, r.Correo, r.CursoNombre, r.Generacion, r.Instructor, r.Modalidad, r.SesionesAsistidas, r.TotalSesiones, pct + '%', constancia]
+            return [r.NumeroEmpleado, r.NombreCompleto, r.Empresa, r.Terminal, r.Plaza, r.Area, r.Correo, r.CursoNombre, r.Generacion, r.Instructor, r.Modalidad, r.SesionesAsistidas, r.TotalSesiones, pct + '%', fmtHoras(r.MinutosAsistidos), fmtHoras(r.MinutosTotales), constancia]
           })
           const csv = [headers, ...rows].map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')).join('\n')
           const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -1388,12 +1388,13 @@ export default function Academia({ usuario }) {
                       <th style={{ textAlign: 'left' }}>Curso</th>
                       <th style={{ textAlign: 'center' }}>Generación</th>
                       <th style={{ textAlign: 'center' }}>Asistencia</th>
+                      <th style={{ textAlign: 'center' }}>Horas</th>
                       <th style={{ textAlign: 'center' }}>Constancia</th>
                     </tr>
                   </thead>
                   <tbody>
                     {paginados.length === 0 ? (
-                      <tr><td colSpan={9} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin registros</td></tr>
+                      <tr><td colSpan={10} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin registros</td></tr>
                     ) : paginados.map(r => {
                       const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
                       const acreedor = r.TotalSesiones > 0 && pct >= r.PorcentajeMinAsistencia
@@ -1411,6 +1412,10 @@ export default function Academia({ usuario }) {
                           <td style={{ textAlign: 'center', fontSize: 11 }}>{r.Generacion || '-'}</td>
                           <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: pct >= r.PorcentajeMinAsistencia ? '#16a34a' : pct > 0 ? '#d97706' : '#6b7280' }}>
                             {r.SesionesAsistidas}/{r.TotalSesiones} ({pct}%)
+                          </td>
+                          <td style={{ textAlign: 'center', fontSize: 11 }}>
+                            <span style={{ fontWeight: 700, color: '#1e3a5f' }}>{fmtHoras(r.MinutosAsistidos)}</span>
+                            {r.MinutosTotales > 0 && <span style={{ color: '#9ca3af' }}> / {fmtHoras(r.MinutosTotales)}</span>}
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <span style={{
@@ -1781,12 +1786,14 @@ export default function Academia({ usuario }) {
         const enProgreso = cursosEmpleado.filter(r => getEstado(r) === 'En progreso').length
         const pendientes = cursosEmpleado.filter(r => getEstado(r) === 'Pendiente').length
         const pctGeneral = cursosEmpleado.length > 0 ? Math.round((completados / cursosEmpleado.length) * 100) : 0
+        const totalMinutosTotales = cursosEmpleado.reduce((s, r) => s + (r.MinutosTotales || 0), 0)
+        const totalMinutosAsistidos = cursosEmpleado.reduce((s, r) => s + (r.MinutosAsistidos || 0), 0)
 
         function descargarKardexCSV() {
-          const headers = ['Curso','Generación','Instructor','Modalidad','Fecha inscripción','Estado','Asistencias','Total sesiones','% Avance']
+          const headers = ['Curso','Generación','Instructor','Modalidad','Fecha inscripción','Estado','Asistencias','Total sesiones','% Avance','Horas Asistidas','Horas Totales']
           const rows = cursosFiltrados.map(r => {
             const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
-            return [r.CursoNombre, r.Generacion, r.Instructor, r.Modalidad, r.FechaInscripcion ? String(r.FechaInscripcion).slice(0,10) : '', getEstado(r), r.SesionesAsistidas, r.TotalSesiones, pct + '%']
+            return [r.CursoNombre, r.Generacion, r.Instructor, r.Modalidad, r.FechaInscripcion ? String(r.FechaInscripcion).slice(0,10) : '', getEstado(r), r.SesionesAsistidas, r.TotalSesiones, pct + '%', fmtHoras(r.MinutosAsistidos), fmtHoras(r.MinutosTotales)]
           })
           const csv = [headers, ...rows].map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n')
           const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -1814,11 +1821,17 @@ export default function Academia({ usuario }) {
             toDataURL(`${origin}/logo-udat.png`),
           ])
 
+          const totalMinTot = cursos.reduce((s, r) => s + (r.MinutosTotales || 0), 0)
+          const totalMinAsis = cursos.reduce((s, r) => s + (r.MinutosAsistidos || 0), 0)
+
           const filas = cursos.map(r => {
             const est = getEst(r)
             const avance = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : null
             const constancia = r.TotalSesiones > 0 && avance >= (r.PorcentajeMinAsistencia || 75)
             const colores = { Completado: '#16a34a', 'En progreso': '#d97706', Pendiente: '#6b7280', 'Sin sesiones': '#9ca3af' }
+            const horasCell = r.MinutosAsistidos > 0
+              ? `<strong style="color:#1e3a5f">${fmtHoras(r.MinutosAsistidos)}</strong>${r.MinutosTotales > 0 ? ` <span style="color:#9ca3af">/ ${fmtHoras(r.MinutosTotales)}</span>` : ''}`
+              : r.MinutosTotales > 0 ? `<span style="color:#9ca3af">— / ${fmtHoras(r.MinutosTotales)}</span>` : '—'
             return `<tr>
               <td><strong>${r.CursoNombre || ''}</strong>${r.Generacion ? `<br><small style="color:#6b7280">${r.Generacion}</small>` : ''}</td>
               <td>${r.Modalidad || '—'}</td>
@@ -1826,6 +1839,7 @@ export default function Academia({ usuario }) {
               <td>${r.FechaInscripcion ? String(r.FechaInscripcion).slice(0,10) : '—'}</td>
               <td><span style="background:${colores[est]}22;color:${colores[est]};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${est}</span></td>
               <td>${avance !== null ? `${r.SesionesAsistidas}/${r.TotalSesiones} (${avance}%)` : '—'}</td>
+              <td style="white-space:nowrap">${horasCell}</td>
               <td style="color:${constancia ? '#16a34a' : '#9ca3af'};font-weight:600">${r.TotalSesiones > 0 ? (constancia ? '✓ Acreedor' : 'Pendiente') : '—'}</td>
             </tr>`
           }).join('')
@@ -1875,9 +1889,11 @@ export default function Academia({ usuario }) {
               <div class="stat"><div class="val" style="color:#d97706">${prog}</div><div class="lbl">En progreso</div></div>
               <div class="stat"><div class="val" style="color:#6b7280">${pend}</div><div class="lbl">Pendientes</div></div>
               <div class="stat"><div class="val" style="color:#2563eb">${pct}%</div><div class="lbl">Avance general</div></div>
+              ${totalMinAsis > 0 ? `<div class="stat"><div class="val" style="color:#0ea5e9;font-size:18px">${fmtHoras(totalMinAsis)}</div><div class="lbl">Horas asistidas</div></div>` : ''}
+              ${totalMinTot > 0 ? `<div class="stat"><div class="val" style="color:#64748b;font-size:18px">${fmtHoras(totalMinTot)}</div><div class="lbl">Horas totales</div></div>` : ''}
             </div>
             <table>
-              <thead><tr><th>Curso</th><th>Modalidad</th><th>Instructor</th><th>Fecha inscripción</th><th>Estado</th><th>Avance</th><th>Constancia</th></tr></thead>
+              <thead><tr><th>Curso</th><th>Modalidad</th><th>Instructor</th><th>Fecha inscripción</th><th>Estado</th><th>Avance</th><th>Horas</th><th>Constancia</th></tr></thead>
               <tbody>${filas}</tbody>
             </table>
             <div class="footer">Generado el ${new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})} · UDAT Academia</div>
@@ -1979,6 +1995,11 @@ export default function Academia({ usuario }) {
                         <Stat label="Completados" value={completados} color="#16a34a"/>
                         <Stat label="En progreso" value={enProgreso} color="#d97706"/>
                         <Stat label="Pendientes" value={pendientes} color="#6b7280"/>
+                        {totalMinutosTotales > 0 && <>
+                          <div style={{ borderTop: '1px solid #e5e7eb', margin: '4px 0' }}/>
+                          <Stat label="Horas asistidas" value={fmtHoras(totalMinutosAsistidos)} color="#0ea5e9"/>
+                          <Stat label="Horas totales" value={fmtHoras(totalMinutosTotales)} color="#64748b"/>
+                        </>}
                       </div>
                     </div>
                     <div style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
@@ -2013,6 +2034,7 @@ export default function Academia({ usuario }) {
                           <th>Fecha inscripción</th>
                           <th>Estado</th>
                           <th>Avance</th>
+                          <th>Horas</th>
                           <th>Constancia</th>
                         </tr>
                       </thead>
@@ -2046,6 +2068,13 @@ export default function Academia({ usuario }) {
                                       <span style={{ fontSize: 11, color: '#6b7280', whiteSpace: 'nowrap' }}>{r.SesionesAsistidas}/{r.TotalSesiones}</span>
                                     </div>
                                   ) : <span style={{ color: '#9ca3af' }}>—</span>}
+                                </td>
+                                <td style={{ whiteSpace: 'nowrap', fontSize: 11 }}>
+                                  {r.MinutosAsistidos > 0
+                                    ? <><span style={{ fontWeight: 700, color: '#1e3a5f' }}>{fmtHoras(r.MinutosAsistidos)}</span>{r.MinutosTotales > 0 && <span style={{ color: '#9ca3af' }}> / {fmtHoras(r.MinutosTotales)}</span>}</>
+                                    : r.MinutosTotales > 0
+                                      ? <span style={{ color: '#9ca3af' }}>— / {fmtHoras(r.MinutosTotales)}</span>
+                                      : <span style={{ color: '#9ca3af' }}>—</span>}
                                 </td>
                                 <td>
                                   {r.TotalSesiones > 0
@@ -2089,6 +2118,13 @@ export default function Academia({ usuario }) {
       `}</style>
     </section>
   )
+}
+
+function fmtHoras(minutos) {
+  if (!minutos || minutos <= 0) return '—'
+  const h = Math.floor(minutos / 60)
+  const m = minutos % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
 function Stat({ label, value, color }) {
