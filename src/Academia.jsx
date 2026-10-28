@@ -1813,14 +1813,19 @@ export default function Academia({ usuario }) {
             </tr>`
           }).join('')
 
+          const origin = window.location.origin
           const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
             <title>Kardex — ${emp.NombreCompleto}</title>
             <style>
               *{box-sizing:border-box;margin:0;padding:0}
-              body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:24px}
+              body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:0}
+              .cintilla{background:#0b2341;padding:12px 24px;display:flex;align-items:center;gap:16px;margin-bottom:20px}
+              .cintilla img.sello{height:40px;width:auto}
+              .cintilla img.nombre{height:28px;width:auto}
+              .content{padding:0 24px 24px}
               h1{font-size:18px;margin-bottom:4px}
-              .header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
-              .header .sub{font-size:11px;color:#94a3b8;margin-top:4px;display:flex;flex-wrap:wrap;gap:12px}
+              .emp-header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
+              .emp-header .sub{font-size:11px;color:#94a3b8;margin-top:4px;display:flex;flex-wrap:wrap;gap:12px}
               .stats{display:flex;gap:12px;margin-bottom:16px}
               .stat{flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center}
               .stat .val{font-size:22px;font-weight:800}
@@ -1830,10 +1835,15 @@ export default function Academia({ usuario }) {
               td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
               tr:last-child td{border-bottom:none}
               .footer{margin-top:20px;font-size:10px;color:#9ca3af;text-align:right}
-              @media print{@page{margin:16mm}}
+              @media print{@page{margin:0;size:A4}.cintilla{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
             </style>
           </head><body>
-            <div class="header">
+            <div class="cintilla">
+              <img class="sello" src="${origin}/logo-udat-sello.png" alt="UDAT sello"/>
+              <img class="nombre" src="${origin}/logo-udat.png" alt="UDAT"/>
+            </div>
+            <div class="content">
+            <div class="emp-header">
               <h1>${emp.NombreCompleto}</h1>
               <div class="sub">
                 ${emp.NumeroEmpleado ? `<span>No. ${emp.NumeroEmpleado}</span>` : ''}
@@ -1855,6 +1865,7 @@ export default function Academia({ usuario }) {
               <tbody>${filas}</tbody>
             </table>
             <div class="footer">Generado el ${new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})} · UDAT Academia</div>
+            </div>
             <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script>
           </body></html>`
 
