@@ -1796,7 +1796,24 @@ export default function Academia({ usuario }) {
           a.click()
         }
 
-        function imprimirKardex(emp, cursos, getEst, pct, comp, prog, pend) {
+        async function imprimirKardex(emp, cursos, getEst, pct, comp, prog, pend) {
+          async function toDataURL(url) {
+            try {
+              const res = await fetch(url)
+              const blob = await res.blob()
+              return new Promise(resolve => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result)
+                reader.readAsDataURL(blob)
+              })
+            } catch { return '' }
+          }
+          const origin = window.location.origin
+          const [selloSrc, nombreSrc] = await Promise.all([
+            toDataURL(`${origin}/logo-udat-sello.png`),
+            toDataURL(`${origin}/logo-udat.png`),
+          ])
+
           const filas = cursos.map(r => {
             const est = getEst(r)
             const avance = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : null
@@ -1813,7 +1830,6 @@ export default function Academia({ usuario }) {
             </tr>`
           }).join('')
 
-          const origin = window.location.origin
           const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
             <title>Kardex — ${emp.NombreCompleto}</title>
             <style>
@@ -1839,8 +1855,8 @@ export default function Academia({ usuario }) {
             </style>
           </head><body>
             <div class="cintilla">
-              <img class="sello" src="${origin}/logo-udat-sello.png" alt="UDAT sello"/>
-              <img class="nombre" src="${origin}/logo-udat.png" alt="UDAT"/>
+              ${selloSrc ? `<img class="sello" src="${selloSrc}" alt="UDAT sello"/>` : ''}
+              ${nombreSrc ? `<img class="nombre" src="${nombreSrc}" alt="UDAT"/>` : ''}
             </div>
             <div class="content">
             <div class="emp-header">
