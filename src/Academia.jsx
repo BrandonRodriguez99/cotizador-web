@@ -18,7 +18,6 @@ import {
   registrarAsistenciaManual,
   getAcademiaHistorico,
   getAcademiaCalendario,
-  convocarCursoAcademia,
   searchParticipantes,
   getCursos,
   getCoaches,
@@ -87,7 +86,7 @@ export default function Academia({ usuario }) {
   const [detalleCurso, setDetalleCurso] = useState(null)
   const [showNuevoCurso, setShowNuevoCurso] = useState(false)
   const [editandoCurso, setEditandoCurso] = useState(null)
-  const [convocandoCurso, setConvocandoCurso] = useState(null) // id del curso en proceso
+  const [convocandoCurso] = useState(null)
 
   // inscripciones
   const [filtroNombreCursoInsc, setFiltroNombreCursoInsc] = useState('')
@@ -311,23 +310,40 @@ export default function Academia({ usuario }) {
     } catch (err) { window.alert('Error: ' + err.message) }
   }
 
-  async function convocarCurso(e, curso) {
+  function convocarCurso(e, curso) {
     e.stopPropagation()
-    if (convocandoCurso === curso.CursoAcademiaId) return
-    if (!window.confirm(`¿Enviar invitación de calendario a los ${curso.Inscritos || 0} participante(s) inscritos en "${cursoLabel(curso)}"?`)) return
-    setConvocandoCurso(curso.CursoAcademiaId)
-    try {
-      const r = await convocarCursoAcademia(curso.CursoAcademiaId)
-      if (r.enviados > 0) {
-        window.alert(`✅ Invitación de calendario enviada a ${r.enviados} participante(s).${r.sinEnviar?.length ? `\n⚠️ Sin correo registrado: ${r.sinEnviar.join(', ')}` : ''}`)
-      } else {
-        window.alert('Ningún participante tiene correo registrado.')
-      }
-    } catch (err) {
-      window.alert('Error al enviar convocatoria: ' + err.message)
-    } finally {
-      setConvocandoCurso(null)
-    }
+    const nombre = cursoLabel(curso)
+    const fmtYMD = d => d ? String(d).slice(0, 10).replace(/-/g, '') : ''
+    const fi = fmtYMD(curso.FechaInicio) || '20260101'
+    const ff = fmtYMD(curso.FechaFin || curso.FechaInicio) || fi
+
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//UDAT//Academia//ES',
+      'METHOD:PUBLISH',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:academia-${curso.CursoAcademiaId}-${Date.now()}@udat.com.mx`,
+      `DTSTART;VALUE=DATE:${fi}`,
+      `DTEND;VALUE=DATE:${ff}`,
+      `SUMMARY:${nombre}`,
+      `DESCRIPTION:Instructor: ${curso.Instructor || 'Por definir'}\\nModalidad: ${curso.Modalidad || '—'}\\nParticipantes: ${curso.Inscritos || 0}/${curso.Capacidad}`,
+      `LOCATION:${(curso.Ubicacion || '').replace(/,/g, '\\,')}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n')
+
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${nombre.replace(/[/\\?%*:|"<>]/g, '-')}.ics`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const cursosFiltrados = cursos.filter(c => {
