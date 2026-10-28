@@ -208,6 +208,9 @@ function App() {
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [catalogError, setCatalogError] = useState(null)
   const [catalogSuccess, setCatalogSuccess] = useState(null)
+  const [catalogSearch, setCatalogSearch] = useState('')
+  const [catalogTipoFilter, setCatalogTipoFilter] = useState('')
+  const [catalogActivoFilter, setCatalogActivoFilter] = useState('')
   const [catalogModalOpen, setCatalogModalOpen] = useState(false)
   const [catalogEditingItem, setCatalogEditingItem] = useState(null)
   const [catalogSaving, setCatalogSaving] = useState(false)
@@ -685,6 +688,9 @@ function App() {
 
   async function loadCatalogView(view) {
     const definition = CATALOG_DEFINITIONS[view]
+    setCatalogSearch('')
+    setCatalogTipoFilter('')
+    setCatalogActivoFilter('')
     if (!definition) {
       setCatalogItems([])
       return
@@ -929,6 +935,40 @@ function App() {
                 </button>
               )}
             </div>
+
+            {/* Barra de filtros */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Buscar..."
+                value={catalogSearch}
+                onChange={e => setCatalogSearch(e.target.value)}
+                style={{ padding: '7px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, minWidth: 200, flex: 1, maxWidth: 320 }}
+              />
+              {activeView === 'cursos' && (
+                <>
+                  <select value={catalogTipoFilter} onChange={e => setCatalogTipoFilter(e.target.value)}
+                    style={{ padding: '7px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
+                    <option value="">Todos los tipos</option>
+                    <option value="Mandatorio">Mandatorio</option>
+                    <option value="Extraordinario">Extraordinario</option>
+                  </select>
+                  <select value={catalogActivoFilter} onChange={e => setCatalogActivoFilter(e.target.value)}
+                    style={{ padding: '7px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
+                    <option value="">Activos e inactivos</option>
+                    <option value="1">Solo activos</option>
+                    <option value="0">Solo inactivos</option>
+                  </select>
+                </>
+              )}
+              {(catalogSearch || catalogTipoFilter || catalogActivoFilter) && (
+                <button onClick={() => { setCatalogSearch(''); setCatalogTipoFilter(''); setCatalogActivoFilter('') }}
+                  style={{ padding: '7px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff', cursor: 'pointer', color: '#6b7280' }}>
+                  Limpiar
+                </button>
+              )}
+            </div>
+
             <div className="table-wrap">
               <table className="participants-table">
                 <thead>
@@ -940,14 +980,31 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {catalogItems.length === 0 && !catalogLoading ? (
-                    <tr>
-                      <td colSpan={activeCatalogDefinition.columns.length + (hasCatalogActions ? 1 : 0)} style={{ padding: '24px', color: '#6b7280' }}>
-                        No hay registros disponibles.
-                      </td>
-                    </tr>
-                  ) : (
-                    catalogItems.map((item, rowIndex) => (
+                  {(() => {
+                    let rows = activeView === 'cursos'
+                      ? [...catalogItems].sort((a, b) => (a.CursoId || 0) - (b.CursoId || 0))
+                      : catalogItems
+                    if (catalogSearch) {
+                      const q = catalogSearch.toLowerCase()
+                      rows = rows.filter(item =>
+                        activeCatalogDefinition.columns.some(col =>
+                          String(item[col.accessor] ?? '').toLowerCase().includes(q)
+                        )
+                      )
+                    }
+                    if (activeView === 'cursos' && catalogTipoFilter) {
+                      rows = rows.filter(item => item.TipoCurso === catalogTipoFilter)
+                    }
+                    if (activeView === 'cursos' && catalogActivoFilter !== '') {
+                      const activo = catalogActivoFilter === '1'
+                      rows = rows.filter(item => Boolean(item.Activo) === activo)
+                    }
+                    if (rows.length === 0) return (
+                      <tr><td colSpan={activeCatalogDefinition.columns.length + (hasCatalogActions ? 1 : 0)} style={{ padding: '24px', color: '#6b7280' }}>
+                        {catalogSearch || catalogTipoFilter || catalogActivoFilter ? 'Sin resultados para los filtros aplicados.' : 'No hay registros disponibles.'}
+                      </td></tr>
+                    )
+                    return rows.map((item, rowIndex) => (
                       <tr key={item[activeCatalogDefinition.columns[0].accessor] || rowIndex}>
                         {activeCatalogDefinition.columns.map((column) => (
                           <td key={column.accessor || column.header}>
@@ -978,7 +1035,7 @@ function App() {
                         )}
                       </tr>
                     ))
-                  )}
+                  })()}
                 </tbody>
               </table>
             </div>
