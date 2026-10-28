@@ -32,7 +32,7 @@ const TABS_ALL = [
   { id: 'cursos',        label: 'Cursos' },
   { id: 'inscripciones', label: 'Inscripciones' },
   { id: 'asistencias',   label: 'Asistencias' },
-  { id: 'solicitudes',   label: 'Solicitudes catálogo' },
+  { id: 'solicitudes',   label: 'Solicitudes' },
   { id: 'qr',            label: 'QR en Aula' },
   { id: 'historico',     label: 'Histórico' },
   { id: 'kardex',        label: 'Kardex' },
@@ -2602,12 +2602,8 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
               <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Tipo de curso</label>
               <select className="form-control" value={tipoCurso} onChange={e => setTipoCurso(e.target.value)} style={{ width: '100%' }}>
                 <option value="">Seleccionar...</option>
-                <option>Técnico</option>
-                <option>Habilidades blandas</option>
-                <option>Seguridad</option>
-                <option>Liderazgo</option>
-                <option>Normativo</option>
-                <option>Otro</option>
+                <option>Mandatorio</option>
+                <option>Extraordinario</option>
               </select>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
