@@ -288,21 +288,17 @@ function App() {
 
   useEffect(() => {
     async function loadCatalogs() {
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
       try {
         setLoading(true)
-        const [clientesRes, cursosRes, coachesRes, modalidadesRes, conceptosRes, estadosRes, proveedoresRes, unidadesNegocioRes] = await Promise.race([
-          Promise.all([
-            getClientes(),
-            getCursos(),
-            getCoaches(),
-            getModalidades(),
-            getConceptos(),
-            getEstados(),
-            getProveedores(),
-            getUnidadesNegocio(),
-          ]),
-          timeout,
+        const [clientesRes, cursosRes, coachesRes, modalidadesRes, conceptosRes, estadosRes, proveedoresRes, unidadesNegocioRes] = await Promise.all([
+          getClientes(),
+          getCursos(),
+          getCoaches(),
+          getModalidades(),
+          getConceptos(),
+          getEstados(),
+          getProveedores(),
+          getUnidadesNegocio(),
         ])
 
         setClientes(clientesRes)
