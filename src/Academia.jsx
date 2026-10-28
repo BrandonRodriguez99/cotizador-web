@@ -1834,7 +1834,7 @@ export default function Academia({ usuario }) {
             {kardexEmpleado && (
               <>
                 {/* Tarjeta empleado + resumen */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, marginBottom: 16, alignItems: 'stretch' }}>
                   {/* Info empleado */}
                   <div style={{ background: '#1e293b', borderRadius: 12, padding: '20px 24px', color: '#f1f5f9' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
