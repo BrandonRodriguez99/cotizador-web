@@ -1835,9 +1835,9 @@ export default function Academia({ usuario }) {
             <style>
               *{box-sizing:border-box;margin:0;padding:0}
               body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:0}
-              .cintilla{background:#0b2341;padding:12px 24px;display:flex;align-items:center;gap:16px;margin-bottom:20px}
-              .cintilla img.sello{height:40px;width:auto}
-              .cintilla img.nombre{height:28px;width:auto}
+              .cintilla{background:#0b2341;padding:14px 28px;display:flex;align-items:center;gap:20px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+              .cintilla img.sello{height:56px;width:auto;display:block;flex-shrink:0}
+              .cintilla img.nombre{height:40px;width:auto;display:block;flex-shrink:0}
               .content{padding:0 24px 24px}
               h1{font-size:18px;margin-bottom:4px}
               .emp-header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
@@ -1851,7 +1851,7 @@ export default function Academia({ usuario }) {
               td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
               tr:last-child td{border-bottom:none}
               .footer{margin-top:20px;font-size:10px;color:#9ca3af;text-align:right}
-              @media print{@page{margin:0;size:A4}.cintilla{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+              @media print{@page{margin:0;size:A4}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
             </style>
           </head><body>
             <div class="cintilla">
