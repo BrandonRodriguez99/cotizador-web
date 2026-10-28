@@ -315,23 +315,36 @@ export default function Academia({ usuario }) {
     const nombre = cursoLabel(curso)
 
     let inscritos = []
+    let sesiones = []
     try { inscritos = await getAcademiaInscritos(curso.CursoAcademiaId) } catch (_) {}
+    try { sesiones = await getAcademiaSesiones(curso.CursoAcademiaId) } catch (_) {}
 
     const correos = inscritos.filter(i => i.Correo).map(i => i.Correo)
 
-    const fechas = [curso.FechaInicio, curso.FechaFin]
-      .filter(Boolean)
-      .map(d => String(d).slice(0, 10))
-      .join(' al ')
+    const fmtFecha = d => d ? String(d).slice(0, 10) : ''
+    const fmtHora = h => h ? String(h).slice(0, 5) : ''
+
+    let sesionesTexto = ''
+    if (sesiones.length > 0) {
+      sesionesTexto = '\nSesiones:\n' + sesiones.map(s =>
+        `  • Sesión ${s.NumeroSesion}: ${fmtFecha(s.Fecha)}` +
+        (s.HoraInicio ? `  ${fmtHora(s.HoraInicio)} – ${fmtHora(s.HoraFin)}` : '') +
+        (s.Ubicacion ? `  (${s.Ubicacion})` : '')
+      ).join('\n')
+    } else {
+      const fi = fmtFecha(curso.FechaInicio)
+      const ff = fmtFecha(curso.FechaFin)
+      if (fi) sesionesTexto = `\nFechas: ${fi}${ff && ff !== fi ? ' al ' + ff : ''}`
+    }
 
     const asunto = encodeURIComponent(`Convocatoria: ${nombre}`)
     const cuerpo = encodeURIComponent(
       `Quedan convocados al curso ${nombre}.\n\n` +
       `Instructor: ${curso.Instructor || 'Por definir'}\n` +
       `Modalidad: ${curso.Modalidad || '—'}\n` +
-      (fechas ? `Fechas: ${fechas}\n` : '') +
       (curso.Ubicacion ? `Lugar: ${curso.Ubicacion}\n` : '') +
-      `\nParticipantes inscritos: ${curso.Inscritos || 0}/${curso.Capacidad}`
+      sesionesTexto +
+      `\n\nParticipantes inscritos: ${curso.Inscritos || 0}/${curso.Capacidad}`
     )
     const para = correos.join(';')
     window.location.href = `mailto:${para}?subject=${asunto}&body=${cuerpo}`
