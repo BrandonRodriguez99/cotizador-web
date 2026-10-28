@@ -1836,8 +1836,8 @@ export default function Academia({ usuario }) {
               *{box-sizing:border-box;margin:0;padding:0}
               body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:0}
               .cintilla{background:#0b2341;padding:14px 28px;display:flex;align-items:center;gap:20px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-              .cintilla img.sello{height:56px;width:auto;display:block;flex-shrink:0}
-              .cintilla img.nombre{height:40px;width:auto;display:block;flex-shrink:0}
+              .cintilla img.sello{height:56px;width:auto;display:block;flex-shrink:0;filter:invert(1);mix-blend-mode:screen}
+              .cintilla img.nombre{height:40px;width:auto;display:block;flex-shrink:0;filter:brightness(0) invert(1)}
               .content{padding:0 24px 24px}
               h1{font-size:18px;margin-bottom:4px}
               .emp-header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
