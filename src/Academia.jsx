@@ -176,15 +176,31 @@ export default function Academia({ usuario }) {
     loadHistorico()
   }, [tab])
 
-  useEffect(() => {
-    if (tab !== 'calendario') return
-    if (sesionesCalendario.length > 0) return
+  function loadCalendario() {
     setLoadingCal(true)
     getAcademiaCalendario()
       .then(d => setSesionesCalendario(d))
       .catch(console.error)
       .finally(() => setLoadingCal(false))
+  }
+
+  useEffect(() => {
+    if (tab !== 'calendario') return
+    if (sesionesCalendario.length > 0) return
+    loadCalendario()
   }, [tab, sesionesCalendario.length])
+
+  function actualizar() {
+    if (tab === 'cursos' || tab === 'inscripciones' || tab === 'asistencias' || tab === 'qr') {
+      loadCursos()
+    } else if (tab === 'historico' || tab === 'kardex') {
+      setHistoricoData([])
+      loadHistorico()
+    } else if (tab === 'calendario') {
+      setSesionesCalendario([])
+      loadCalendario()
+    }
+  }
 
   // search participantes (same as NuevaCotizacion)
   useEffect(() => {
@@ -379,7 +395,7 @@ export default function Academia({ usuario }) {
             Gestión de cursos, inscripciones y asistencia
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="ghost-button" onClick={loadCursos} style={{ fontSize: 13 }}>Actualizar</button>
+            <button className="ghost-button" onClick={actualizar} style={{ fontSize: 13 }}>Actualizar</button>
             {!esCapacitacion && (
               <button className="primary-button" onClick={() => { setShowNuevoCurso(true); setEditandoCurso(null) }} style={{ fontSize: 13 }}>
                 + Nuevo curso
