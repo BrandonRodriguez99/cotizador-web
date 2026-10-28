@@ -2178,9 +2178,9 @@ export default function Academia({ usuario }) {
                         </div>
                         {s.Descripcion && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#4b5563' }}>{s.Descripcion}</p>}
                         <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
-                          {s.Horas > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>⏱ {s.Horas}h</span>}
-                          {s.Costo > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>💲 ${Number(s.Costo).toLocaleString('es-MX')}</span>}
-                          {s.DuracionDefaultDias > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>📅 {s.DuracionDefaultDias} día(s)</span>}
+                          {s.Horas > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>h</span> {s.Horas}h</span>}
+                          {s.Costo > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>$</span> {Number(s.Costo).toLocaleString('es-MX')}</span>}
+                          {s.DuracionDefaultDias > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>días</span> {s.DuracionDefaultDias}</span>}
                           {s.Justificacion && <span style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>"{s.Justificacion}"</span>}
                         </div>
                         <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
