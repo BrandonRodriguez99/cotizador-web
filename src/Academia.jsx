@@ -33,10 +33,10 @@ const TABS_ALL = [
   { id: 'inscripciones', label: 'Inscripciones' },
   { id: 'asistencias',   label: 'Asistencias' },
   { id: 'solicitudes',   label: 'Solicitudes' },
-  { id: 'qr',            label: 'QR en Aula' },
   { id: 'historico',     label: 'Histórico' },
   { id: 'kardex',        label: 'Kardex' },
   { id: 'calendario',    label: 'Calendario' },
+  { id: 'qr',            label: 'QR en Aula' },
 ]
 
 const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'kardex', 'calendario', 'solicitudes'])
