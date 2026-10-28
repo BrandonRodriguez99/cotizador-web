@@ -313,73 +313,28 @@ export default function Academia({ usuario }) {
   async function convocarCurso(e, curso) {
     e.stopPropagation()
     const nombre = cursoLabel(curso)
-    const fmtYMD = d => d ? String(d).slice(0, 10).replace(/-/g, '') : ''
-    const fmtHM = h => h ? String(h).replace(':', '').padEnd(4, '0') + '00' : '090000'
 
-    let sesiones = []
     let inscritos = []
-    try { sesiones = await getAcademiaSesiones(curso.CursoAcademiaId) } catch (_) {}
     try { inscritos = await getAcademiaInscritos(curso.CursoAcademiaId) } catch (_) {}
 
-    const attendees = inscritos
-      .filter(i => i.Correo)
-      .map(i => `ATTENDEE;CN="${(i.NombreCompleto || i.Correo).replace(/"/g, '')}";RSVP=TRUE:mailto:${i.Correo}`)
+    const correos = inscritos.filter(i => i.Correo).map(i => i.Correo)
 
-    const desc = `Instructor: ${curso.Instructor || 'Por definir'}\\nModalidad: ${curso.Modalidad || '—'}\\nParticipantes: ${curso.Inscritos || 0}/${curso.Capacidad}`
-    const loc = (curso.Ubicacion || '').replace(/,/g, '\\,')
+    const fechas = [curso.FechaInicio, curso.FechaFin]
+      .filter(Boolean)
+      .map(d => String(d).slice(0, 10))
+      .join(' al ')
 
-    const lines = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//UDAT//Academia//ES',
-      'METHOD:REQUEST',
-      'CALSCALE:GREGORIAN',
-    ]
-
-    if (sesiones.length > 0) {
-      for (const s of sesiones) {
-        const ymd = fmtYMD(s.Fecha ? (s.Fecha.toISOString ? s.Fecha.toISOString() : String(s.Fecha)) : '')
-        lines.push(
-          'BEGIN:VEVENT',
-          `UID:academia-s${s.SesionId}@udat.com.mx`,
-          `DTSTART;TZID=America/Mexico_City:${ymd}T${fmtHM(s.HoraInicio)}`,
-          `DTEND;TZID=America/Mexico_City:${ymd}T${fmtHM(s.HoraFin)}`,
-          `SUMMARY:${nombre} — Sesión ${s.NumeroSesion}`,
-          `DESCRIPTION:${desc}`,
-          `LOCATION:${(s.Ubicacion || curso.Ubicacion || '').replace(/,/g, '\\,')}`,
-          ...attendees,
-          'STATUS:CONFIRMED',
-          'END:VEVENT',
-        )
-      }
-    } else {
-      const fi = fmtYMD(curso.FechaInicio) || '20260101'
-      const ff = fmtYMD(curso.FechaFin || curso.FechaInicio) || fi
-      lines.push(
-        'BEGIN:VEVENT',
-        `UID:academia-c${curso.CursoAcademiaId}@udat.com.mx`,
-        `DTSTART;VALUE=DATE:${fi}`,
-        `DTEND;VALUE=DATE:${ff}`,
-        `SUMMARY:${nombre}`,
-        `DESCRIPTION:${desc}`,
-        `LOCATION:${loc}`,
-        ...attendees,
-        'STATUS:CONFIRMED',
-        'END:VEVENT',
-      )
-    }
-
-    lines.push('END:VCALENDAR')
-    const ics = lines.join('\r\n')
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${nombre.replace(/[/\\?%*:|"<>]/g, '-')}.ics`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const asunto = encodeURIComponent(`Convocatoria: ${nombre}`)
+    const cuerpo = encodeURIComponent(
+      `Quedan convocados al curso ${nombre}.\n\n` +
+      `Instructor: ${curso.Instructor || 'Por definir'}\n` +
+      `Modalidad: ${curso.Modalidad || '—'}\n` +
+      (fechas ? `Fechas: ${fechas}\n` : '') +
+      (curso.Ubicacion ? `Lugar: ${curso.Ubicacion}\n` : '') +
+      `\nParticipantes inscritos: ${curso.Inscritos || 0}/${curso.Capacidad}`
+    )
+    const para = correos.join(';')
+    window.location.href = `mailto:${para}?subject=${asunto}&body=${cuerpo}`
   }
 
   const cursosFiltrados = cursos.filter(c => {
