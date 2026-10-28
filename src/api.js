@@ -621,6 +621,7 @@ export function getVisitas(fecha) {
   return fetchJson(`seguridad/visitas${q}`, { headers: authHeaders() })
 }
 export function createVisita(data) { return fetchJson('seguridad/visitas', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateVisita(id, data) { return fetchJson(`seguridad/visitas/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function registrarSalidaVisita(id, data) { return fetchJson(`seguridad/visitas/${id}/salida`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data || {}) }) }
 
 // ── Seguridad — Órdenes de Vehículo ──────────────────────────────────────────

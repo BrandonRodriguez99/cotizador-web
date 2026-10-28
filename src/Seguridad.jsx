@@ -10,7 +10,7 @@ import {
   getPuntosRevision, createPuntoRevision, updatePuntoRevision,
   createAreaRevision, updateAreaRevision,
   getRondines, getRondinById, createRondin, marcarRegistroRondin, finalizarRondin, deleteRondin,
-  getVisitas, createVisita, registrarSalidaVisita, deleteVisita,
+  getVisitas, createVisita, updateVisita, registrarSalidaVisita, deleteVisita,
   getOrdenesVehiculo, createOrdenVehiculo,
   autorizarOrdenVehiculo, rechazarOrdenVehiculo,
   registrarSalidaVehiculo, registrarLlegadaVehiculo, deleteOrdenVehiculo, updateKmOrdenVehiculo,
@@ -193,6 +193,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [errorE, setErrorE]                       = useState('')
   const [historialExt, setHistorialExt]           = useState([])
   const [verHistorialId, setVerHistorialId]       = useState(null)
+  const [editExtintorModal, setEditExtintorModal] = useState(null)
+  const [editExtintorForm, setEditExtintorForm]   = useState({})
 
   const loadExtintores = useCallback(async () => {
     setLoadingE(true); setErrorE('')
@@ -202,6 +204,16 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   }, [])
 
   useEffect(() => { if (tab === 'extintores') loadExtintores() }, [tab, loadExtintores])
+
+  async function guardarEditExtintor() {
+    if (!editExtintorModal) return
+    try {
+      await updateExtintor(editExtintorModal.ExtintorId, editExtintorForm)
+      await loadExtintores()
+      setEditExtintorModal(null)
+      setEditExtintorForm({})
+    } catch (e) { alert('Error al editar extintor: ' + e.message) }
+  }
 
   async function guardarRevision() {
     if (!extintorRevisando) return
@@ -229,6 +241,8 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   const [nuevaVisita, setNuevaVisita]   = useState(false)
   const [fechaVisitas, setFechaVisitas] = useState(new Date().toISOString().substring(0, 10))
   const [confirmSalida, setConfirmSalida] = useState(null) // VisitaId pendiente de confirmar salida
+  const [editVisitaModal, setEditVisitaModal] = useState(null)
+  const [editVisitaForm, setEditVisitaForm] = useState({})
 
   const loadVisitas = useCallback(async () => {
     setLoadingV(true); setErrorV('')
@@ -443,6 +457,17 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
     if (!window.confirm('¿Eliminar este rondín? Esta acción no se puede deshacer.')) return
     try { await deleteRondin(id); await loadRondines() }
     catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function guardarEditVisita() {
+    if (!editVisitaModal) return
+    if (!editVisitaForm.NombreVisitante?.trim()) { alert('El nombre del visitante es requerido.'); return }
+    try {
+      await updateVisita(editVisitaModal.VisitaId, editVisitaForm)
+      setVisitas(prev => prev.map(v => v.VisitaId === editVisitaModal.VisitaId ? { ...v, ...editVisitaForm } : v))
+      setEditVisitaModal(null)
+      setEditVisitaForm({})
+    } catch (e) { alert('Error al editar visita: ' + e.message) }
   }
 
   async function eliminarVisita(id) {
@@ -876,10 +901,14 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                                 onClick={() => verHistorial(e)}>
                                 Historial
                               </button>
-                              {(esAdmin || esJefeSeg) && (
+                              {(esAdmin || esJefeSeg) && (<>
+                                <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
+                                  onClick={() => { setEditExtintorModal(e); setEditExtintorForm({ Codigo: e.Codigo, Tipo: e.Tipo || '', Ubicacion: e.Ubicacion || '', FechaVencimiento: e.FechaVencimiento ? String(e.FechaVencimiento).substring(0,10) : '' }) }}>
+                                  Editar
+                                </button>
                                 <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
                                   onClick={() => eliminarCatExtintor(e.ExtintorId)}>Desactivar</button>
-                              )}
+                              </>)}
                             </div>
                           </td>
                         </tr>
@@ -933,6 +962,35 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                     <button className="ghost-button" onClick={() => { setExtintorRevisando(null); setRevisionForm({}) }}>Cancelar</button>
                     <button className="primary-button" onClick={guardarRevision}>Guardar revisión</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal editar extintor */}
+            {editExtintorModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '420px' }}>
+                  <h3 style={{ margin: '0 0 16px' }}>Editar Extintor</h3>
+                  {[
+                    { label: 'Código', field: 'Codigo', placeholder: 'EXT-001' },
+                    { label: 'Tipo', field: 'Tipo', placeholder: 'PQS, CO2, Agua...' },
+                    { label: 'Ubicación', field: 'Ubicacion', placeholder: 'Área / zona' },
+                  ].map(f => (
+                    <div key={f.field} style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>{f.label}</label>
+                      <input className="form-control" value={editExtintorForm[f.field] || ''} placeholder={f.placeholder}
+                        onChange={e => setEditExtintorForm(p => ({ ...p, [f.field]: e.target.value }))} />
+                    </div>
+                  ))}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>Fecha de vencimiento</label>
+                    <input type="date" className="form-control" value={editExtintorForm.FechaVencimiento || ''}
+                      onChange={e => setEditExtintorForm(p => ({ ...p, FechaVencimiento: e.target.value }))} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button className="ghost-button" onClick={() => { setEditExtintorModal(null); setEditExtintorForm({}) }}>Cancelar</button>
+                    <button className="primary-button" onClick={guardarEditExtintor}>Guardar cambios</button>
                   </div>
                 </div>
               </div>
@@ -1018,6 +1076,12 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                                 Registrar salida
                               </button>
                             ) : null}
+                            {(esAdmin || esJefeSeg || esSeguridad) && (
+                              <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px' }}
+                                onClick={() => { setEditVisitaModal(v); setEditVisitaForm({ NombreVisitante: v.NombreVisitante, Empresa: v.Empresa || '', Documento: v.Documento || '', AQuienVisita: v.AQuienVisita || '', Motivo: v.Motivo || '', TipoVisita: v.TipoVisita || 'general' }) }}>
+                                Editar
+                              </button>
+                            )}
                             {(esAdmin || esJefeSeg) && (
                               <button className="ghost-button" style={{ padding: '4px 10px', fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
                                 onClick={() => eliminarVisita(v.VisitaId)}>Eliminar</button>
@@ -1028,6 +1092,42 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Modal editar visita */}
+            {editVisitaModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflow: 'auto' }}>
+                  <h3 style={{ margin: '0 0 4px' }}>Editar Visita</h3>
+                  <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6b7280' }}>{editVisitaModal.Folio}</p>
+                  {[
+                    { label: 'Nombre del visitante *', field: 'NombreVisitante', placeholder: 'Nombre completo' },
+                    { label: 'Empresa / Organización', field: 'Empresa', placeholder: 'Empresa' },
+                    { label: 'Documento / ID', field: 'Documento', placeholder: 'INE, pasaporte...' },
+                    { label: 'A quién visita', field: 'AQuienVisita', placeholder: 'Persona o área' },
+                    { label: 'Motivo', field: 'Motivo', placeholder: 'Motivo de la visita' },
+                  ].map(f => (
+                    <div key={f.field} style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>{f.label}</label>
+                      <input className="form-control" value={editVisitaForm[f.field] || ''} placeholder={f.placeholder}
+                        onChange={e => setEditVisitaForm(p => ({ ...p, [f.field]: e.target.value }))} />
+                    </div>
+                  ))}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>Tipo de visita</label>
+                    <select className="form-control" value={editVisitaForm.TipoVisita || 'general'}
+                      onChange={e => setEditVisitaForm(p => ({ ...p, TipoVisita: e.target.value }))}>
+                      <option value="general">General</option>
+                      <option value="proveedor">Proveedor</option>
+                      <option value="contratista">Contratista</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button className="ghost-button" onClick={() => { setEditVisitaModal(null); setEditVisitaForm({}) }}>Cancelar</button>
+                    <button className="primary-button" onClick={guardarEditVisita}>Guardar cambios</button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1324,25 +1424,17 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#6b7280', marginBottom: '4px' }}>Km Inicial (ida)</label>
-                        {(!esSeguridad || esAdmin || esJefeSeg || esEncargado) ? (
-                          <input type="number" className="form-control" placeholder="Ej: 125000"
-                            value={detalleForm.KmInicial}
-                            onChange={e => setDetalleForm(p => ({ ...p, KmInicial: e.target.value }))}
-                            style={{ fontSize: '14px' }} />
-                        ) : (
-                          <div style={{ fontWeight: 700, fontSize: '18px', color: '#1e3a5f' }}>{detalleOrdenV.KmInicial != null ? detalleOrdenV.KmInicial : '—'}</div>
-                        )}
+                        <input type="number" className="form-control" placeholder="Ej: 125000"
+                          value={detalleForm.KmInicial}
+                          onChange={e => setDetalleForm(p => ({ ...p, KmInicial: e.target.value }))}
+                          style={{ fontSize: '14px' }} />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#6b7280', marginBottom: '4px' }}>Km Final (vuelta)</label>
-                        {(!esSeguridad || esAdmin || esJefeSeg || esEncargado) ? (
-                          <input type="number" className="form-control" placeholder="Ej: 125350"
-                            value={detalleForm.KmFinal}
-                            onChange={e => setDetalleForm(p => ({ ...p, KmFinal: e.target.value }))}
-                            style={{ fontSize: '14px' }} />
-                        ) : (
-                          <div style={{ fontWeight: 700, fontSize: '18px', color: '#1e3a5f' }}>{detalleOrdenV.KmFinal != null ? detalleOrdenV.KmFinal : '—'}</div>
-                        )}
+                        <input type="number" className="form-control" placeholder="Ej: 125350"
+                          value={detalleForm.KmFinal}
+                          onChange={e => setDetalleForm(p => ({ ...p, KmFinal: e.target.value }))}
+                          style={{ fontSize: '14px' }} />
                       </div>
                     </div>
                     {detalleForm.KmInicial && detalleForm.KmFinal && Number(detalleForm.KmFinal) > Number(detalleForm.KmInicial) && (
@@ -1380,15 +1472,13 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
                   })}
                 </div>
 
-                {(!esSeguridad || esAdmin || esJefeSeg || esEncargado) && (
-                  <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
-                    <button className="primary-button" style={{ width: '100%', padding: '10px', fontSize: '14px' }}
-                      disabled={guardandoDetalle}
-                      onClick={guardarDetalleOrden}>
-                      {guardandoDetalle ? 'Guardando...' : 'Guardar cambios'}
-                    </button>
-                  </div>
-                )}
+                <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
+                  <button className="primary-button" style={{ width: '100%', padding: '10px', fontSize: '14px' }}
+                    disabled={guardandoDetalle}
+                    onClick={guardarDetalleOrden}>
+                    {guardandoDetalle ? 'Guardando...' : 'Guardar Km'}
+                  </button>
+                </div>
               </div>
 
               {fotoAmpliadaV && (
