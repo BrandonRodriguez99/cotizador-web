@@ -18,6 +18,7 @@ import {
   registrarAsistenciaManual,
   getAcademiaHistorico,
   getAcademiaCalendario,
+  convocarCursoAcademia,
   searchParticipantes,
   getCursos,
   getCoaches,
@@ -313,28 +314,17 @@ export default function Academia({ usuario }) {
   async function convocarCurso(e, curso) {
     e.stopPropagation()
     if (convocandoCurso === curso.CursoAcademiaId) return
+    if (!window.confirm(`¿Enviar invitación de calendario a los ${curso.Inscritos || 0} participante(s) inscritos en "${cursoLabel(curso)}"?`)) return
     setConvocandoCurso(curso.CursoAcademiaId)
     try {
-      const inscritos = await getAcademiaInscritos(curso.CursoAcademiaId)
-      const correos = inscritos.filter(i => i.Correo).map(i => i.Correo)
-      if (correos.length === 0) {
+      const r = await convocarCursoAcademia(curso.CursoAcademiaId)
+      if (r.enviados > 0) {
+        window.alert(`✅ Invitación de calendario enviada a ${r.enviados} participante(s).${r.sinEnviar?.length ? `\n⚠️ Sin correo registrado: ${r.sinEnviar.join(', ')}` : ''}`)
+      } else {
         window.alert('Ningún participante tiene correo registrado.')
-        return
       }
-      const nombre = cursoLabel(curso)
-      const fechas = curso.FechaInicio ? `${fmtFecha(curso.FechaInicio)}${curso.FechaFin ? ` al ${fmtFecha(curso.FechaFin)}` : ''}` : ''
-      const subject = encodeURIComponent(`Convocatoria: ${nombre}`)
-      const body = encodeURIComponent(
-        `Estimados participantes,\n\nQuedan convocados al curso "${nombre}"` +
-        (fechas ? ` programado del ${fechas}` : '') +
-        (curso.Ubicacion ? ` en ${curso.Ubicacion}` : '') +
-        (curso.Instructor ? `\nInstructor: ${curso.Instructor}` : '') +
-        `\nModalidad: ${curso.Modalidad || '—'}` +
-        `\n\nFavor de confirmar su asistencia.\n\nSaludos,\nAcademia UDAT`
-      )
-      window.location.href = `mailto:${correos.join(',')}?subject=${subject}&body=${body}`
     } catch (err) {
-      window.alert('Error al obtener correos: ' + err.message)
+      window.alert('Error al enviar convocatoria: ' + err.message)
     } finally {
       setConvocandoCurso(null)
     }

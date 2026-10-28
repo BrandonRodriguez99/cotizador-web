@@ -809,6 +809,7 @@ export function registrarAsistenciaManual(data) { return fetchJson('academia/asi
 export function getAcademiaHistorico() { return fetchJson('academia/historico', { headers: authHeaders() }) }
 export function getAcademiaCalendario() { return fetchJson('academia/calendario', { headers: authHeaders() }) }
 export function buscarEmpleadosAcademia(q) { return fetchJson(`academia/buscar-empleados?q=${encodeURIComponent(q)}`, { headers: authHeaders() }) }
+export function convocarCursoAcademia(cursoId) { return fetchJson(`academia/cursos/${cursoId}/convocar`, { method: 'POST', headers: authHeaders() }) }
 
 export function getFormularios() { return fetchJson('formularios', { headers: authHeaders() }) }
 export function getFormulario(id) { return fetchJson(`formularios/${id}`, { headers: authHeaders() }) }
