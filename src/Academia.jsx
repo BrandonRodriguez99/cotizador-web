@@ -1796,6 +1796,73 @@ export default function Academia({ usuario }) {
           a.click()
         }
 
+        function imprimirKardex(emp, cursos, getEst, pct, comp, prog, pend) {
+          const filas = cursos.map(r => {
+            const est = getEst(r)
+            const avance = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : null
+            const constancia = r.TotalSesiones > 0 && avance >= (r.PorcentajeMinAsistencia || 75)
+            const colores = { Completado: '#16a34a', 'En progreso': '#d97706', Pendiente: '#6b7280', 'Sin sesiones': '#9ca3af' }
+            return `<tr>
+              <td><strong>${r.CursoNombre || ''}</strong>${r.Generacion ? `<br><small style="color:#6b7280">${r.Generacion}</small>` : ''}</td>
+              <td>${r.Modalidad || '—'}</td>
+              <td>${r.Instructor || '—'}</td>
+              <td>${r.FechaInscripcion ? String(r.FechaInscripcion).slice(0,10) : '—'}</td>
+              <td><span style="background:${colores[est]}22;color:${colores[est]};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${est}</span></td>
+              <td>${avance !== null ? `${r.SesionesAsistidas}/${r.TotalSesiones} (${avance}%)` : '—'}</td>
+              <td style="color:${constancia ? '#16a34a' : '#9ca3af'};font-weight:600">${r.TotalSesiones > 0 ? (constancia ? '✓ Acreedor' : 'Pendiente') : '—'}</td>
+            </tr>`
+          }).join('')
+
+          const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <title>Kardex — ${emp.NombreCompleto}</title>
+            <style>
+              *{box-sizing:border-box;margin:0;padding:0}
+              body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:24px}
+              h1{font-size:18px;margin-bottom:4px}
+              .header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
+              .header .sub{font-size:11px;color:#94a3b8;margin-top:4px;display:flex;flex-wrap:wrap;gap:12px}
+              .stats{display:flex;gap:12px;margin-bottom:16px}
+              .stat{flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center}
+              .stat .val{font-size:22px;font-weight:800}
+              .stat .lbl{font-size:11px;color:#6b7280;margin-top:2px}
+              table{width:100%;border-collapse:collapse;margin-top:8px}
+              th{background:#f1f5f9;text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#374151;border-bottom:2px solid #e5e7eb}
+              td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+              tr:last-child td{border-bottom:none}
+              .footer{margin-top:20px;font-size:10px;color:#9ca3af;text-align:right}
+              @media print{@page{margin:16mm}}
+            </style>
+          </head><body>
+            <div class="header">
+              <h1>${emp.NombreCompleto}</h1>
+              <div class="sub">
+                ${emp.NumeroEmpleado ? `<span>No. ${emp.NumeroEmpleado}</span>` : ''}
+                ${emp.Area ? `<span>Área: ${emp.Area}</span>` : ''}
+                ${emp.Plaza ? `<span>Plaza: ${emp.Plaza}</span>` : ''}
+                ${emp.Empresa ? `<span>Empresa: ${emp.Empresa}</span>` : ''}
+                ${emp.Terminal ? `<span>Terminal: ${emp.Terminal}</span>` : ''}
+              </div>
+            </div>
+            <div class="stats">
+              <div class="stat"><div class="val" style="color:#2563eb">${cursos.length}</div><div class="lbl">Asignados</div></div>
+              <div class="stat"><div class="val" style="color:#16a34a">${comp}</div><div class="lbl">Completados</div></div>
+              <div class="stat"><div class="val" style="color:#d97706">${prog}</div><div class="lbl">En progreso</div></div>
+              <div class="stat"><div class="val" style="color:#6b7280">${pend}</div><div class="lbl">Pendientes</div></div>
+              <div class="stat"><div class="val" style="color:#2563eb">${pct}%</div><div class="lbl">Avance general</div></div>
+            </div>
+            <table>
+              <thead><tr><th>Curso</th><th>Modalidad</th><th>Instructor</th><th>Fecha inscripción</th><th>Estado</th><th>Avance</th><th>Constancia</th></tr></thead>
+              <tbody>${filas}</tbody>
+            </table>
+            <div class="footer">Generado el ${new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})} · UDAT Academia</div>
+            <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script>
+          </body></html>`
+
+          const w = window.open('', '_blank', 'width=900,height=700')
+          w.document.write(html)
+          w.document.close()
+        }
+
         // Donut SVG helpers
         const R = 40, C = 2 * Math.PI * R
         const stroke = C * (pctGeneral / 100)
@@ -1804,7 +1871,14 @@ export default function Academia({ usuario }) {
           <div style={{ padding: '16px 0' }}>
             {/* Búsqueda */}
             <div style={{ background: 'var(--surface,#f9fafb)', border: '1px solid var(--border,#e5e7eb)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>Kardex de Capacitación</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Kardex de Capacitación</h3>
+                {kardexEmpleado && (
+                  <button className="secondary-button" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => imprimirKardex(kardexEmpleado, cursosEmpleado, getEstado, pctGeneral, completados, enProgreso, pendientes)}>
+                    ↓ Descargar PDF
+                  </button>
+                )}
+              </div>
               <div style={{ position: 'relative', maxWidth: 420 }}>
                 <input
                   type="text"
