@@ -1609,7 +1609,7 @@ export default function Academia({ usuario }) {
         }
 
         return (
-          <div style={{ padding: '16px 0' }}>
+          <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 180px)' }}>
             {loadingCal && <p style={{ color: '#9ca3af', fontSize: 13 }}>Cargando sesiones...</p>}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -1628,7 +1628,7 @@ export default function Academia({ usuario }) {
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flex: 1 }}>
               {/* Calendario grid */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 1, background: '#e5e7eb', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
@@ -1636,12 +1636,12 @@ export default function Academia({ usuario }) {
                     <div key={d} style={{ background: '#f9fafb', padding: '8px 4px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{d}</div>
                   ))}
                   {cells.map((d, i) => {
-                    if (d === null) return <div key={`b${i}`} style={{ background: '#fafafa', minHeight: 80 }} />
+                    if (d === null) return <div key={`b${i}`} style={{ background: '#fafafa', minHeight: 120 }} />
                     const iso = padISO(calYear, calMonth, d)
                     const eventos = byDate[iso] || []
                     const esHoy = iso === hoyISO
                     return (
-                      <div key={iso} style={{ background: '#fff', minHeight: 80, padding: 4, position: 'relative', borderTop: esHoy ? '2px solid #2563eb' : 'none' }}>
+                      <div key={iso} style={{ background: '#fff', minHeight: 120, padding: 6, position: 'relative', borderTop: esHoy ? '2px solid #2563eb' : 'none' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           width: 24, height: 24, borderRadius: '50%', fontSize: 12, fontWeight: esHoy ? 700 : 400,
