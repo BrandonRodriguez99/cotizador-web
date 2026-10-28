@@ -315,7 +315,7 @@ export default function Academia({ usuario }) {
     const token = localStorage.getItem('cotizador-token') || ''
     const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api')
     const url = `${base}/academia/cursos/${curso.CursoAcademiaId}/evento.ics?token=${encodeURIComponent(token)}`
-    window.location.href = url
+    window.open(url, '_blank')
   }
 
   const cursosFiltrados = cursos.filter(c => {
