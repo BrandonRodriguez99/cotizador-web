@@ -494,7 +494,10 @@ export default function Academia({ usuario }) {
                         color: c.Modalidad === 'Presencial' ? '#d97706' : c.Modalidad === 'En línea' ? '#2563eb' : '#6b7280',
                       }}>{c.Modalidad}</span>
                     </td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{c.TotalSesiones || 0} {(c.TotalSesiones || 0) === 1 ? 'sesión' : 'sesiones'}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                      {c.TotalSesiones || 0} {(c.TotalSesiones || 0) === 1 ? 'sesión' : 'sesiones'}
+                      {c.HorasPorSesion > 0 && <span style={{ color: '#2563eb', fontWeight: 600, marginLeft: 6 }}>· {fmtHoras(c.HorasPorSesion * 60 * (c.TotalSesiones || 0))}</span>}
+                    </td>
                     <td style={{ fontSize: 12 }}>{fmtFecha(c.FechaInicio)}{c.FechaFin ? ` — ${fmtFecha(c.FechaFin)}` : ''}</td>
                     <td>
                       <div style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: (c.Inscritos || 0) >= c.Capacidad ? '#dc2626' : (c.Inscritos || 0) >= c.Capacidad * 0.8 ? '#d97706' : '#16a34a' }}>
@@ -2147,6 +2150,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   const [ubicacion, setUbicacion] = useState(cursoInicial?.Ubicacion || '')
   const [capacidad, setCapacidad] = useState(String(cursoInicial?.Capacidad || 25))
   const [pctMin, setPctMin] = useState(String(cursoInicial?.PorcentajeMinAsistencia || 75))
+  const [horasPorSesion, setHorasPorSesion] = useState(cursoInicial?.HorasPorSesion != null ? String(cursoInicial.HorasPorSesion) : '')
   const [estado, setEstado] = useState(cursoInicial?.Estado || 'Activo')
   const [sesiones, setSesiones] = useState([])
   const [saving, setSaving] = useState(false)
@@ -2213,7 +2217,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
     setSaving(true)
     try {
       if (isEdit) {
-        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null })
+        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null })
         for (const s of sesiones) {
           if (s.SesionId) {
             await updateAcademiaSesion(s.SesionId, { Fecha: s.Fecha, HoraInicio: s.HoraInicio, HoraFin: s.HoraFin, Ubicacion: s.Ubicacion })
@@ -2223,7 +2227,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
         }
       } else {
         const sesionesValidas = sesiones.filter(s => s.Fecha)
-        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, sesiones: sesionesValidas })
+        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, sesiones: sesionesValidas })
       }
       onSaved()
     } catch (err) { window.alert('Error: ' + err.message) } finally { setSaving(false) }
@@ -2355,6 +2359,21 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>% Min. Asistencia</label>
                 <input className="form-control" type="number" value={pctMin} onChange={e => setPctMin(e.target.value)} min={0} max={100} style={{ width: '100%' }} />
               </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Horas por sesión</label>
+                <input className="form-control" type="number" value={horasPorSesion} onChange={e => setHorasPorSesion(e.target.value)} min={0} step={0.5} placeholder="Ej: 2, 1.5" style={{ width: '100%' }} />
+              </div>
+              {horasPorSesion && Number(horasPorSesion) > 0 && (
+                <div style={{ padding: '8px 12px', background: '#eff6ff', borderRadius: 8, border: '1px solid #bfdbfe' }}>
+                  <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600 }}>Total estimado</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#1e3a5f', marginTop: 2 }}>
+                    {fmtHoras(Number(horasPorSesion) * 60 * sesiones.length)}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#6b7280' }}>{sesiones.length} sesión(es) × {horasPorSesion}h</div>
+                </div>
+              )}
             </div>
             {isEdit && (
               <div>

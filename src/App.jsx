@@ -903,7 +903,7 @@ function App() {
           )}
         </header>
 
-        {loading && !isCatalogView && <div className="notification">Cargando datos de catálogo...</div>}
+        {loading && !isCatalogView && ['cotizacion','clientes','proveedores','ordenesCompra','cotizaciones','dashboard'].includes(activeView) && <div className="notification">Cargando datos de catálogo...</div>}
         {error && !isCatalogView && <div className="notification error">{error}</div>}
         {isCatalogView && catalogLoading && <div className="notification">Cargando catálogo...</div>}
         {isCatalogView && catalogError && <div className="notification error">{catalogError}</div>}
