@@ -810,6 +810,10 @@ export function registrarAsistenciaManual(data) { return fetchJson('academia/asi
 export function getAcademiaHistorico() { return fetchJson('academia/historico', { headers: authHeaders() }) }
 export function getAcademiaCalendario() { return fetchJson('academia/calendario', { headers: authHeaders() }) }
 export function buscarEmpleadosAcademia(q) { return fetchJson(`academia/buscar-empleados?q=${encodeURIComponent(q)}`, { headers: authHeaders() }) }
+export function getSolicitudesCatalogo() { return fetchJson('academia/solicitudes-catalogo', { headers: authHeaders() }) }
+export function createSolicitudCatalogo(data) { return fetchJson('academia/solicitudes-catalogo', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function aprobarSolicitudCatalogo(id, data) { return fetchJson(`academia/solicitudes-catalogo/${id}/aprobar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data || {}) }) }
+export function rechazarSolicitudCatalogo(id, data) { return fetchJson(`academia/solicitudes-catalogo/${id}/rechazar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data || {}) }) }
 export function convocarCursoAcademia(cursoId) { return fetchJson(`academia/cursos/${cursoId}/convocar`, { method: 'POST', headers: authHeaders() }) }
 
 export function getFormularios() { return fetchJson('formularios', { headers: authHeaders() }) }

@@ -21,6 +21,10 @@ import {
   searchParticipantes,
   getCursos,
   getCoaches,
+  getSolicitudesCatalogo,
+  createSolicitudCatalogo,
+  aprobarSolicitudCatalogo,
+  rechazarSolicitudCatalogo,
 } from './api'
 import { generarListaAsistenciaPDF } from './generarListaAsistencia'
 
@@ -28,13 +32,14 @@ const TABS_ALL = [
   { id: 'cursos',        label: 'Cursos' },
   { id: 'inscripciones', label: 'Inscripciones' },
   { id: 'asistencias',   label: 'Asistencias' },
+  { id: 'solicitudes',   label: 'Solicitudes catálogo' },
   { id: 'qr',            label: 'QR en Aula' },
   { id: 'historico',     label: 'Histórico' },
   { id: 'kardex',        label: 'Kardex' },
   { id: 'calendario',    label: 'Calendario' },
 ]
 
-const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'kardex', 'calendario'])
+const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'kardex', 'calendario', 'solicitudes'])
 
 // ── Calendario helpers ────────────────────────────────────────────────────────
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -117,6 +122,14 @@ export default function Academia({ usuario }) {
   const [sesionQR, setSesionQR] = useState('')
   const [sesionesQR, setSesionesQR] = useState([])
 
+  // solicitudes catálogo
+  const esAprobador = ['admin', 'academia'].includes(usuario?.rol)
+  const [solicitudes, setSolicitudes] = useState([])
+  const [loadingSolicitudes, setLoadingSolicitudes] = useState(false)
+  const [showSolicitudModal, setShowSolicitudModal] = useState(false)
+  const [rechazandoId, setRechazandoId] = useState(null)
+  const [comentarioRechazo, setComentarioRechazo] = useState('')
+
   // calendario
   const hoy = new Date()
   const [calYear, setCalYear] = useState(hoy.getFullYear())
@@ -190,6 +203,15 @@ export default function Academia({ usuario }) {
     loadCalendario()
   }, [tab, sesionesCalendario.length])
 
+  function loadSolicitudes() {
+    setLoadingSolicitudes(true)
+    getSolicitudesCatalogo().then(setSolicitudes).catch(console.error).finally(() => setLoadingSolicitudes(false))
+  }
+
+  useEffect(() => {
+    if (tab === 'solicitudes') loadSolicitudes()
+  }, [tab])
+
   function actualizar() {
     if (tab === 'cursos' || tab === 'inscripciones' || tab === 'asistencias' || tab === 'qr') {
       loadCursos()
@@ -199,6 +221,8 @@ export default function Academia({ usuario }) {
     } else if (tab === 'calendario') {
       setSesionesCalendario([])
       loadCalendario()
+    } else if (tab === 'solicitudes') {
+      loadSolicitudes()
     }
   }
 
@@ -416,6 +440,11 @@ export default function Academia({ usuario }) {
               marginBottom: -2, whiteSpace: 'nowrap',
             }}>
             {t.label}
+            {t.id === 'solicitudes' && esAprobador && solicitudes.filter(s => s.Estado === 'Pendiente').length > 0 && (
+              <span style={{ marginLeft: 6, background: '#dc2626', color: '#fff', borderRadius: 10, fontSize: 10, padding: '1px 6px', fontWeight: 700, verticalAlign: 'middle' }}>
+                {solicitudes.filter(s => s.Estado === 'Pendiente').length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -2107,6 +2136,105 @@ export default function Academia({ usuario }) {
         )
       })()}
 
+      {/* ═══ TAB SOLICITUDES CATÁLOGO ═══ */}
+      {tab === 'solicitudes' && (
+        <div style={{ padding: '16px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
+                {esAprobador ? 'Solicitudes de nuevos cursos al catálogo' : 'Mis solicitudes al catálogo'}
+              </h3>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>
+                {esAprobador
+                  ? 'Aprueba o rechaza solicitudes para agregar cursos al catálogo.'
+                  : 'Solicita que se agregue un curso al catálogo para que pueda ser impartido.'}
+              </p>
+            </div>
+            <button className="primary-button" style={{ fontSize: 13 }} onClick={() => setShowSolicitudModal(true)}>
+              + Nueva solicitud
+            </button>
+          </div>
+
+          {loadingSolicitudes ? (
+            <p style={{ color: '#9ca3af', fontSize: 13 }}>Cargando...</p>
+          ) : solicitudes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 0', color: '#9ca3af' }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+              <p style={{ margin: 0 }}>No hay solicitudes aún</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {solicitudes.map(s => {
+                const colores = { Pendiente: { bg: '#fef9c3', text: '#854d0e', border: '#fde047' }, Aprobado: { bg: '#dcfce7', text: '#166534', border: '#86efac' }, Rechazado: { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' } }
+                const c = colores[s.Estado] || colores.Pendiente
+                return (
+                  <div key={s.SolicitudId} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px', background: '#fff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: 14 }}>{s.Nombre}</span>
+                          <span style={{ background: c.bg, color: c.text, border: `1px solid ${c.border}`, borderRadius: 12, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>{s.Estado}</span>
+                          {s.TipoCurso && <span style={{ fontSize: 11, color: '#6b7280', background: '#f3f4f6', borderRadius: 8, padding: '2px 8px' }}>{s.TipoCurso}</span>}
+                        </div>
+                        {s.Descripcion && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#4b5563' }}>{s.Descripcion}</p>}
+                        <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+                          {s.Horas > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>⏱ {s.Horas}h</span>}
+                          {s.Costo > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>💲 ${Number(s.Costo).toLocaleString('es-MX')}</span>}
+                          {s.DuracionDefaultDias > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>📅 {s.DuracionDefaultDias} día(s)</span>}
+                          {s.Justificacion && <span style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>"{s.Justificacion}"</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+                          Solicitado por <strong>{s.SolicitadoPor}</strong> · {s.FechaSolicitud ? new Date(s.FechaSolicitud).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                          {s.ResueltoPor && <> · Resuelto por <strong>{s.ResueltoPor}</strong></>}
+                          {s.Comentario && <> · <em>"{s.Comentario}"</em></>}
+                        </div>
+                      </div>
+                      {esAprobador && s.Estado === 'Pendiente' && (
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button className="primary-button" style={{ fontSize: 12, padding: '5px 14px', background: '#16a34a', borderColor: '#16a34a' }}
+                            onClick={async () => {
+                              if (!window.confirm(`¿Aprobar "${s.Nombre}" y agregarlo al catálogo?`)) return
+                              try { await aprobarSolicitudCatalogo(s.SolicitudId); loadSolicitudes() }
+                              catch (err) { window.alert('Error: ' + err.message) }
+                            }}>✓ Aprobar</button>
+                          <button className="secondary-button" style={{ fontSize: 12, padding: '5px 14px', color: '#dc2626', borderColor: '#fca5a5' }}
+                            onClick={() => { setRechazandoId(s.SolicitudId); setComentarioRechazo('') }}>
+                            ✕ Rechazar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {rechazandoId === s.SolicitudId && (
+                      <div style={{ marginTop: 12, padding: '12px', background: '#fff7f7', border: '1px solid #fecaca', borderRadius: 8 }}>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', display: 'block', marginBottom: 6 }}>Motivo del rechazo</label>
+                        <textarea value={comentarioRechazo} onChange={e => setComentarioRechazo(e.target.value)} rows={2}
+                          placeholder="Escribe el motivo..." className="form-control" style={{ width: '100%', fontSize: 13, marginBottom: 8, boxSizing: 'border-box' }} />
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button className="ghost-button" style={{ fontSize: 12 }} onClick={() => setRechazandoId(null)}>Cancelar</button>
+                          <button className="secondary-button" style={{ fontSize: 12, color: '#dc2626', borderColor: '#fca5a5' }}
+                            onClick={async () => {
+                              try { await rechazarSolicitudCatalogo(s.SolicitudId, { Comentario: comentarioRechazo }); setRechazandoId(null); loadSolicitudes() }
+                              catch (err) { window.alert('Error: ' + err.message) }
+                            }}>Confirmar rechazo</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ MODAL: Nueva Solicitud al Catálogo ═══ */}
+      {showSolicitudModal && (
+        <SolicitudCatalogoModal
+          onClose={() => setShowSolicitudModal(false)}
+          onSaved={() => { setShowSolicitudModal(false); loadSolicitudes() }}
+        />
+      )}
+
       {/* ═══ MODAL: Nuevo/Editar Curso ═══ */}
       {showNuevoCurso && (
         <NuevoCursoModal
@@ -2414,6 +2542,98 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
           <button type="button" className="ghost-button" onClick={onClose}>Cancelar</button>
           <button type="submit" className="primary-button" disabled={saving} onClick={handleSubmit}>
             {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear curso'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function SolicitudCatalogoModal({ onClose, onSaved }) {
+  const [nombre, setNombre] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [tipoCurso, setTipoCurso] = useState('')
+  const [horas, setHoras] = useState('')
+  const [costo, setCosto] = useState('')
+  const [duracionDias, setDuracionDias] = useState('')
+  const [justificacion, setJustificacion] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!nombre.trim()) { window.alert('El nombre es requerido'); return }
+    setSaving(true)
+    try {
+      await createSolicitudCatalogo({
+        Nombre: nombre.trim(),
+        Descripcion: descripcion || null,
+        TipoCurso: tipoCurso || null,
+        Horas: horas !== '' ? Number(horas) : null,
+        Costo: costo !== '' ? Number(costo) : null,
+        DuracionDefaultDias: duracionDias !== '' ? Number(duracionDias) : null,
+        Justificacion: justificacion || null,
+      })
+      onSaved()
+    } catch (err) { window.alert('Error: ' + err.message) } finally { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000 }} onClick={onClose} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'min(500px, 95vw)', maxHeight: '90vh', background: '#fff', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 1001, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Solicitar nuevo curso</h2>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#6b7280' }}>La solicitud será revisada por el área de Academia</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Nombre del curso *</label>
+              <input className="form-control" value={nombre} onChange={e => setNombre(e.target.value)} required placeholder="Ej: Excel Avanzado" style={{ width: '100%' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Descripción</label>
+              <textarea className="form-control" value={descripcion} onChange={e => setDescripcion(e.target.value)} rows={2} placeholder="¿De qué trata el curso?" style={{ width: '100%', resize: 'vertical' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Tipo de curso</label>
+              <select className="form-control" value={tipoCurso} onChange={e => setTipoCurso(e.target.value)} style={{ width: '100%' }}>
+                <option value="">Seleccionar...</option>
+                <option>Técnico</option>
+                <option>Habilidades blandas</option>
+                <option>Seguridad</option>
+                <option>Liderazgo</option>
+                <option>Normativo</option>
+                <option>Otro</option>
+              </select>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Horas</label>
+                <input className="form-control" type="number" value={horas} onChange={e => setHoras(e.target.value)} min={0} step={0.5} placeholder="0" style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Costo ($)</label>
+                <input className="form-control" type="number" value={costo} onChange={e => setCosto(e.target.value)} min={0} placeholder="0" style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Duración (días)</label>
+                <input className="form-control" type="number" value={duracionDias} onChange={e => setDuracionDias(e.target.value)} min={1} placeholder="1" style={{ width: '100%' }} />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Justificación</label>
+              <textarea className="form-control" value={justificacion} onChange={e => setJustificacion(e.target.value)} rows={2} placeholder="¿Por qué se necesita este curso?" style={{ width: '100%', resize: 'vertical' }} />
+            </div>
+          </div>
+        </form>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button type="button" className="ghost-button" onClick={onClose}>Cancelar</button>
+          <button type="submit" className="primary-button" disabled={saving} onClick={handleSubmit}>
+            {saving ? 'Enviando...' : 'Enviar solicitud'}
           </button>
         </div>
       </div>
