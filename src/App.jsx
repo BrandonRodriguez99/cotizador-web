@@ -195,7 +195,7 @@ function App() {
   const [selectedModalidad, setSelectedModalidad] = useState('')
   const [selectedUnidadNegocio, setSelectedUnidadNegocio] = useState('')
   const [selectedEstado, setSelectedEstado] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeView, setActiveView] = useState(() => {
     try {
