@@ -26,6 +26,7 @@ import {
   createSolicitudCatalogo,
   aprobarSolicitudCatalogo,
   rechazarSolicitudCatalogo,
+  getAcademiaUbits,
 } from './api'
 import { generarListaAsistenciaPDF } from './generarListaAsistencia'
 
@@ -35,12 +36,13 @@ const TABS_ALL = [
   { id: 'asistencias',   label: 'Asistencias' },
   { id: 'solicitudes',   label: 'Solicitudes' },
   { id: 'historico',     label: 'Histórico' },
+  { id: 'ubits',         label: 'Ubits' },
   { id: 'kardex',        label: 'Kardex' },
   { id: 'calendario',    label: 'Calendario' },
   { id: 'qr',            label: 'QR en Aula' },
 ]
 
-const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'kardex', 'calendario', 'solicitudes'])
+const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'ubits', 'kardex', 'calendario', 'solicitudes'])
 
 // ── Calendario helpers ────────────────────────────────────────────────────────
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -151,6 +153,15 @@ export default function Academia({ usuario }) {
   const [historicoPagina, setHistoricoPagina] = useState(1)
   const HISTORICO_POR_PAGINA = 25
 
+  // ubits
+  const [ubitsData, setUbitsData] = useState([])
+  const [loadingUbits, setLoadingUbits] = useState(false)
+  const [filtroUbitsBuscar, setFiltroUbitsBuscar] = useState('')
+  const [filtroUbitsPlan, setFiltroUbitsPlan] = useState('')
+  const [filtroUbitsEstado, setFiltroUbitsEstado] = useState('')
+  const [ubitsPagina, setUbitsPagina] = useState(1)
+  const UBITS_POR_PAGINA = 30
+
   // kardex
   const [kardexBusqueda, setKardexBusqueda] = useState('')
   const [kardexEmpleado, setKardexEmpleado] = useState(null)
@@ -213,6 +224,20 @@ export default function Academia({ usuario }) {
     if (tab === 'solicitudes') loadSolicitudes()
   }, [tab])
 
+  function loadUbits() {
+    setLoadingUbits(true)
+    getAcademiaUbits()
+      .then(d => setUbitsData(d))
+      .catch(console.error)
+      .finally(() => setLoadingUbits(false))
+  }
+
+  useEffect(() => {
+    if (tab !== 'ubits' && tab !== 'kardex') return
+    if (ubitsData.length > 0) return
+    loadUbits()
+  }, [tab])
+
   function actualizar() {
     if (tab === 'cursos' || tab === 'inscripciones' || tab === 'asistencias' || tab === 'qr') {
       loadCursos()
@@ -224,6 +249,9 @@ export default function Academia({ usuario }) {
       loadCalendario()
     } else if (tab === 'solicitudes') {
       loadSolicitudes()
+    } else if (tab === 'ubits') {
+      setUbitsData([])
+      loadUbits()
     }
   }
 
@@ -1804,6 +1832,136 @@ export default function Academia({ usuario }) {
         )
       })()}
 
+      {/* ═══ TAB UBITS ═══ */}
+      {tab === 'ubits' && (() => {
+        const uFiltrado = ubitsData.filter(r => {
+          if (filtroUbitsBuscar) {
+            const q = filtroUbitsBuscar.toLowerCase()
+            if (!(r.NombreEmpleado || `${r.Nombre || ''} ${r.Apellido || ''}`).toLowerCase().includes(q) &&
+                !(r.NumeroEmpleado || '').toLowerCase().includes(q)) return false
+          }
+          if (filtroUbitsPlan && r.NombrePlan !== filtroUbitsPlan) return false
+          if (filtroUbitsEstado && r.EstadoAprendizaje !== filtroUbitsEstado) return false
+          return true
+        })
+        const uTotalPags = Math.max(1, Math.ceil(uFiltrado.length / UBITS_POR_PAGINA))
+        const uPagActual = Math.min(ubitsPagina, uTotalPags)
+        const uPaginados = uFiltrado.slice((uPagActual - 1) * UBITS_POR_PAGINA, uPagActual * UBITS_POR_PAGINA)
+        const uUnique = key => [...new Set(ubitsData.map(r => r[key]).filter(Boolean))].sort()
+
+        const estadoUbitsColor = { Completado: '#16a34a', Aprobado: '#16a34a', 'En progreso': '#d97706', Iniciado: '#d97706', Asignado: '#6b7280', Pendiente: '#9ca3af' }
+        const estadoUbitsBg   = { Completado: '#dcfce7', Aprobado: '#dcfce7', 'En progreso': '#fef3c7', Iniciado: '#fef3c7', Asignado: '#f3f4f6', Pendiente: '#f9fafb' }
+
+        return (
+          <div style={{ padding: '16px 0' }}>
+            <div style={{ background: 'var(--surface,#f9fafb)', border: '1px solid var(--border,#e5e7eb)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>Progreso Ubits 2026</h3>
+                  <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                    {uFiltrado.length} registro(s){ubitsData.length !== uFiltrado.length ? ` de ${ubitsData.length}` : ''}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <input
+                  type="text" placeholder="Buscar por nombre o No. empleado..."
+                  value={filtroUbitsBuscar} onChange={e => { setFiltroUbitsBuscar(e.target.value); setUbitsPagina(1) }}
+                  style={{ flex: '1 1 200px', minWidth: 180, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
+                />
+                <select value={filtroUbitsPlan} onChange={e => { setFiltroUbitsPlan(e.target.value); setUbitsPagina(1) }}
+                  style={{ minWidth: 160, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                  <option value="">Todos los planes</option>
+                  {uUnique('NombrePlan').map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select value={filtroUbitsEstado} onChange={e => { setFiltroUbitsEstado(e.target.value); setUbitsPagina(1) }}
+                  style={{ minWidth: 140, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                  <option value="">Todos los estados</option>
+                  {uUnique('EstadoAprendizaje').map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                {(filtroUbitsBuscar || filtroUbitsPlan || filtroUbitsEstado) && (
+                  <button className="ghost-button" style={{ fontSize: 12 }} onClick={() => { setFiltroUbitsBuscar(''); setFiltroUbitsPlan(''); setFiltroUbitsEstado(''); setUbitsPagina(1) }}>Limpiar</button>
+                )}
+              </div>
+            </div>
+
+            {loadingUbits ? <p style={{ color: '#6b7280' }}>Cargando datos Ubits...</p> : (
+              <>
+                <div className="table-wrap">
+                  <table className="participants-table" style={{ fontSize: 12 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left', minWidth: 160 }}>Colaborador</th>
+                        <th style={{ textAlign: 'left' }}>Área</th>
+                        <th style={{ textAlign: 'left', minWidth: 140 }}>Plan</th>
+                        <th style={{ textAlign: 'left', minWidth: 180 }}>Contenido</th>
+                        <th style={{ textAlign: 'center' }}>Formato</th>
+                        <th style={{ textAlign: 'center' }}>Estado</th>
+                        <th style={{ textAlign: 'center' }}>% Avance</th>
+                        <th style={{ textAlign: 'center' }}>Nota</th>
+                        <th style={{ textAlign: 'center' }}>Horas</th>
+                        <th style={{ textAlign: 'center' }}>Fecha fin</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {uPaginados.length === 0 ? (
+                        <tr><td colSpan={10} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>
+                          {loadingUbits ? 'Cargando...' : 'Sin registros'}
+                        </td></tr>
+                      ) : uPaginados.map((r, idx) => {
+                        const estado = r.EstadoAprendizaje || ''
+                        const colorE = estadoUbitsColor[estado] || '#6b7280'
+                        const bgE    = estadoUbitsBg[estado]   || '#f3f4f6'
+                        return (
+                          <tr key={idx}>
+                            <td>
+                              <div style={{ fontWeight: 600 }}>{`${r.Nombre || ''} ${r.Apellido || ''}`.trim()}</div>
+                              <div style={{ fontSize: 11, color: '#9ca3af' }}>{r.NumeroEmpleado}</div>
+                            </td>
+                            <td style={{ fontSize: 11 }}>{r.Area || '-'}</td>
+                            <td style={{ fontSize: 11, fontWeight: 600 }}>{r.NombrePlan || '-'}</td>
+                            <td style={{ fontSize: 11 }}>{r.NombreContenido || '-'}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 999, background: '#eff6ff', color: '#2563eb', fontWeight: 600 }}>
+                                {r.FormatoContenido || '-'}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: bgE, color: colorE, fontWeight: 700 }}>
+                                {estado || '-'}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: (r.PctAvance || 0) >= 100 ? '#16a34a' : (r.PctAvance || 0) > 0 ? '#d97706' : '#6b7280' }}>
+                              {r.PctAvance != null ? `${r.PctAvance}%` : '-'}
+                            </td>
+                            <td style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 11 }}>
+                              {r.NotaExamen != null ? r.NotaExamen : '-'}
+                            </td>
+                            <td style={{ textAlign: 'center', fontSize: 11 }}>
+                              {r.HorasEstudiadas != null ? `${r.HorasEstudiadas}h` : '-'}
+                            </td>
+                            <td style={{ textAlign: 'center', fontSize: 11 }}>
+                              {r.FechaFin ? String(r.FechaFin).slice(0, 10) : '-'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {uTotalPags > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                    <button className="secondary-button" style={{ fontSize: 12, padding: '4px 10px' }} disabled={uPagActual <= 1} onClick={() => setUbitsPagina(uPagActual - 1)}>Anterior</button>
+                    <span style={{ fontSize: 13, color: '#6b7280' }}>Página {uPagActual} de {uTotalPags}</span>
+                    <button className="secondary-button" style={{ fontSize: 12, padding: '4px 10px' }} disabled={uPagActual >= uTotalPags} onClick={() => setUbitsPagina(uPagActual + 1)}>Siguiente</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )
+      })()}
+
       {/* ═══ TAB KARDEX ═══ */}
       {tab === 'kardex' && (() => {
         // Empleados únicos del histórico
@@ -2159,6 +2317,61 @@ export default function Academia({ usuario }) {
                     </table>
                   </div>
                 </div>
+
+                {/* Ubits del empleado */}
+                {(() => {
+                  const ubitsEmp = ubitsData.filter(r => r.NumeroEmpleado === kardexEmpleado.NumeroEmpleado)
+                  if (ubitsEmp.length === 0) return null
+                  const estadoUbitsColor = { Completado: '#16a34a', Aprobado: '#16a34a', 'En progreso': '#d97706', Iniciado: '#d97706', Asignado: '#6b7280', Pendiente: '#9ca3af' }
+                  const estadoUbitsBg   = { Completado: '#dcfce7', Aprobado: '#dcfce7', 'En progreso': '#fef3c7', Iniciado: '#fef3c7', Asignado: '#f3f4f6', Pendiente: '#f9fafb' }
+                  return (
+                    <div style={{ marginTop: 24 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b2341' }}>Cursos Ubits</span>
+                        <span style={{ fontSize: 11, color: '#6b7280', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 999, padding: '1px 8px', fontWeight: 600 }}>{ubitsEmp.length}</span>
+                      </div>
+                      <div className="table-wrap">
+                        <table className="participants-table" style={{ fontSize: 12 }}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'left' }}>Plan</th>
+                              <th style={{ textAlign: 'left' }}>Contenido</th>
+                              <th style={{ textAlign: 'center' }}>Formato</th>
+                              <th style={{ textAlign: 'center' }}>Estado</th>
+                              <th style={{ textAlign: 'center' }}>% Avance</th>
+                              <th style={{ textAlign: 'center' }}>Nota</th>
+                              <th style={{ textAlign: 'center' }}>Horas</th>
+                              <th style={{ textAlign: 'center' }}>Fecha fin</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ubitsEmp.map((r, i) => {
+                              const estado = r.EstadoAprendizaje || ''
+                              return (
+                                <tr key={i}>
+                                  <td style={{ fontWeight: 600, fontSize: 11 }}>{r.NombrePlan || '-'}</td>
+                                  <td style={{ fontSize: 11 }}>{r.NombreContenido || '-'}</td>
+                                  <td style={{ textAlign: 'center' }}>
+                                    <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 999, background: '#eff6ff', color: '#2563eb', fontWeight: 600 }}>{r.FormatoContenido || '-'}</span>
+                                  </td>
+                                  <td style={{ textAlign: 'center' }}>
+                                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: estadoUbitsBg[estado] || '#f3f4f6', color: estadoUbitsColor[estado] || '#6b7280', fontWeight: 700 }}>{estado || '-'}</span>
+                                  </td>
+                                  <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: (r.PctAvance || 0) >= 100 ? '#16a34a' : (r.PctAvance || 0) > 0 ? '#d97706' : '#6b7280' }}>
+                                    {r.PctAvance != null ? `${r.PctAvance}%` : '-'}
+                                  </td>
+                                  <td style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 11 }}>{r.NotaExamen != null ? r.NotaExamen : '-'}</td>
+                                  <td style={{ textAlign: 'center', fontSize: 11 }}>{r.HorasEstudiadas != null ? `${r.HorasEstudiadas}h` : '-'}</td>
+                                  <td style={{ textAlign: 'center', fontSize: 11 }}>{r.FechaFin ? String(r.FechaFin).slice(0, 10) : '-'}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })()}
               </>
             )}
 
