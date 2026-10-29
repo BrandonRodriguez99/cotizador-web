@@ -2031,7 +2031,7 @@ export default function Academia({ usuario }) {
           a.click()
         }
 
-        async function imprimirKardex(emp, cursos, getEst, pct, comp, prog, pend) {
+        async function imprimirKardex(emp, cursos, getEst, pct, comp, prog, pend, ubitsEmp = []) {
           async function toDataURL(url) {
             try {
               const res = await fetch(url)
@@ -2069,6 +2069,22 @@ export default function Academia({ usuario }) {
               <td>${avance !== null ? `${r.SesionesAsistidas}/${r.TotalSesiones} (${avance}%)` : '—'}</td>
               <td style="white-space:nowrap">${horasCell}</td>
               <td style="color:${constancia ? '#16a34a' : '#9ca3af'};font-weight:600">${r.TotalSesiones > 0 ? (constancia ? '✓ Acreedor' : 'Pendiente') : '—'}</td>
+            </tr>`
+          }).join('')
+
+          const filasUbits = ubitsEmp.map(r => {
+            const colU = { Completado: '#16a34a', Aprobado: '#16a34a', 'En progreso': '#d97706', Iniciado: '#d97706', Asignado: '#6b7280', Pendiente: '#9ca3af' }
+            const estado = r.EstadoAprendizaje || '—'
+            const color = colU[estado] || '#6b7280'
+            return `<tr>
+              <td><strong>${r.NombrePlan || '—'}</strong></td>
+              <td>${r.NombreContenido || '—'}</td>
+              <td>${r.FormatoContenido || '—'}</td>
+              <td><span style="background:${color}22;color:${color};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${estado}</span></td>
+              <td style="text-align:center;font-weight:700;color:${(r.PctAvance||0)>=100?'#16a34a':(r.PctAvance||0)>0?'#d97706':'#6b7280'}">${r.PctAvance!=null?r.PctAvance+'%':'—'}</td>
+              <td style="text-align:center">${r.NotaExamen!=null?r.NotaExamen:'—'}</td>
+              <td style="text-align:center">${r.HorasEstudiadas!=null?r.HorasEstudiadas+'h':'—'}</td>
+              <td style="text-align:center">${r.FechaFin?String(r.FechaFin).slice(0,10):'—'}</td>
             </tr>`
           }).join('')
 
@@ -2124,6 +2140,17 @@ export default function Academia({ usuario }) {
               <thead><tr><th>Curso</th><th>Modalidad</th><th>Instructor</th><th>Fecha inscripción</th><th>Estado</th><th>Avance</th><th>Horas</th><th>Constancia</th></tr></thead>
               <tbody>${filas}</tbody>
             </table>
+            ${filasUbits ? `
+            <div style="margin-top:28px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <h2 style="font-size:14px;font-weight:700;color:#0b2341;margin:0">Cursos Ubits 2026</h2>
+                <span style="font-size:11px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:1px 8px;font-weight:600">${ubitsEmp.length}</span>
+              </div>
+              <table>
+                <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Nota</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
+                <tbody>${filasUbits}</tbody>
+              </table>
+            </div>` : ''}
             <div class="footer">Generado el ${new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})} · UDAT Academia</div>
             </div>
             <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script>
@@ -2145,7 +2172,7 @@ export default function Academia({ usuario }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Kardex de Capacitación</h3>
                 {kardexEmpleado && (
-                  <button className="secondary-button" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => imprimirKardex(kardexEmpleado, cursosEmpleado, getEstado, pctGeneral, completados, enProgreso, pendientes)}>
+                  <button className="secondary-button" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => imprimirKardex(kardexEmpleado, cursosEmpleado, getEstado, pctGeneral, completados, enProgreso, pendientes, ubitsData.filter(r => r.NumeroEmpleado === kardexEmpleado.NumeroEmpleado))}>
                     ↓ Descargar PDF
                   </button>
                 )}
