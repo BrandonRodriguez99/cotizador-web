@@ -2156,11 +2156,12 @@ export default function Academia({ usuario }) {
             } catch { return '' }
           }
           const origin = window.location.origin
-          const [selloSrc, nombreSrc, ubitsSrc, selloHdSrc] = await Promise.all([
+          const [selloSrc, nombreSrc, ubitsSrc, selloHdSrc, udatDarkSrc] = await Promise.all([
             toDataURL(`${origin}/logo-udat-sello.png`),
             toDataURL(`${origin}/logo-udat.png`),
             toDataURL(`${origin}/logo-trayecto.png`),
             toDataURL(`${origin}/logo-udat-sello-hd.png`),
+            toDataURL(`${origin}/logo-udat-dark.png`),
           ])
 
           // Marca de agua: sello HD, una sola grande centrada
@@ -2248,8 +2249,7 @@ export default function Academia({ usuario }) {
               *{box-sizing:border-box;margin:0;padding:0}
               body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:0}
               .cintilla{background:#1a1a1a;padding:16px 28px;display:flex;align-items:center;gap:16px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-              .cintilla img.sello{height:44px;width:auto;display:block;flex-shrink:0;filter:invert(1);mix-blend-mode:screen}
-              .cintilla img.nombre{height:44px;width:auto;display:block;flex-shrink:0;filter:invert(1) brightness(5);mix-blend-mode:screen}
+              .cintilla img.nombre{height:44px;width:auto;display:block;flex-shrink:0}
               .cintilla img.trayecto{height:44px;width:auto;display:block;flex-shrink:0;margin-left:auto}
               .content{padding:0 24px 24px;background-image:url(${selloWM});background-repeat:no-repeat;background-position:center 200px;background-size:500px 500px}
               h1{font-size:18px;margin-bottom:4px}
@@ -2269,8 +2269,7 @@ export default function Academia({ usuario }) {
             </style>
           </head><body>
             <div class="cintilla">
-              ${selloSrc ? `<img class="sello" src="${selloSrc}" alt="UDAT sello"/>` : ''}
-              ${nombreSrc ? `<img class="nombre" src="${nombreSrc}" alt="UDAT"/>` : ''}
+              ${udatDarkSrc ? `<img class="nombre" src="${udatDarkSrc}" alt="UDAT"/>` : ''}
               ${ubitsSrc && ubitsEmp.length > 0 ? `<img class="trayecto" src="${ubitsSrc}" alt="Ubits"/>` : ''}
             </div>
             <div class="content">
