@@ -2214,8 +2214,7 @@ export default function Academia({ usuario }) {
 
           const bloqueUbits = ubitsEmp.length === 0 ? '' : `
             <div style="margin-top:28px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                ${ubitsSrc ? `<div style="background:#1a1a1a;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;flex-shrink:0"><img src="${ubitsSrc}" alt="Ubits" style="height:22px;width:auto;display:block"></div>` : ''}
+              <div style="margin-bottom:8px">
                 <h2 style="font-size:13px;font-weight:700;color:#0b2341;margin:0">UBITS 2026 <span style="font-size:12px;color:#2563eb;font-weight:600">(${ubitsEmp.length})</span></h2>
               </div>
               <table>
@@ -2232,6 +2231,7 @@ export default function Academia({ usuario }) {
               .cintilla{background:#0b2341;padding:14px 28px;display:flex;align-items:center;gap:20px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
               .cintilla img.sello{height:56px;width:auto;display:block;flex-shrink:0;filter:invert(1);mix-blend-mode:screen}
               .cintilla img.nombre{height:40px;width:auto;display:block;flex-shrink:0;filter:brightness(0) invert(1)}
+              .cintilla .trayecto-logo{margin-left:auto;flex-shrink:0}
               .content{padding:0 24px 24px}
               h1{font-size:18px;margin-bottom:4px}
               .emp-header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
@@ -2252,6 +2252,7 @@ export default function Academia({ usuario }) {
             <div class="cintilla">
               ${selloSrc ? `<img class="sello" src="${selloSrc}" alt="UDAT sello"/>` : ''}
               ${nombreSrc ? `<img class="nombre" src="${nombreSrc}" alt="UDAT"/>` : ''}
+              ${ubitsSrc && ubitsEmp.length > 0 ? `<div class="trayecto-logo"><img src="${ubitsSrc}" alt="Ubits" style="height:36px;width:auto;display:block"/></div>` : ''}
             </div>
             <div class="content">
             <div class="emp-header">
