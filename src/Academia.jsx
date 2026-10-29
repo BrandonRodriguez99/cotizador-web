@@ -2101,7 +2101,7 @@ export default function Academia({ usuario }) {
 
         // Cursos del empleado seleccionado
         const cursosEmpleado = kardexEmpleado
-          ? historicoData.filter(r => r.NumeroEmpleado === kardexEmpleado.NumeroEmpleado)
+          ? historicoData.filter(r => String(r.NumeroEmpleado) === String(kardexEmpleado.NumeroEmpleado))
           : []
 
         const getEstado = r => {
@@ -2310,7 +2310,7 @@ export default function Academia({ usuario }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Kardex de Capacitación</h3>
                 {kardexEmpleado && (
-                  <button className="secondary-button" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => imprimirKardex(kardexEmpleado, cursosEmpleado, getEstado, pctGeneral, completados, enProgreso, pendientes, ubitsData.filter(r => r.NumeroEmpleado === kardexEmpleado.NumeroEmpleado))}>
+                  <button className="secondary-button" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => imprimirKardex(kardexEmpleado, cursosEmpleado, getEstado, pctGeneral, completados, enProgreso, pendientes, ubitsData.filter(r => String(r.NumeroEmpleado) === String(kardexEmpleado.NumeroEmpleado)))}>
                     ↓ Descargar PDF
                   </button>
                 )}
@@ -2498,7 +2498,7 @@ export default function Academia({ usuario }) {
 
                 {/* Ubits del empleado */}
                 {(() => {
-                  const ubitsEmp = ubitsData.filter(r => r.NumeroEmpleado === kardexEmpleado.NumeroEmpleado)
+                  const ubitsEmp = ubitsData.filter(r => String(r.NumeroEmpleado) === String(kardexEmpleado.NumeroEmpleado))
                   if (ubitsEmp.length === 0) return null
                   const estadoUbitsColor = { Completado: '#16a34a', Aprobado: '#16a34a', 'En progreso': '#d97706', Iniciado: '#d97706', Asignado: '#6b7280', Pendiente: '#9ca3af' }
                   const estadoUbitsBg   = { Completado: '#dcfce7', Aprobado: '#dcfce7', 'En progreso': '#fef3c7', Iniciado: '#fef3c7', Asignado: '#f3f4f6', Pendiente: '#f9fafb' }
