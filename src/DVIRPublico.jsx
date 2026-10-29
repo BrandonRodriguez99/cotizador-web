@@ -206,44 +206,63 @@ function InspeccionList({ puntos, offset, setPuntoEstado, setPuntoComentario, su
   })
 }
 
+const SESION_KEY = 'dvir_sesion_v1'
+function leerSesion() {
+  try { const s = sessionStorage.getItem(SESION_KEY); return s ? JSON.parse(s) : null } catch { return null }
+}
+
 export default function DVIRPublico() {
-  const [tipoDVIR, setTipoDVIR] = useState(null)
-  const [paso, setPaso] = useState(0)
+  const [tipoDVIR, setTipoDVIR] = useState(() => leerSesion()?.tipoDVIR ?? null)
+  const [paso, setPaso] = useState(() => leerSesion()?.paso ?? 0)
   const [vehiculos, setVehiculos] = useState([])
   const [semirremolques, setSemirremolques] = useState([])
   const [loading, setLoading] = useState(true)
 
   // Paso 1
-  const [operadorNombre, setOperadorNombre] = useState('')
-  const [vehiculoId, setVehiculoId] = useState(null)
-  const [vehiculoNombre, setVehiculoNombre] = useState('')
-  const [matricula, setMatricula] = useState('')
-  const [tipoInspeccion, setTipoInspeccion] = useState('')
-  const [odometro, setOdometro] = useState('')
-  const [ubicacion, setUbicacion] = useState('')
-  const [semirremolqueId, setSemirremolqueId] = useState(null)
-  const [semirremolqueNombre, setSemirremolqueNombre] = useState('')
+  const [operadorNombre, setOperadorNombre] = useState(() => leerSesion()?.operadorNombre ?? '')
+  const [vehiculoId, setVehiculoId] = useState(() => leerSesion()?.vehiculoId ?? null)
+  const [vehiculoNombre, setVehiculoNombre] = useState(() => leerSesion()?.vehiculoNombre ?? '')
+  const [matricula, setMatricula] = useState(() => leerSesion()?.matricula ?? '')
+  const [tipoInspeccion, setTipoInspeccion] = useState(() => leerSesion()?.tipoInspeccion ?? '')
+  const [odometro, setOdometro] = useState(() => leerSesion()?.odometro ?? '')
+  const [ubicacion, setUbicacion] = useState(() => leerSesion()?.ubicacion ?? '')
+  const [semirremolqueId, setSemirremolqueId] = useState(() => leerSesion()?.semirremolqueId ?? null)
+  const [semirremolqueNombre, setSemirremolqueNombre] = useState(() => leerSesion()?.semirremolqueNombre ?? '')
 
   // Paso 2 — fotos
-  const [fotos, setFotos] = useState({})
+  const [fotos, setFotos] = useState(() => leerSesion()?.fotos ?? {})
   const [subiendoFoto, setSubiendoFoto] = useState(null)
 
   // Paso 3 — puntos vehículo + remolque
   const [puntos, setPuntos] = useState(
-    PUNTOS_INSPECCION.map(p => ({ ...p, estado: '', comentario: '', fotoUrl: null }))
+    () => leerSesion()?.puntos ?? PUNTOS_INSPECCION.map(p => ({ ...p, estado: '', comentario: '', fotoUrl: null }))
   )
   const [puntosRemolque, setPuntosRemolque] = useState(
-    PUNTOS_REMOLQUE.map(p => ({ ...p, estado: '', comentario: '', fotoUrl: null }))
+    () => leerSesion()?.puntosRemolque ?? PUNTOS_REMOLQUE.map(p => ({ ...p, estado: '', comentario: '', fotoUrl: null }))
   )
   const [subiendoFotoDefecto, setSubiendoFotoDefecto] = useState(null)
 
   // Paso 4 — estado final
-  const [estadoSeguridad, setEstadoSeguridad] = useState('')
+  const [estadoSeguridad, setEstadoSeguridad] = useState(() => leerSesion()?.estadoSeguridad ?? '')
 
   // Envío
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const [exito, setExito] = useState(null)
+
+  // Persistir estado en sessionStorage para sobrevivir recarga por cámara iOS
+  useEffect(() => {
+    if (exito) { try { sessionStorage.removeItem(SESION_KEY) } catch {} ; return }
+    try {
+      sessionStorage.setItem(SESION_KEY, JSON.stringify({
+        tipoDVIR, paso, operadorNombre, vehiculoId, vehiculoNombre,
+        matricula, tipoInspeccion, odometro, ubicacion,
+        semirremolqueId, semirremolqueNombre, fotos, puntos, puntosRemolque, estadoSeguridad,
+      }))
+    } catch {}
+  }, [tipoDVIR, paso, operadorNombre, vehiculoId, vehiculoNombre, matricula,
+      tipoInspeccion, odometro, ubicacion, semirremolqueId, semirremolqueNombre,
+      fotos, puntos, puntosRemolque, estadoSeguridad, exito])
 
   const conRemolque = tipoDVIR === 'vehiculo_trailer'
 
@@ -424,6 +443,7 @@ export default function DVIRPublico() {
   }
 
   function resetear() {
+    try { sessionStorage.removeItem(SESION_KEY) } catch {}
     setTipoDVIR(null)
     setPaso(0)
     setOperadorNombre('')

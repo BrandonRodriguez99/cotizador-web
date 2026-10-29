@@ -150,6 +150,7 @@ export default function Academia({ usuario }) {
   const [filtroHistArea, setFiltroHistArea] = useState('')
   const [filtroHistBuscar, setFiltroHistBuscar] = useState('')
   const [filtroHistCurso, setFiltroHistCurso] = useState('')
+  const [filtroHistTipo, setFiltroHistTipo] = useState('')
   const [historicoPagina, setHistoricoPagina] = useState(1)
   const HISTORICO_POR_PAGINA = 25
 
@@ -170,6 +171,7 @@ export default function Academia({ usuario }) {
   const [kardexBusqueda, setKardexBusqueda] = useState('')
   const [kardexEmpleado, setKardexEmpleado] = useState(null)
   const [kardexFiltroEstado, setKardexFiltroEstado] = useState('')
+  const [kardexFiltroTipo, setKardexFiltroTipo] = useState('')
 
   // filters
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -1407,6 +1409,7 @@ export default function Academia({ usuario }) {
           if (filtroHistPlaza && r.Plaza !== filtroHistPlaza) return false
           if (filtroHistArea && r.Area !== filtroHistArea) return false
           if (filtroHistCurso && r.CursoNombre !== filtroHistCurso) return false
+          if (filtroHistTipo && r.TipoCurso !== filtroHistTipo) return false
           if (filtroHistBuscar) {
             const q = filtroHistBuscar.toLowerCase()
             if (!(r.NombreCompleto || '').toLowerCase().includes(q) && !(r.NumeroEmpleado || '').includes(q)) return false
@@ -1419,12 +1422,12 @@ export default function Academia({ usuario }) {
         const uniqueVals = (key) => [...new Set(historicoData.map(r => r[key]).filter(Boolean))].sort()
 
         function descargarCSV() {
-          const headers = ['No. Empleado','Nombre','Empresa','Terminal','Plaza','Área','Correo','Curso','Generación','Instructor','Modalidad','Sesiones Asistidas','Total Sesiones','% Asistencia','Horas Asistidas','Horas Totales','Constancia']
+          const headers = ['No. Empleado','Nombre','Empresa','Terminal','Plaza','Área','Correo','Tipo','Curso','Generación','Instructor','Modalidad','Sesiones Asistidas','Total Sesiones','% Asistencia','Horas Asistidas','Horas Totales','Constancia']
           const rows = filtered.map(r => {
             const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
             const esBaja = r.InscripcionActiva === false || r.InscripcionActiva === 0
             const constancia = esBaja ? 'Baja' : r.TotalSesiones > 0 && pct >= r.PorcentajeMinAsistencia ? 'Acreedor' : 'Pendiente'
-            return [r.NumeroEmpleado, r.NombreCompleto, r.Empresa, r.Terminal, r.Plaza, r.Area, r.Correo, r.CursoNombre, r.Generacion, r.Instructor, r.Modalidad, r.SesionesAsistidas, r.TotalSesiones, pct + '%', fmtHoras(r.MinutosAsistidos), fmtHoras(r.MinutosTotales), constancia]
+            return [r.NumeroEmpleado, r.NombreCompleto, r.Empresa, r.Terminal, r.Plaza, r.Area, r.Correo, r.TipoCurso || '', r.CursoNombre, r.Generacion, r.Instructor, r.Modalidad, r.SesionesAsistidas, r.TotalSesiones, pct + '%', fmtHoras(r.MinutosAsistidos), fmtHoras(r.MinutosTotales), constancia]
           })
           const csv = [headers, ...rows].map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')).join('\n')
           const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -1475,6 +1478,10 @@ export default function Academia({ usuario }) {
                   <option value="">Todas las áreas</option>
                   {uniqueVals('Area').map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
+                <select value={filtroHistTipo} onChange={e => { setFiltroHistTipo(e.target.value); setHistoricoPagina(1) }} style={{ minWidth: 130, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                  <option value="">Todos los tipos</option>
+                  {uniqueVals('TipoCurso').map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
               </div>
             </div>
 
@@ -1488,6 +1495,7 @@ export default function Academia({ usuario }) {
                       <th style={{ textAlign: 'left' }}>Terminal</th>
                       <th style={{ textAlign: 'left' }}>Plaza</th>
                       <th style={{ textAlign: 'left' }}>Área</th>
+                      <th style={{ textAlign: 'left' }}>Tipo</th>
                       <th style={{ textAlign: 'left' }}>Curso</th>
                       <th style={{ textAlign: 'center' }}>Generación</th>
                       <th style={{ textAlign: 'center' }}>Asistencia</th>
@@ -1497,11 +1505,12 @@ export default function Academia({ usuario }) {
                   </thead>
                   <tbody>
                     {paginados.length === 0 ? (
-                      <tr><td colSpan={10} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin registros</td></tr>
+                      <tr><td colSpan={11} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin registros</td></tr>
                     ) : paginados.map(r => {
                       const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
                       const acreedor = r.TotalSesiones > 0 && pct >= r.PorcentajeMinAsistencia
                       const esBaja = r.InscripcionActiva === false || r.InscripcionActiva === 0
+                      const tipoColor = r.TipoCurso === 'Mandatorio' ? { bg: '#eff6ff', color: '#1d4ed8' } : r.TipoCurso === 'Extraordinario' ? { bg: '#fdf4ff', color: '#7e22ce' } : { bg: '#f3f4f6', color: '#6b7280' }
                       return (
                         <tr key={r.InscripcionId} style={{ opacity: esBaja ? 0.65 : 1 }}>
                           <td style={{ textAlign: 'left' }}>
@@ -1512,6 +1521,11 @@ export default function Academia({ usuario }) {
                           <td style={{ fontSize: 11 }}>{r.Terminal || '-'}</td>
                           <td style={{ fontSize: 11 }}>{r.Plaza || '-'}</td>
                           <td style={{ fontSize: 11 }}>{r.Area || '-'}</td>
+                          <td style={{ fontSize: 11 }}>
+                            {r.TipoCurso
+                              ? <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 600, background: tipoColor.bg, color: tipoColor.color }}>{r.TipoCurso}</span>
+                              : <span style={{ color: '#d1d5db' }}>—</span>}
+                          </td>
                           <td style={{ fontSize: 11, fontWeight: 600 }}>
                             {r.CursoNombre}
                             {esBaja && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: '#dc2626', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 999, padding: '1px 6px' }}>Baja</span>}
@@ -2088,9 +2102,11 @@ export default function Academia({ usuario }) {
         const estadoColor = { Completado: '#16a34a', 'En progreso': '#d97706', Pendiente: '#6b7280', 'Sin sesiones': '#9ca3af', Baja: '#dc2626' }
         const estadoBg = { Completado: '#dcfce7', 'En progreso': '#fef3c7', Pendiente: '#f3f4f6', 'Sin sesiones': '#f9fafb', Baja: '#fef2f2' }
 
-        const cursosFiltrados = kardexFiltroEstado
-          ? cursosEmpleado.filter(r => getEstado(r) === kardexFiltroEstado)
-          : cursosEmpleado
+        const cursosFiltrados = cursosEmpleado.filter(r => {
+          if (kardexFiltroEstado && getEstado(r) !== kardexFiltroEstado) return false
+          if (kardexFiltroTipo && r.TipoCurso !== kardexFiltroTipo) return false
+          return true
+        })
 
         const completados = cursosEmpleado.filter(r => getEstado(r) === 'Completado').length
         const enProgreso = cursosEmpleado.filter(r => getEstado(r) === 'En progreso').length
@@ -2134,25 +2150,38 @@ export default function Academia({ usuario }) {
           const totalMinTot = cursos.reduce((s, r) => s + (r.MinutosTotales || 0), 0)
           const totalMinAsis = cursos.reduce((s, r) => s + (r.MinutosAsistidos || 0), 0)
 
-          const filas = cursos.map(r => {
-            const est = getEst(r)
-            const avance = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : null
-            const constancia = r.TotalSesiones > 0 && avance >= (r.PorcentajeMinAsistencia || 75)
-            const colores = { Completado: '#16a34a', 'En progreso': '#d97706', Pendiente: '#6b7280', 'Sin sesiones': '#9ca3af' }
-            const horasCell = r.MinutosAsistidos > 0
-              ? `<strong style="color:#1e3a5f">${fmtHoras(r.MinutosAsistidos)}</strong>${r.MinutosTotales > 0 ? ` <span style="color:#9ca3af">/ ${fmtHoras(r.MinutosTotales)}</span>` : ''}`
-              : r.MinutosTotales > 0 ? `<span style="color:#9ca3af">— / ${fmtHoras(r.MinutosTotales)}</span>` : '—'
-            return `<tr>
-              <td><strong>${r.CursoNombre || ''}</strong>${r.Generacion ? `<br><small style="color:#6b7280">${r.Generacion}</small>` : ''}</td>
-              <td>${r.Modalidad || '—'}</td>
-              <td>${r.Instructor || '—'}</td>
-              <td>${r.FechaInscripcion ? String(r.FechaInscripcion).slice(0,10) : '—'}</td>
-              <td><span style="background:${colores[est]}22;color:${colores[est]};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${est}</span></td>
-              <td>${avance !== null ? `${r.SesionesAsistidas}/${r.TotalSesiones} (${avance}%)` : '—'}</td>
-              <td style="white-space:nowrap">${horasCell}</td>
-              <td style="color:${constancia ? '#16a34a' : '#9ca3af'};font-weight:600">${r.TotalSesiones > 0 ? (constancia ? '✓ Acreedor' : 'Pendiente') : '—'}</td>
-            </tr>`
-          }).join('')
+          function buildFilasCursos(lista) {
+            return lista.map(r => {
+              const est = getEst(r)
+              const avance = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : null
+              const constancia = r.TotalSesiones > 0 && avance >= (r.PorcentajeMinAsistencia || 75)
+              const colores = { Completado: '#16a34a', 'En progreso': '#d97706', Pendiente: '#6b7280', 'Sin sesiones': '#9ca3af' }
+              const horasCell = r.MinutosAsistidos > 0
+                ? `<strong style="color:#1e3a5f">${fmtHoras(r.MinutosAsistidos)}</strong>${r.MinutosTotales > 0 ? ` <span style="color:#9ca3af">/ ${fmtHoras(r.MinutosTotales)}</span>` : ''}`
+                : r.MinutosTotales > 0 ? `<span style="color:#9ca3af">— / ${fmtHoras(r.MinutosTotales)}</span>` : '—'
+              return `<tr>
+                <td><strong>${r.CursoNombre || ''}</strong>${r.Generacion ? `<br><small style="color:#6b7280">${r.Generacion}</small>` : ''}</td>
+                <td>${r.Modalidad || '—'}</td>
+                <td>${r.Instructor || '—'}</td>
+                <td>${r.FechaInscripcion ? String(r.FechaInscripcion).slice(0,10) : '—'}</td>
+                <td><span style="background:${colores[est]}22;color:${colores[est]};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${est}</span></td>
+                <td>${avance !== null ? `${r.SesionesAsistidas}/${r.TotalSesiones} (${avance}%)` : '—'}</td>
+                <td style="white-space:nowrap">${horasCell}</td>
+                <td style="color:${constancia ? '#16a34a' : '#9ca3af'};font-weight:600">${r.TotalSesiones > 0 ? (constancia ? '✓ Acreedor' : 'Pendiente') : '—'}</td>
+              </tr>`
+            }).join('')
+          }
+          const cursosTable = `<thead><tr><th>Curso</th><th>Modalidad</th><th>Instructor</th><th>Fecha inscripción</th><th>Estado</th><th>Avance</th><th>Horas</th><th>Constancia</th></tr></thead>`
+          const mandatorios = cursos.filter(r => r.TipoCurso === 'Mandatorio')
+          const extraordinarios = cursos.filter(r => r.TipoCurso === 'Extraordinario')
+          const otros = cursos.filter(r => r.TipoCurso !== 'Mandatorio' && r.TipoCurso !== 'Extraordinario')
+          const bloqueTabla = (titulo, color, lista) => lista.length === 0 ? '' : `
+            <div style="margin-top:20px">
+              <div style="margin-bottom:8px">
+                <h2 style="font-size:13px;font-weight:700;color:#0b2341;margin:0">${titulo} <span style="font-size:12px;color:${color};font-weight:600">(${lista.length})</span></h2>
+              </div>
+              <table>${cursosTable}<tbody>${buildFilasCursos(lista)}</tbody></table>
+            </div>`
 
           const filasUbits = ubitsEmp.map(r => {
             const colU = { Completado: '#16a34a', Aprobado: '#16a34a', 'En progreso': '#d97706', Iniciado: '#d97706', Asignado: '#6b7280', Pendiente: '#9ca3af' }
@@ -2218,10 +2247,9 @@ export default function Academia({ usuario }) {
               ${totalMinAsis > 0 ? `<div class="stat"><div class="val" style="color:#0ea5e9;font-size:18px">${fmtHoras(totalMinAsis)}</div><div class="lbl">Horas asistidas</div></div>` : ''}
               ${totalMinTot > 0 ? `<div class="stat"><div class="val" style="color:#64748b;font-size:18px">${fmtHoras(totalMinTot)}</div><div class="lbl">Horas totales</div></div>` : ''}
             </div>
-            <table>
-              <thead><tr><th>Curso</th><th>Modalidad</th><th>Instructor</th><th>Fecha inscripción</th><th>Estado</th><th>Avance</th><th>Horas</th><th>Constancia</th></tr></thead>
-              <tbody>${filas}</tbody>
-            </table>
+            ${bloqueTabla('Cursos Mandatorios', '#1d4ed8', mandatorios)}
+            ${bloqueTabla('Cursos Extraordinarios', '#7e22ce', extraordinarios)}
+            ${bloqueTabla('Otros cursos', '#6b7280', otros)}
             ${filasUbits ? `
             <div style="margin-top:28px">
               <div style="margin-bottom:10px">
@@ -2281,7 +2309,7 @@ export default function Academia({ usuario }) {
                 {sugerencias.length > 0 && !kardexEmpleado && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.1)', zIndex: 50, marginTop: 4, overflow: 'hidden' }}>
                     {sugerencias.map(emp => (
-                      <button key={emp.NumeroEmpleado} onClick={() => { setKardexEmpleado(emp); setKardexBusqueda(emp.NombreCompleto); setKardexFiltroEstado('') }}
+                      <button key={emp.NumeroEmpleado} onClick={() => { setKardexEmpleado(emp); setKardexBusqueda(emp.NombreCompleto); setKardexFiltroEstado(''); setKardexFiltroTipo('') }}
                         style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f3f4f6' }}
                         onMouseEnter={e => e.currentTarget.style.background='#f9fafb'}
                         onMouseLeave={e => e.currentTarget.style.background='none'}>
@@ -2361,6 +2389,12 @@ export default function Academia({ usuario }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                     <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Historial de cursos</h3>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select value={kardexFiltroTipo} onChange={e => setKardexFiltroTipo(e.target.value)}
+                        style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
+                        <option value="">Todos los tipos</option>
+                        <option value="Mandatorio">Mandatorio</option>
+                        <option value="Extraordinario">Extraordinario</option>
+                      </select>
                       <select value={kardexFiltroEstado} onChange={e => setKardexFiltroEstado(e.target.value)}
                         style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
                         <option value="">Todos los estados</option>
@@ -2376,6 +2410,7 @@ export default function Academia({ usuario }) {
                     <table className="participants-table" style={{ fontSize: 12 }}>
                       <thead>
                         <tr>
+                          <th>Tipo</th>
                           <th>Curso</th>
                           <th>Modalidad</th>
                           <th>Instructor</th>
@@ -2388,13 +2423,19 @@ export default function Academia({ usuario }) {
                       </thead>
                       <tbody>
                         {cursosFiltrados.length === 0
-                          ? <tr><td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin cursos{kardexFiltroEstado ? ' con ese estado' : ''}</td></tr>
+                          ? <tr><td colSpan={9} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>Sin cursos{kardexFiltroEstado ? ' con ese estado' : ''}</td></tr>
                           : cursosFiltrados.map((r, i) => {
                             const estado = getEstado(r)
                             const pct = r.TotalSesiones > 0 ? Math.round((r.SesionesAsistidas / r.TotalSesiones) * 100) : 0
                             const constancia = r.TotalSesiones > 0 && pct >= (r.PorcentajeMinAsistencia || 75)
+                            const tipoKardex = r.TipoCurso === 'Mandatorio' ? { bg: '#eff6ff', color: '#1d4ed8' } : r.TipoCurso === 'Extraordinario' ? { bg: '#fdf4ff', color: '#7e22ce' } : { bg: '#f3f4f6', color: '#6b7280' }
                             return (
                               <tr key={i}>
+                                <td>
+                                  {r.TipoCurso
+                                    ? <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 600, background: tipoKardex.bg, color: tipoKardex.color, whiteSpace: 'nowrap' }}>{r.TipoCurso}</span>
+                                    : <span style={{ color: '#d1d5db' }}>—</span>}
+                                </td>
                                 <td style={{ fontWeight: 600 }}>
                                   {r.CursoNombre}
                                   {r.Generacion && <div style={{ fontWeight: 400, color: '#6b7280', fontSize: 11 }}>{r.Generacion}</div>}
