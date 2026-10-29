@@ -2162,6 +2162,23 @@ export default function Academia({ usuario }) {
             toDataURL(`${origin}/logo-trayecto.png`),
           ])
 
+          // Marca de agua: sello a 5% opacidad en tile de 380px
+          const selloWM = await new Promise(resolve => {
+            if (!selloSrc) return resolve('')
+            const img = new Image()
+            img.onload = () => {
+              const tile = 380, sz = 160
+              const cv = document.createElement('canvas')
+              cv.width = tile; cv.height = tile
+              const ctx = cv.getContext('2d')
+              ctx.globalAlpha = 0.05
+              ctx.drawImage(img, (tile - sz) / 2, (tile - sz) / 2, sz, sz)
+              resolve(cv.toDataURL())
+            }
+            img.onerror = () => resolve('')
+            img.src = selloSrc
+          })
+
           const totalMinTot = cursos.reduce((s, r) => s + (r.MinutosTotales || 0), 0)
           const totalMinAsis = cursos.reduce((s, r) => s + (r.MinutosAsistidos || 0), 0)
 
@@ -2232,7 +2249,7 @@ export default function Academia({ usuario }) {
               .cintilla img.sello{height:56px;width:auto;display:block;flex-shrink:0;filter:invert(1);mix-blend-mode:screen}
               .cintilla img.nombre{height:40px;width:auto;display:block;flex-shrink:0;filter:brightness(0) invert(1)}
               .cintilla .trayecto-logo{margin-left:auto;flex-shrink:0}
-              .content{padding:0 24px 24px}
+              .content{padding:0 24px 24px;background-image:url(${selloWM});background-repeat:repeat;background-size:380px 380px}
               h1{font-size:18px;margin-bottom:4px}
               .emp-header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
               .emp-header .sub{font-size:11px;color:#94a3b8;margin-top:4px;display:flex;flex-wrap:wrap;gap:12px}
