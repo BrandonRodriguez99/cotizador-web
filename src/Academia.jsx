@@ -2533,34 +2533,36 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
               )}
             </div>
             {isEdit && (
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Estado</label>
-                <select className="form-control" value={estado} onChange={e => setEstado(e.target.value)} style={{ width: '100%' }}>
-                  <option>Activo</option>
-                  <option>Próximo</option>
-                  <option>Completado</option>
-                </select>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                <div
-                  onClick={() => setHabilitado(v => !v)}
-                  style={{
-                    width: 40, height: 22, borderRadius: 11, background: habilitado ? '#2563eb' : '#d1d5db',
-                    position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
-                  }}
-                >
-                  <div style={{
-                    position: 'absolute', top: 3, left: habilitado ? 20 : 3, width: 16, height: 16,
-                    borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
-                  }} />
+              <>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Estado</label>
+                  <select className="form-control" value={estado} onChange={e => setEstado(e.target.value)} style={{ width: '100%' }}>
+                    <option>Activo</option>
+                    <option>Próximo</option>
+                    <option>Completado</option>
+                  </select>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
-                  Habilitado para inscripciones
-                </span>
-                <span style={{ fontSize: 11, color: habilitado ? '#16a34a' : '#9ca3af', fontWeight: 600 }}>
-                  {habilitado ? 'Sí' : 'No'}
-                </span>
-              </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                  <div
+                    onClick={() => setHabilitado(v => !v)}
+                    style={{
+                      width: 40, height: 22, borderRadius: 11, background: habilitado ? '#2563eb' : '#d1d5db',
+                      position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', top: 3, left: habilitado ? 20 : 3, width: 16, height: 16,
+                      borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
+                    Habilitado para inscripciones
+                  </span>
+                  <span style={{ fontSize: 11, color: habilitado ? '#16a34a' : '#9ca3af', fontWeight: 600 }}>
+                    {habilitado ? 'Sí' : 'No'}
+                  </span>
+                </label>
+              </>
             )}
 
             {/* Sesiones */}
