@@ -2138,9 +2138,8 @@ export default function Academia({ usuario }) {
             </table>
             ${filasUbits ? `
             <div style="margin-top:28px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:nowrap">
-                <h2 style="font-size:14px;font-weight:700;color:#0b2341;margin:0;white-space:nowrap">Cursos Ubits 2026</h2>
-                <span style="display:inline-flex;align-items:center;font-size:11px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:1px 8px;font-weight:600;line-height:1.4;flex-shrink:0">${ubitsEmp.length}</span>
+              <div style="margin-bottom:10px">
+                <h2 style="font-size:14px;font-weight:700;color:#0b2341;margin:0;display:inline">Cursos Ubits 2026</h2><span style="font-size:9px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:0 6px;font-weight:600;vertical-align:middle;margin-left:6px;line-height:18px">${ubitsEmp.length}</span>
               </div>
               <table>
                 <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
