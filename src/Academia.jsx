@@ -2248,9 +2248,9 @@ export default function Academia({ usuario }) {
             <style>
               *{box-sizing:border-box;margin:0;padding:0}
               body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:0}
-              .cintilla{background:#1a1a1a;padding:16px 28px;display:flex;align-items:center;gap:16px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-              .cintilla img.nombre{height:44px;width:auto;display:block;flex-shrink:0}
-              .cintilla img.trayecto{height:44px;width:auto;display:block;flex-shrink:0;margin-left:auto}
+              .cintilla{background:#1e293b;padding:16px 28px;display:flex;align-items:center;gap:16px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+              .cintilla img.nombre{height:44px;width:auto;display:block;flex-shrink:0;mix-blend-mode:screen}
+              .cintilla img.trayecto{height:44px;width:auto;display:block;flex-shrink:0;margin-left:auto;mix-blend-mode:screen}
               .content{padding:0 24px 24px;background-image:url(${selloWM});background-repeat:no-repeat;background-position:center 200px;background-size:500px 500px}
               h1{font-size:18px;margin-bottom:4px}
               .emp-header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
