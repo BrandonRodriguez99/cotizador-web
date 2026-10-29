@@ -2156,27 +2156,29 @@ export default function Academia({ usuario }) {
             } catch { return '' }
           }
           const origin = window.location.origin
-          const [selloSrc, nombreSrc, ubitsSrc] = await Promise.all([
+          const [selloSrc, nombreSrc, ubitsSrc, selloHdSrc] = await Promise.all([
             toDataURL(`${origin}/logo-udat-sello.png`),
             toDataURL(`${origin}/logo-udat.png`),
             toDataURL(`${origin}/logo-trayecto.png`),
+            toDataURL(`${origin}/logo-udat-sello-hd.png`),
           ])
 
-          // Marca de agua: sello a 5% opacidad en tile de 380px
+          // Marca de agua: sello HD, una sola grande centrada
           const selloWM = await new Promise(resolve => {
-            if (!selloSrc) return resolve('')
+            const src = selloHdSrc || selloSrc
+            if (!src) return resolve('')
             const img = new Image()
             img.onload = () => {
-              const tile = 380, sz = 160
+              const sz = 500
               const cv = document.createElement('canvas')
-              cv.width = tile; cv.height = tile
+              cv.width = sz; cv.height = sz
               const ctx = cv.getContext('2d')
-              ctx.globalAlpha = 0.05
-              ctx.drawImage(img, (tile - sz) / 2, (tile - sz) / 2, sz, sz)
+              ctx.globalAlpha = 0.07
+              ctx.drawImage(img, 0, 0, sz, sz)
               resolve(cv.toDataURL())
             }
             img.onerror = () => resolve('')
-            img.src = selloSrc
+            img.src = src
           })
 
           const totalMinTot = cursos.reduce((s, r) => s + (r.MinutosTotales || 0), 0)
@@ -2245,11 +2247,11 @@ export default function Academia({ usuario }) {
             <style>
               *{box-sizing:border-box;margin:0;padding:0}
               body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:0}
-              .cintilla{background:#0b2341;padding:14px 28px;display:flex;align-items:center;gap:20px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-              .cintilla img.sello{height:56px;width:auto;display:block;flex-shrink:0;filter:invert(1);mix-blend-mode:screen}
-              .cintilla img.nombre{height:40px;width:auto;display:block;flex-shrink:0;filter:brightness(0) invert(1)}
-              .cintilla .trayecto-logo{margin-left:auto;flex-shrink:0}
-              .content{padding:0 24px 24px;background-image:url(${selloWM});background-repeat:repeat;background-size:380px 380px}
+              .cintilla{background:#1a1a1a;padding:16px 28px;display:flex;align-items:center;gap:16px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+              .cintilla img.sello{height:44px;width:auto;display:block;flex-shrink:0;filter:invert(1);mix-blend-mode:screen}
+              .cintilla img.nombre{height:44px;width:auto;display:block;flex-shrink:0;filter:invert(1) brightness(5);mix-blend-mode:screen}
+              .cintilla img.trayecto{height:44px;width:auto;display:block;flex-shrink:0;margin-left:auto}
+              .content{padding:0 24px 24px;background-image:url(${selloWM});background-repeat:no-repeat;background-position:center 200px;background-size:500px 500px}
               h1{font-size:18px;margin-bottom:4px}
               .emp-header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
               .emp-header .sub{font-size:11px;color:#94a3b8;margin-top:4px;display:flex;flex-wrap:wrap;gap:12px}
@@ -2269,7 +2271,7 @@ export default function Academia({ usuario }) {
             <div class="cintilla">
               ${selloSrc ? `<img class="sello" src="${selloSrc}" alt="UDAT sello"/>` : ''}
               ${nombreSrc ? `<img class="nombre" src="${nombreSrc}" alt="UDAT"/>` : ''}
-              ${ubitsSrc && ubitsEmp.length > 0 ? `<div class="trayecto-logo"><img src="${ubitsSrc}" alt="Ubits" style="height:36px;width:auto;display:block"/></div>` : ''}
+              ${ubitsSrc && ubitsEmp.length > 0 ? `<img class="trayecto" src="${ubitsSrc}" alt="Ubits"/>` : ''}
             </div>
             <div class="content">
             <div class="emp-header">
