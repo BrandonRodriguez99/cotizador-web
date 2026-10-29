@@ -1207,7 +1207,7 @@ export default function Academia({ usuario }) {
                               {(() => {
                                 const firmaVal = asistenciasData.asistencias.find(a => a.InscripcionId === insc.InscripcionId && a.Firma)?.Firma
                                 return firmaVal
-                                  ? <span style={{ fontFamily: "'Dancing Script','Brush Script MT',cursive", fontSize: 15, color: '#1e3a5f' }}>{firmaVal}</span>
+                                  ? <span style={{ fontSize: 12, color: '#1e3a5f', fontWeight: 500 }}>{firmaVal}</span>
                                   : <span style={{ color: '#d1d5db', fontSize: 12 }}>—</span>
                               })()}
                             </td>
@@ -1256,6 +1256,7 @@ export default function Academia({ usuario }) {
                           sesion: s,
                           inscritos: asistenciasData.inscritos,
                           instructor: cursoObj?.Instructor || '',
+                          asistencias: asistenciasData.asistencias,
                         })
                         setModalListaAsistOpen(false)
                       }}

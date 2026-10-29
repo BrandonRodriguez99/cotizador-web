@@ -119,7 +119,7 @@ export default function AsistenciaAcademiaPublica() {
               {consentimiento && (
                 <div style={{ textAlign: 'center', marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.05em' }}>Vista previa de firma</div>
-                  <div style={{ fontFamily: "'Dancing Script', 'Brush Script MT', cursive", fontSize: 22, color: '#1e3a5f', borderBottom: '1px solid #d1d5db', paddingBottom: 4, display: 'inline-block', minWidth: 180 }}>
+                  <div style={{ fontSize: 15, color: '#1e3a5f', fontWeight: 600, borderBottom: '1px solid #d1d5db', paddingBottom: 4, display: 'inline-block', minWidth: 180 }}>
                     {empleado.NombreCompleto}
                   </div>
                 </div>

@@ -20,7 +20,7 @@ function fmtFechaPDF(fecha) {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 }
 
-export async function generarListaAsistenciaPDF({ cursoNombre, generacion, sesion, inscritos, instructor }) {
+export async function generarListaAsistenciaPDF({ cursoNombre, generacion, sesion, inscritos, instructor, asistencias = [] }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const logo = await loadLogo()
 
@@ -190,6 +190,15 @@ export async function generarListaAsistenciaPDF({ cursoNombre, generacion, sesio
       // Unidad de Negocio - Área (Area)
       x += cols[3].w
       doc.text(insc.Area || '', x + 2, cy, { maxWidth: cols[4].w - 4 })
+
+      // Firma
+      x += cols[4].w
+      const asist = asistencias.find(a => a.SesionId === sesion?.SesionId && a.InscripcionId === insc.InscripcionId)
+      if (asist?.Firma) {
+        doc.setFontSize(6.5)
+        doc.text(asist.Firma, x + 2, cy, { maxWidth: cols[5].w - 4 })
+        doc.setFontSize(7)
+      }
     }
 
     y += rowH
