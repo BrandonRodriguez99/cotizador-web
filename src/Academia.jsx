@@ -1863,38 +1863,14 @@ export default function Academia({ usuario }) {
       {/* ═══ TAB UBITS ═══ */}
       {tab === 'ubits' && (() => {
         const uFiltrado = ubitsData.filter(r => {
-          if (filtroUbitsBuscar) {
-            const q = filtroUbitsBuscar.toLowerCase()
-            if (!(`${r.Nombre || ''} ${r.Apellido || ''}`).toLowerCase().includes(q) &&
-                !(r.NumeroEmpleado || '').toLowerCase().includes(q)) return false
-          }
-          if (filtroUbitsPlan && r.NombrePlan !== filtroUbitsPlan) return false
-          if (filtroUbitsEstado && r.EstadoAprendizaje !== filtroUbitsEstado) return false
           if (filtroUbitsEmpresa && r.Empresa !== filtroUbitsEmpresa) return false
-          if (filtroUbitsArea && r.Area !== filtroUbitsArea) return false
-          if (filtroUbitsTerminal && r.Terminal !== filtroUbitsTerminal) return false
-          if (filtroUbitsFormato && r.FormatoContenido !== filtroUbitsFormato) return false
           return true
         })
         const uTotalPags = Math.max(1, Math.ceil(uFiltrado.length / UBITS_POR_PAGINA))
         const uPagActual = Math.min(ubitsPagina, uTotalPags)
         const uPaginados = uFiltrado.slice((uPagActual - 1) * UBITS_POR_PAGINA, uPagActual * UBITS_POR_PAGINA)
 
-        // Opciones en cascada: cada dropdown filtra por todo EXCEPTO su propio campo
-        const filtrarSin = (excluir) => ubitsData.filter(r => {
-          if (filtroUbitsBuscar) {
-            const q = filtroUbitsBuscar.toLowerCase()
-            if (!(`${r.Nombre||''} ${r.Apellido||''}`).toLowerCase().includes(q) && !(r.NumeroEmpleado||'').toLowerCase().includes(q)) return false
-          }
-          if (excluir !== 'empresa'  && filtroUbitsEmpresa  && r.Empresa           !== filtroUbitsEmpresa)  return false
-          if (excluir !== 'area'     && filtroUbitsArea     && r.Area               !== filtroUbitsArea)     return false
-          if (excluir !== 'terminal' && filtroUbitsTerminal && r.Terminal           !== filtroUbitsTerminal) return false
-          if (excluir !== 'plan'     && filtroUbitsPlan     && r.NombrePlan         !== filtroUbitsPlan)     return false
-          if (excluir !== 'estado'   && filtroUbitsEstado   && r.EstadoAprendizaje  !== filtroUbitsEstado)   return false
-          if (excluir !== 'formato'  && filtroUbitsFormato  && r.FormatoContenido   !== filtroUbitsFormato)  return false
-          return true
-        })
-        const uOpts = (excluir, key) => [...new Set(filtrarSin(excluir).map(r => r[key]).filter(Boolean))].sort()
+        const empresaOpts = [...new Set(ubitsData.map(r => r.Empresa).filter(Boolean))].sort()
 
         function exportarUbitsCSV() {
           const cols = ['NumeroEmpleado','Nombre','Apellido','Empresa','Terminal','Area','Cargo','NombrePlan','NombreContenido','FormatoContenido','EstadoAprendizaje','PctAvance','HorasEstudiadas','FechaFin']
@@ -1912,10 +1888,9 @@ export default function Academia({ usuario }) {
           a.click(); URL.revokeObjectURL(a.href)
         }
 
-        const hayFiltros = filtroUbitsBuscar || filtroUbitsPlan || filtroUbitsEstado || filtroUbitsEmpresa || filtroUbitsArea || filtroUbitsTerminal || filtroUbitsFormato
+        const hayFiltros = !!filtroUbitsEmpresa
         function limpiarFiltrosUbits() {
-          setFiltroUbitsBuscar(''); setFiltroUbitsPlan(''); setFiltroUbitsEstado('')
-          setFiltroUbitsEmpresa(''); setFiltroUbitsArea(''); setFiltroUbitsTerminal(''); setFiltroUbitsFormato('')
+          setFiltroUbitsEmpresa('')
           setUbitsPagina(1)
         }
 
@@ -1933,44 +1908,11 @@ export default function Academia({ usuario }) {
                   </p>
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  <input
-                    type="text" placeholder="Buscar por nombre o No. empleado..."
-                    value={filtroUbitsBuscar} onChange={e => { setFiltroUbitsBuscar(e.target.value); setUbitsPagina(1) }}
-                    style={{ flex: '1 1 200px', minWidth: 180, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
-                  />
-                  <select value={filtroUbitsEmpresa} onChange={e => { setFiltroUbitsEmpresa(e.target.value); setFiltroUbitsArea(''); setFiltroUbitsTerminal(''); setUbitsPagina(1) }}
-                    style={{ minWidth: 130, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
-                    <option value="">Todas las empresas</option>
-                    {uOpts('empresa','Empresa').map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                  <select value={filtroUbitsArea} onChange={e => { setFiltroUbitsArea(e.target.value); setFiltroUbitsTerminal(''); setUbitsPagina(1) }}
-                    style={{ minWidth: 130, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
-                    <option value="">Todas las áreas</option>
-                    {uOpts('area','Area').map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                  <select value={filtroUbitsTerminal} onChange={e => { setFiltroUbitsTerminal(e.target.value); setUbitsPagina(1) }}
-                    style={{ minWidth: 130, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
-                    <option value="">Todas las terminales</option>
-                    {uOpts('terminal','Terminal').map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                  <select value={filtroUbitsPlan} onChange={e => { setFiltroUbitsPlan(e.target.value); setUbitsPagina(1) }}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  <select value={filtroUbitsEmpresa} onChange={e => { setFiltroUbitsEmpresa(e.target.value); setUbitsPagina(1) }}
                     style={{ minWidth: 160, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
-                    <option value="">Todos los planes</option>
-                    {uOpts('plan','NombrePlan').map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                  <select value={filtroUbitsEstado} onChange={e => { setFiltroUbitsEstado(e.target.value); setUbitsPagina(1) }}
-                    style={{ minWidth: 130, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
-                    <option value="">Todos los estados</option>
-                    {uOpts('estado','EstadoAprendizaje').map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                  <select value={filtroUbitsFormato} onChange={e => { setFiltroUbitsFormato(e.target.value); setUbitsPagina(1) }}
-                    style={{ minWidth: 120, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}>
-                    <option value="">Todos los formatos</option>
-                    {uOpts('formato','FormatoContenido').map(v => <option key={v} value={v}>{v}</option>)}
+                    <option value="">Todas las empresas</option>
+                    {empresaOpts.map(v => <option key={v} value={v}>{v}</option>)}
                   </select>
                   <div style={{ flex: 1 }} />
                   {hayFiltros && (
@@ -1980,7 +1922,6 @@ export default function Academia({ usuario }) {
                     ↓ Exportar CSV ({uFiltrado.length})
                   </button>
                 </div>
-              </div>
             </div>
 
             {loadingUbits ? <p style={{ color: '#6b7280' }}>Cargando datos Ubits...</p> : (
