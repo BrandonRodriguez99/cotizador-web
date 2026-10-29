@@ -1898,14 +1898,13 @@ export default function Academia({ usuario }) {
                         <th style={{ textAlign: 'center' }}>Formato</th>
                         <th style={{ textAlign: 'center' }}>Estado</th>
                         <th style={{ textAlign: 'center' }}>% Avance</th>
-                        <th style={{ textAlign: 'center' }}>Nota</th>
                         <th style={{ textAlign: 'center' }}>Horas</th>
                         <th style={{ textAlign: 'center' }}>Fecha fin</th>
                       </tr>
                     </thead>
                     <tbody>
                       {uPaginados.length === 0 ? (
-                        <tr><td colSpan={10} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>
+                        <tr><td colSpan={9} style={{ textAlign: 'center', color: '#9ca3af', padding: 24 }}>
                           {loadingUbits ? 'Cargando...' : 'Sin registros'}
                         </td></tr>
                       ) : uPaginados.map((r, idx) => {
@@ -1933,9 +1932,6 @@ export default function Academia({ usuario }) {
                             </td>
                             <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: (r.PctAvance || 0) >= 100 ? '#16a34a' : (r.PctAvance || 0) > 0 ? '#d97706' : '#6b7280' }}>
                               {r.PctAvance != null ? `${r.PctAvance}%` : '-'}
-                            </td>
-                            <td style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 11 }}>
-                              {r.NotaExamen != null ? r.NotaExamen : '-'}
                             </td>
                             <td style={{ textAlign: 'center', fontSize: 11 }}>
                               {r.HorasEstudiadas != null ? `${r.HorasEstudiadas}h` : '-'}
@@ -2082,7 +2078,6 @@ export default function Academia({ usuario }) {
               <td>${r.FormatoContenido || '—'}</td>
               <td><span style="background:${color}22;color:${color};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${estado}</span></td>
               <td style="text-align:center;font-weight:700;color:${(r.PctAvance||0)>=100?'#16a34a':(r.PctAvance||0)>0?'#d97706':'#6b7280'}">${r.PctAvance!=null?r.PctAvance+'%':'—'}</td>
-              <td style="text-align:center">${r.NotaExamen!=null?r.NotaExamen:'—'}</td>
               <td style="text-align:center">${r.HorasEstudiadas!=null?r.HorasEstudiadas+'h':'—'}</td>
               <td style="text-align:center">${r.FechaFin?String(r.FechaFin).slice(0,10):'—'}</td>
             </tr>`
@@ -2108,6 +2103,7 @@ export default function Academia({ usuario }) {
               th{background:#f1f5f9;text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#374151;border-bottom:2px solid #e5e7eb}
               td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
               tr:last-child td{border-bottom:none}
+              tr{page-break-inside:avoid}
               .footer{margin-top:20px;font-size:10px;color:#9ca3af;text-align:right}
               @media print{@page{margin:0;size:A4}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
             </style>
@@ -2142,12 +2138,12 @@ export default function Academia({ usuario }) {
             </table>
             ${filasUbits ? `
             <div style="margin-top:28px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                <h2 style="font-size:14px;font-weight:700;color:#0b2341;margin:0">Cursos Ubits 2026</h2>
-                <span style="font-size:11px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:1px 8px;font-weight:600">${ubitsEmp.length}</span>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:nowrap">
+                <h2 style="font-size:14px;font-weight:700;color:#0b2341;margin:0;white-space:nowrap">Cursos Ubits 2026</h2>
+                <span style="display:inline-flex;align-items:center;font-size:11px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:1px 8px;font-weight:600;line-height:1.4;flex-shrink:0">${ubitsEmp.length}</span>
               </div>
               <table>
-                <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Nota</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
+                <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
                 <tbody>${filasUbits}</tbody>
               </table>
             </div>` : ''}
@@ -2378,7 +2374,6 @@ export default function Academia({ usuario }) {
                               <th style={{ textAlign: 'center' }}>Formato</th>
                               <th style={{ textAlign: 'center' }}>Estado</th>
                               <th style={{ textAlign: 'center' }}>% Avance</th>
-                              <th style={{ textAlign: 'center' }}>Nota</th>
                               <th style={{ textAlign: 'center' }}>Horas</th>
                               <th style={{ textAlign: 'center' }}>Fecha fin</th>
                             </tr>
@@ -2399,7 +2394,6 @@ export default function Academia({ usuario }) {
                                   <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: (r.PctAvance || 0) >= 100 ? '#16a34a' : (r.PctAvance || 0) > 0 ? '#d97706' : '#6b7280' }}>
                                     {r.PctAvance != null ? `${r.PctAvance}%` : '-'}
                                   </td>
-                                  <td style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 11 }}>{r.NotaExamen != null ? r.NotaExamen : '-'}</td>
                                   <td style={{ textAlign: 'center', fontSize: 11 }}>{r.HorasEstudiadas != null ? `${r.HorasEstudiadas}h` : '-'}</td>
                                   <td style={{ textAlign: 'center', fontSize: 11 }}>{r.FechaFin ? String(r.FechaFin).slice(0, 10) : '-'}</td>
                                 </tr>
