@@ -8,6 +8,7 @@ export default function AsistenciaAcademiaPublica() {
 
   const [numEmpleado, setNumEmpleado] = useState('')
   const [empleado, setEmpleado] = useState(null)
+  const [consentimiento, setConsentimiento] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [exito, setExito] = useState(null)
@@ -29,7 +30,7 @@ export default function AsistenciaAcademiaPublica() {
     try {
       const res = await fetch(`${API_BASE_URL}/academia/asistencia-qr`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sesionId: Number(sesionId), numeroEmpleado: numEmpleado }),
+        body: JSON.stringify({ sesionId: Number(sesionId), numeroEmpleado: numEmpleado, firma: consentimiento ? empleado.NombreCompleto : null }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error')
@@ -106,12 +107,29 @@ export default function AsistenciaAcademiaPublica() {
                   </div>
                 ))}
               </div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 14px', cursor: 'pointer', marginBottom: 16 }}>
+                <input
+                  type="checkbox" checked={consentimiento} onChange={e => setConsentimiento(e.target.checked)}
+                  style={{ marginTop: 2, flexShrink: 0, accentColor: '#16a34a', width: 16, height: 16 }}
+                />
+                <span style={{ fontSize: 13, color: '#166534', lineHeight: 1.5 }}>
+                  Confirmo mi asistencia y autorizo el uso de mi nombre como firma de registro.
+                </span>
+              </label>
+              {consentimiento && (
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.05em' }}>Vista previa de firma</div>
+                  <div style={{ fontFamily: "'Dancing Script', 'Brush Script MT', cursive", fontSize: 22, color: '#1e3a5f', borderBottom: '1px solid #d1d5db', paddingBottom: 4, display: 'inline-block', minWidth: 180 }}>
+                    {empleado.NombreCompleto}
+                  </div>
+                </div>
+              )}
               {error && <p style={{ color: '#dc2626', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => { setEmpleado(null); setError('') }} style={{ flex: 1, padding: 12, background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => { setEmpleado(null); setConsentimiento(false); setError('') }} style={{ flex: 1, padding: 12, background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                   Corregir
                 </button>
-                <button onClick={handleRegistrar} disabled={loading} style={{ flex: 1, padding: 12, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={handleRegistrar} disabled={loading || !consentimiento} style={{ flex: 1, padding: 12, background: consentimiento ? '#16a34a' : '#9ca3af', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: consentimiento ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
                   {loading ? 'Registrando...' : 'Confirmar asistencia'}
                 </button>
               </div>

@@ -1146,6 +1146,7 @@ export default function Academia({ usuario }) {
                         ))}
                         <th style={{ textAlign: 'center' }}>%</th>
                         <th style={{ textAlign: 'center' }}>Constancia</th>
+                        <th style={{ textAlign: 'center' }}>Firma</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1201,6 +1202,14 @@ export default function Academia({ usuario }) {
                               }}>
                                 {acreedor ? 'Acreedor' : noAcreedor ? 'No acreedor' : enRiesgo ? 'En riesgo' : 'Pendiente'}
                               </span>
+                            </td>
+                            <td style={{ textAlign: 'center', minWidth: 120 }}>
+                              {(() => {
+                                const firmaVal = asistenciasData.asistencias.find(a => a.InscripcionId === insc.InscripcionId && a.Firma)?.Firma
+                                return firmaVal
+                                  ? <span style={{ fontFamily: "'Dancing Script','Brush Script MT',cursive", fontSize: 15, color: '#1e3a5f' }}>{firmaVal}</span>
+                                  : <span style={{ color: '#d1d5db', fontSize: 12 }}>—</span>
+                              })()}
                             </td>
                           </tr>
                         )
