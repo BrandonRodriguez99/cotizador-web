@@ -1934,7 +1934,7 @@ export default function Academia({ usuario }) {
                               {r.PctAvance != null ? `${r.PctAvance}%` : '-'}
                             </td>
                             <td style={{ textAlign: 'center', fontSize: 11 }}>
-                              {r.HorasEstudiadas != null ? `${r.HorasEstudiadas}h` : '-'}
+                              {fmtHorasDecimal(r.HorasEstudiadas)}
                             </td>
                             <td style={{ textAlign: 'center', fontSize: 11 }}>
                               {r.FechaFin ? String(r.FechaFin).slice(0, 10) : '-'}
@@ -2078,7 +2078,7 @@ export default function Academia({ usuario }) {
               <td>${r.FormatoContenido || '—'}</td>
               <td><span style="background:${color}22;color:${color};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${estado}</span></td>
               <td style="text-align:center;font-weight:700;color:${(r.PctAvance||0)>=100?'#16a34a':(r.PctAvance||0)>0?'#d97706':'#6b7280'}">${r.PctAvance!=null?r.PctAvance+'%':'—'}</td>
-              <td style="text-align:center">${r.HorasEstudiadas!=null?r.HorasEstudiadas+'h':'—'}</td>
+              <td style="text-align:center">${fmtHorasDecimal(r.HorasEstudiadas)}</td>
               <td style="text-align:center">${r.FechaFin?String(r.FechaFin).slice(0,10):'—'}</td>
             </tr>`
           }).join('')
@@ -2393,7 +2393,7 @@ export default function Academia({ usuario }) {
                                   <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: (r.PctAvance || 0) >= 100 ? '#16a34a' : (r.PctAvance || 0) > 0 ? '#d97706' : '#6b7280' }}>
                                     {r.PctAvance != null ? `${r.PctAvance}%` : '-'}
                                   </td>
-                                  <td style={{ textAlign: 'center', fontSize: 11 }}>{r.HorasEstudiadas != null ? `${r.HorasEstudiadas}h` : '-'}</td>
+                                  <td style={{ textAlign: 'center', fontSize: 11 }}>{fmtHorasDecimal(r.HorasEstudiadas)}</td>
                                   <td style={{ textAlign: 'center', fontSize: 11 }}>{r.FechaFin ? String(r.FechaFin).slice(0, 10) : '-'}</td>
                                 </tr>
                               )
@@ -2538,6 +2538,15 @@ function fmtHoras(minutos) {
   if (!minutos || minutos <= 0) return '—'
   const h = Math.floor(minutos / 60)
   const m = minutos % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
+}
+
+function fmtHorasDecimal(hDec) {
+  if (hDec == null || hDec <= 0) return '—'
+  const totalMin = Math.round(hDec * 60)
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  if (h === 0) return `${m}m`
   return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
