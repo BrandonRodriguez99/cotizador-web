@@ -5,6 +5,7 @@ import {
   getAcademiaCursoDetalle,
   createAcademiaCurso,
   updateAcademiaCurso,
+  toggleHabilitadoCurso,
   deleteAcademiaCurso,
   getAcademiaSesiones,
   createAcademiaSesion,
@@ -357,6 +358,15 @@ export default function Academia({ usuario }) {
     } catch (err) { window.alert('Error: ' + err.message) }
   }
 
+  async function handleToggleHabilitado(e, c) {
+    e.stopPropagation()
+    const nuevoValor = c.Habilitado === false ? true : false
+    try {
+      await toggleHabilitadoCurso(c.CursoAcademiaId, nuevoValor)
+      setCursos(prev => prev.map(x => x.CursoAcademiaId === c.CursoAcademiaId ? { ...x, Habilitado: nuevoValor } : x))
+    } catch (err) { window.alert(err.message) }
+  }
+
   async function convocarCurso(e, curso) {
     e.stopPropagation()
     const nombre = cursoLabel(curso)
@@ -543,6 +553,24 @@ export default function Academia({ usuario }) {
                         color: c.Estado === 'Activo' ? '#16a34a' : c.Estado === 'Próximo' ? '#2563eb' : '#6b7280',
                         border: '1px solid currentColor', opacity: 0.85,
                       }}>{c.Estado}</span>
+                      {!esCapacitacion && (
+                        <button
+                          onClick={e => handleToggleHabilitado(e, c)}
+                          title={c.Habilitado !== false ? 'Deshabilitar inscripciones' : 'Habilitar inscripciones'}
+                          style={{
+                            display: 'block', marginTop: 4, fontSize: 10, padding: '1px 8px', borderRadius: 999, cursor: 'pointer',
+                            border: '1px solid', fontWeight: 700,
+                            background: c.Habilitado !== false ? '#eff6ff' : '#fef2f2',
+                            borderColor: c.Habilitado !== false ? '#93c5fd' : '#fca5a5',
+                            color: c.Habilitado !== false ? '#2563eb' : '#dc2626',
+                          }}
+                        >
+                          {c.Habilitado !== false ? '✓ Inscripciones ON' : '✗ Inscripciones OFF'}
+                        </button>
+                      )}
+                      {esCapacitacion && c.Habilitado === false && (
+                        <span style={{ display: 'block', marginTop: 4, fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Sin inscripciones</span>
+                      )}
                     </td>
                     <td onClick={e => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -587,7 +615,7 @@ export default function Academia({ usuario }) {
 
       {/* ═══ TAB INSCRIPCIONES ═══ */}
       {tab === 'inscripciones' && (() => {
-        const cursosDisponibles = cursos.filter(c => c.Estado === 'Activo' || c.Estado === 'Próximo')
+        const cursosDisponibles = cursos.filter(c => c.Habilitado !== false && (c.Estado === 'Activo' || c.Estado === 'Próximo'))
         const nombresUnicosInsc = [...new Set(cursosDisponibles.map(c => c.Nombre))].sort()
         const cursosDelNombreInsc = filtroNombreCursoInsc ? cursosDisponibles.filter(c => c.Nombre === filtroNombreCursoInsc) : []
         const generacionesInsc = cursosDelNombreInsc.map(c => ({ id: c.CursoAcademiaId, gen: c.Generacion || '', lugares: c.Capacidad - (c.Inscritos || 0) }))
@@ -2280,6 +2308,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   const [pctMin, setPctMin] = useState(String(cursoInicial?.PorcentajeMinAsistencia || 75))
   const [horasPorSesion, setHorasPorSesion] = useState(cursoInicial?.HorasPorSesion != null ? String(cursoInicial.HorasPorSesion) : '')
   const [estado, setEstado] = useState(cursoInicial?.Estado || 'Activo')
+  const [habilitado, setHabilitado] = useState(cursoInicial?.Habilitado !== false)
   const [sesiones, setSesiones] = useState([])
   const [saving, setSaving] = useState(false)
 
@@ -2345,7 +2374,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
     setSaving(true)
     try {
       if (isEdit) {
-        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null })
+        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, Habilitado: habilitado })
         for (const s of sesiones) {
           if (s.SesionId) {
             await updateAcademiaSesion(s.SesionId, { Fecha: s.Fecha, HoraInicio: s.HoraInicio, HoraFin: s.HoraFin, Ubicacion: s.Ubicacion })
@@ -2512,6 +2541,26 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                   <option>Completado</option>
                 </select>
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                <div
+                  onClick={() => setHabilitado(v => !v)}
+                  style={{
+                    width: 40, height: 22, borderRadius: 11, background: habilitado ? '#2563eb' : '#d1d5db',
+                    position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    position: 'absolute', top: 3, left: habilitado ? 20 : 3, width: 16, height: 16,
+                    borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+                  }} />
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
+                  Habilitado para inscripciones
+                </span>
+                <span style={{ fontSize: 11, color: habilitado ? '#16a34a' : '#9ca3af', fontWeight: 600 }}>
+                  {habilitado ? 'Sí' : 'No'}
+                </span>
+              </label>
             )}
 
             {/* Sesiones */}

@@ -796,6 +796,7 @@ export function getAcademiaCursos() { return fetchJson('academia/cursos', { head
 export function getAcademiaCursoDetalle(id) { return fetchJson(`academia/cursos/${id}`, { headers: authHeaders() }) }
 export function createAcademiaCurso(data) { return fetchJson('academia/cursos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function updateAcademiaCurso(id, data) { return fetchJson(`academia/cursos/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function toggleHabilitadoCurso(id, habilitado) { return fetchJson(`academia/cursos/${id}/habilitado`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ Habilitado: habilitado }) }) }
 export function deleteAcademiaCurso(id) { return fetchJson(`academia/cursos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function getAcademiaSesiones(cursoId) { return fetchJson(`academia/cursos/${cursoId}/sesiones`, { headers: authHeaders() }) }
 export function createAcademiaSesion(cursoId, data) { return fetchJson(`academia/cursos/${cursoId}/sesiones`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
