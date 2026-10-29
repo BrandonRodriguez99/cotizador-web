@@ -2159,7 +2159,7 @@ export default function Academia({ usuario }) {
           const [selloSrc, nombreSrc, ubitsSrc] = await Promise.all([
             toDataURL(`${origin}/logo-udat-sello.png`),
             toDataURL(`${origin}/logo-udat.png`),
-            toDataURL(`${origin}/logo-ubits.png`),
+            toDataURL(`${origin}/logo-trayecto.png`),
           ])
 
           const totalMinTot = cursos.reduce((s, r) => s + (r.MinutosTotales || 0), 0)
@@ -2200,8 +2200,8 @@ export default function Academia({ usuario }) {
           const bloqueUbits = ubitsEmp.length === 0 ? '' : `
             <div style="margin-top:28px">
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                ${ubitsSrc ? `<img src="${ubitsSrc}" alt="Ubits" style="height:28px;width:auto;display:block">` : ''}
-                <h2 style="font-size:13px;font-weight:700;color:#0b2341;margin:0">Cursos Ubits 2026 <span style="font-size:12px;color:#2563eb;font-weight:600">(${ubitsEmp.length})</span></h2>
+                ${ubitsSrc ? `<div style="background:#1a1a1a;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;flex-shrink:0"><img src="${ubitsSrc}" alt="Trayecto" style="height:22px;width:auto;display:block"></div>` : ''}
+                <h2 style="font-size:13px;font-weight:700;color:#0b2341;margin:0">Cursos Trayecto 2026 <span style="font-size:12px;color:#2563eb;font-weight:600">(${ubitsEmp.length})</span></h2>
               </div>
               <table>
                 <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
@@ -2505,8 +2505,10 @@ export default function Academia({ usuario }) {
                   return (
                     <div style={{ marginTop: 24 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <img src="/logo-ubits.png" alt="Ubits" style={{ height: 24, width: 'auto', display: 'block' }} />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b2341' }}>Cursos Ubits 2026</span>
+                        <div style={{ background: '#1a1a1a', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+                          <img src="/logo-trayecto.png" alt="Trayecto" style={{ height: 22, width: 'auto', display: 'block' }} />
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b2341' }}>Cursos Trayecto 2026</span>
                         <span style={{ fontSize: 11, color: '#6b7280', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 999, padding: '1px 8px', fontWeight: 600 }}>{ubitsEmp.length}</span>
                       </div>
                       <div className="table-wrap">

@@ -75,8 +75,8 @@ select {
 .sidebar-logo {
   height: 28px;
   width: auto;
-  object-fit: contain;
-  filter: brightness(0) invert(1);
+  filter: invert(1) brightness(5);
+  mix-blend-mode: screen;
 }
 
 .brand-name {
