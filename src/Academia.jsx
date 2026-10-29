@@ -2197,18 +2197,6 @@ export default function Academia({ usuario }) {
               </div>
               <table>${cursosTable}<tbody>${buildFilasCursos(lista)}</tbody></table>
             </div>`
-          const bloqueUbits = ubitsEmp.length === 0 ? '' : `
-            <div style="margin-top:28px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                ${ubitsSrc ? `<div style="background:#1a1a1a;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;flex-shrink:0"><img src="${ubitsSrc}" alt="Trayecto" style="height:22px;width:auto;display:block"></div>` : ''}
-                <h2 style="font-size:13px;font-weight:700;color:#0b2341;margin:0">Cursos Trayecto 2026 <span style="font-size:12px;color:#2563eb;font-weight:600">(${ubitsEmp.length})</span></h2>
-              </div>
-              <table>
-                <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
-                <tbody>${filasUbits}</tbody>
-              </table>
-            </div>`
-
           const filasUbits = ubitsEmp.map(r => {
             const colU = { Completado: '#16a34a', Aprobado: '#16a34a', 'En progreso': '#d97706', Iniciado: '#d97706', Asignado: '#6b7280', Pendiente: '#9ca3af' }
             const estado = r.EstadoAprendizaje || '—'
@@ -2223,6 +2211,18 @@ export default function Academia({ usuario }) {
               <td style="text-align:center">${r.FechaFin?String(r.FechaFin).slice(0,10):'—'}</td>
             </tr>`
           }).join('')
+
+          const bloqueUbits = ubitsEmp.length === 0 ? '' : `
+            <div style="margin-top:28px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                ${ubitsSrc ? `<div style="background:#1a1a1a;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;flex-shrink:0"><img src="${ubitsSrc}" alt="Ubits" style="height:22px;width:auto;display:block"></div>` : ''}
+                <h2 style="font-size:13px;font-weight:700;color:#0b2341;margin:0">UBITS 2026 <span style="font-size:12px;color:#2563eb;font-weight:600">(${ubitsEmp.length})</span></h2>
+              </div>
+              <table>
+                <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
+                <tbody>${filasUbits}</tbody>
+              </table>
+            </div>`
 
           const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
             <title>Kardex — ${emp.NombreCompleto}</title>
@@ -2508,7 +2508,7 @@ export default function Academia({ usuario }) {
                         <div style={{ background: '#1a1a1a', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
                           <img src="/logo-trayecto.png" alt="Trayecto" style={{ height: 22, width: 'auto', display: 'block' }} />
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b2341' }}>Cursos Trayecto 2026</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b2341' }}>UBITS 2026</span>
                         <span style={{ fontSize: 11, color: '#6b7280', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 999, padding: '1px 8px', fontWeight: 600 }}>{ubitsEmp.length}</span>
                       </div>
                       <div className="table-wrap">
