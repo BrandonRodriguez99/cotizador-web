@@ -2156,9 +2156,10 @@ export default function Academia({ usuario }) {
             } catch { return '' }
           }
           const origin = window.location.origin
-          const [selloSrc, nombreSrc] = await Promise.all([
+          const [selloSrc, nombreSrc, ubitsSrc] = await Promise.all([
             toDataURL(`${origin}/logo-udat-sello.png`),
             toDataURL(`${origin}/logo-udat.png`),
+            toDataURL(`${origin}/logo-ubits.png`),
           ])
 
           const totalMinTot = cursos.reduce((s, r) => s + (r.MinutosTotales || 0), 0)
@@ -2195,6 +2196,17 @@ export default function Academia({ usuario }) {
                 <h2 style="font-size:13px;font-weight:700;color:#0b2341;margin:0">${titulo} <span style="font-size:12px;color:${color};font-weight:600">(${lista.length})</span></h2>
               </div>
               <table>${cursosTable}<tbody>${buildFilasCursos(lista)}</tbody></table>
+            </div>`
+          const bloqueUbits = ubitsEmp.length === 0 ? '' : `
+            <div style="margin-top:28px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                ${ubitsSrc ? `<img src="${ubitsSrc}" alt="Ubits" style="height:28px;width:auto;display:block">` : ''}
+                <h2 style="font-size:13px;font-weight:700;color:#0b2341;margin:0">Cursos Ubits 2026 <span style="font-size:12px;color:#2563eb;font-weight:600">(${ubitsEmp.length})</span></h2>
+              </div>
+              <table>
+                <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
+                <tbody>${filasUbits}</tbody>
+              </table>
             </div>`
 
           const filasUbits = ubitsEmp.map(r => {
@@ -2264,16 +2276,7 @@ export default function Academia({ usuario }) {
             ${bloqueTabla('Cursos Mandatorios', '#1d4ed8', mandatorios)}
             ${bloqueTabla('Cursos Extraordinarios', '#7e22ce', extraordinarios)}
             ${bloqueTabla('Otros cursos', '#6b7280', otros)}
-            ${filasUbits ? `
-            <div style="margin-top:28px">
-              <div style="margin-bottom:10px">
-                <h2 style="font-size:14px;font-weight:700;color:#0b2341;margin:0">Cursos Ubits 2026 <span style="font-size:12px;color:#2563eb;font-weight:600">(${ubitsEmp.length})</span></h2>
-              </div>
-              <table>
-                <thead><tr><th>Plan</th><th>Contenido</th><th>Formato</th><th>Estado</th><th style="text-align:center">% Avance</th><th style="text-align:center">Horas</th><th style="text-align:center">Fecha fin</th></tr></thead>
-                <tbody>${filasUbits}</tbody>
-              </table>
-            </div>` : ''}
+            ${bloqueUbits}
             <div class="footer">Generado el ${new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})} · UDAT Academia</div>
             </div>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
@@ -2502,7 +2505,8 @@ export default function Academia({ usuario }) {
                   return (
                     <div style={{ marginTop: 24 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b2341' }}>Cursos Ubits</span>
+                        <img src="/logo-ubits.png" alt="Ubits" style={{ height: 24, width: 'auto', display: 'block' }} />
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b2341' }}>Cursos Ubits 2026</span>
                         <span style={{ fontSize: 11, color: '#6b7280', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 999, padding: '1px 8px', fontWeight: 600 }}>{ubitsEmp.length}</span>
                       </div>
                       <div className="table-wrap">
