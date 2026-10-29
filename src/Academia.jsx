@@ -2153,7 +2153,19 @@ export default function Academia({ usuario }) {
             </div>` : ''}
             <div class="footer">Generado el ${new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})} · UDAT Academia</div>
             </div>
-            <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+            <script>
+              window.onload = function() {
+                var opt = {
+                  margin: 0,
+                  filename: 'Kardex_${(emp.NombreCompleto || 'empleado').replace(/[^a-zA-Z0-9_áéíóúÁÉÍÓÚüÜñÑ ]/g,'').trim().replace(/ +/g,'_')}.pdf',
+                  image: { type: 'jpeg', quality: 0.98 },
+                  html2canvas: { scale: 2, useCORS: true, logging: false },
+                  jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                html2pdf().set(opt).from(document.body).save().then(function(){ window.close(); });
+              };
+            <\/script>
           </body></html>`
 
           const w = window.open('', '_blank', 'width=900,height=700')
