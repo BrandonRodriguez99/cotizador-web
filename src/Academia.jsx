@@ -2698,6 +2698,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   const [capacidad, setCapacidad] = useState(String(cursoInicial?.Capacidad || 25))
   const [pctMin, setPctMin] = useState(String(cursoInicial?.PorcentajeMinAsistencia || 75))
   const [horasPorSesion, setHorasPorSesion] = useState(cursoInicial?.HorasPorSesion != null ? String(cursoInicial.HorasPorSesion) : '')
+  const [tipoCurso, setTipoCurso] = useState(cursoInicial?.TipoCurso || '')
   const [estado, setEstado] = useState(cursoInicial?.Estado || 'Activo')
   const [habilitado, setHabilitado] = useState(cursoInicial?.Habilitado !== false)
   const [sesiones, setSesiones] = useState([])
@@ -2738,6 +2739,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   function selectCatalogCurso(c) {
     setNombre(c.Nombre)
     setDescripcion(c.Descripcion || '')
+    if (c.TipoCurso) setTipoCurso(c.TipoCurso)
     setCursoSearch('')
     setShowDropdown(false)
     if (c.DuracionDefaultDias && sesiones.length === 0) {
@@ -2765,7 +2767,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
     setSaving(true)
     try {
       if (isEdit) {
-        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, Habilitado: habilitado })
+        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, TipoCurso: tipoCurso || null, Habilitado: habilitado })
         for (const s of sesiones) {
           if (s.SesionId) {
             await updateAcademiaSesion(s.SesionId, { Fecha: s.Fecha, HoraInicio: s.HoraInicio, HoraFin: s.HoraFin, Ubicacion: s.Ubicacion })
@@ -2775,7 +2777,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
         }
       } else {
         const sesionesValidas = sesiones.filter(s => s.Fecha)
-        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, sesiones: sesionesValidas })
+        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, TipoCurso: tipoCurso || null, sesiones: sesionesValidas })
       }
       onSaved()
     } catch (err) { window.alert('Error: ' + err.message) } finally { setSaving(false) }
@@ -2845,6 +2847,14 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Generación</label>
                 <input className="form-control" value={generacion} onChange={e => setGeneracion(e.target.value)} placeholder="Ej: Gen 1, 2024-B, Grupo A" style={{ width: '100%' }} />
               </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Tipo de curso</label>
+              <select className="form-control" value={tipoCurso} onChange={e => setTipoCurso(e.target.value)} style={{ width: '100%' }}>
+                <option value="">Sin tipo</option>
+                <option value="Mandatorio">Mandatorio</option>
+                <option value="Extraordinario">Extraordinario</option>
+              </select>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ position: 'relative' }}>
