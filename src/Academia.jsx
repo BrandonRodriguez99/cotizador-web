@@ -2060,7 +2060,7 @@ export default function Academia({ usuario }) {
 
       {/* ═══ TAB KARDEX ═══ */}
       {tab === 'kardex' && (() => {
-        // Empleados únicos del histórico
+        // Empleados únicos del histórico + Ubits (para que se puedan buscar aunque no tengan cursos academia)
         const empleadosMap = {}
         historicoData.forEach(r => {
           if (!empleadosMap[r.NumeroEmpleado]) {
@@ -2072,6 +2072,20 @@ export default function Academia({ usuario }) {
               Plaza: r.Plaza,
               Area: r.Area,
               Correo: r.Correo,
+            }
+          }
+        })
+        ubitsData.forEach(r => {
+          if (r.NumeroEmpleado && !empleadosMap[r.NumeroEmpleado]) {
+            const nombre = [r.Nombre, r.Apellido].filter(Boolean).join(' ')
+            empleadosMap[r.NumeroEmpleado] = {
+              NumeroEmpleado: r.NumeroEmpleado,
+              NombreCompleto: nombre,
+              Empresa: r.Empresa || '',
+              Terminal: r.Terminal || '',
+              Plaza: r.Cargo || '',
+              Area: r.Area || '',
+              Correo: r.Correo || '',
             }
           }
         })
