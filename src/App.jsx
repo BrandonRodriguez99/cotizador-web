@@ -204,6 +204,21 @@ function App() {
     } catch { return 'dashboard' }
   })
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('siga_sidebar_collapsed') === '1' } catch { return false }
+  })
+  const [sidebarHovered, setSidebarHovered] = useState(false)
+
+  function toggleCollapse() {
+    setSidebarCollapsed(c => {
+      const next = !c
+      try { localStorage.setItem('siga_sidebar_collapsed', next ? '1' : '0') } catch {}
+      return next
+    })
+    setSidebarHovered(false)
+  }
+
+  const sidebarExpanded = !sidebarCollapsed || sidebarHovered
   const [catalogItems, setCatalogItems] = useState([])
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [catalogError, setCatalogError] = useState(null)
@@ -832,11 +847,20 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarCollapsed ? ' collapsed-sidebar' : ''}`}>
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
-      <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
+      <aside
+        className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}${sidebarCollapsed ? ' sidebar-collapsed' : ''}${sidebarCollapsed && sidebarHovered ? ' sidebar-hovered' : ''}`}
+        onMouseEnter={() => sidebarCollapsed && setSidebarHovered(true)}
+        onMouseLeave={() => setSidebarHovered(false)}
+      >
         <div className="brand">
-          <img src="/logo-siga.svg" alt="SIGA" className="sidebar-logo" />
+          <img src="/logo-siga.svg" alt="SIGA" className="sidebar-logo" style={{ display: sidebarExpanded ? 'block' : 'none' }} />
+          <button className="sidebar-collapse-btn" onClick={toggleCollapse} title={sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -849,9 +873,10 @@ function App() {
                 {visibles.map(item => (
                   <button key={item.vista} type="button"
                     className={`nav-link${activeView === item.vista ? ' active' : ''}`}
-                    onClick={() => handleNavClick(item.vista)}>
+                    onClick={() => handleNavClick(item.vista)}
+                    title={!sidebarExpanded ? item.label : undefined}>
                     <NavIcon i={item.vista} />
-                    {item.label}
+                    <span className="nav-label">{item.label}</span>
                   </button>
                 ))}
               </div>
@@ -863,7 +888,7 @@ function App() {
           <div className="avatar">
             {(usuario?.nombre || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="sidebar-footer-info">
             <p className="sidebar-user">{usuario?.nombre || ''}</p>
             <span className="sidebar-role" style={{ textTransform: 'capitalize' }}>{usuario?.rol || ''}</span>
           </div>
