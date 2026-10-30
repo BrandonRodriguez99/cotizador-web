@@ -755,6 +755,15 @@ function App() {
   }
 
   function handleNavClick(view) {
+    if (view === 'aprobaciones') {
+      setActiveView('cotizacion')
+      setCotizacionTab('aprobaciones')
+      loadPendientes()
+      setSidebarOpen(false)
+      if (detallesCotizacionOpen) { setDetallesCotizacionOpen(false); setCotizacionSeleccionada(null) }
+      return
+    }
+    if (view === 'cotizacion') setCotizacionTab('nueva')
     setActiveView(view)
     setSidebarOpen(false)
     if (detallesCotizacionOpen) {
@@ -775,12 +784,8 @@ function App() {
         : activeView === 'ordenesCompra'
           ? 'Ordenes de Compra'
           : activeView === 'cotizacion'
-            ? (editingCotizacion ? 'Editar Cotización' : 'Nueva Cotización')
-            : activeView === 'historial'
-              ? 'Historial de Cotizaciones'
-              : activeView === 'aprobaciones'
-                ? 'Aprobaciones'
-                : activeView === 'mantenimiento'
+            ? 'Cotizaciones'
+            : activeView === 'mantenimiento'
                   ? 'Órdenes de Mantenimiento'
                   : activeView === 'inventario'
                     ? 'Inventario'
@@ -812,12 +817,8 @@ function App() {
         : activeView === 'ordenesCompra'
           ? 'Ordenes de Compra > Nueva Orden'
           : activeView === 'cotizacion'
-            ? (editingCotizacion ? 'Cotizaciones > Editar Cotización' : 'Cotizaciones > Nueva Cotización')
-            : activeView === 'historial'
-              ? 'Cotizaciones > Historial de Cotizaciones'
-              : activeView === 'aprobaciones'
-                ? 'Cotizaciones > Aprobaciones'
-                : activeView === 'mantenimiento'
+            ? `Administración > Cotizaciones${cotizacionTab === 'aprobaciones' ? ' > Aprobaciones' : cotizacionTab === 'historial' ? ' > Historial' : ''}`
+            : activeView === 'mantenimiento'
                   ? 'Herramientas > Órdenes de Mantenimiento'
                   : activeView === 'inventario'
                     ? 'Herramientas > Inventario'
@@ -1177,169 +1178,34 @@ function App() {
           </section>
         ) : activeView === 'academia' ? (
           <Academia usuario={usuario} />
-        ) : activeView === 'aprobaciones' ? (
-            <section className="panel card">
-              <div className="panel-header space-between">
-                <div>
-                  <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
-                    {pendientes.length > 0
-                      ? `${pendientes.length} cotización${pendientes.length !== 1 ? 'es' : ''} pendiente${pendientes.length !== 1 ? 's' : ''} de aprobación`
-                      : 'Sin cotizaciones pendientes de aprobación'}
+        ) : activeView === 'cotizacion' ? (
+            <div>
+              {/* Barra de tabs — mismo estilo que Órdenes de Compra */}
+              <div className="panel card" style={{ marginBottom: '16px' }}>
+                <div className="panel-header space-between" style={{ flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: '13px' }}>
+                    Gestiona cotizaciones, historial y aprobaciones
                   </p>
-                </div>
-              </div>
-
-              {usuario?.rol !== 'autorizador1' && usuario?.rol !== 'admin' && (
-                <div className="notification" style={{ marginBottom: '16px' }}>
-                  Solo el autorizador 1 puede aprobar o rechazar cotizaciones. Puedes consultar el listado.
-                </div>
-              )}
-
-              {pendientesLoading && <div className="notification">Cargando pendientes...</div>}
-              {pendientesError && <div className="notification error">{pendientesError}</div>}
-
-              {/* Modal de rechazo inline */}
-              {rechazandoId && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
-                  <p style={{ fontWeight: '600', color: '#991b1b', marginBottom: '10px' }}>
-                    Rechazar cotización {pendientes.find(p => p.CotizacionId === rechazandoId)?.Folio}
-                  </p>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>
-                    Motivo de rechazo (opcional)
-                  </label>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    value={comentarioRechazo}
-                    onChange={e => setComentarioRechazo(e.target.value)}
-                    placeholder="Describe el motivo del rechazo..."
-                    style={{ marginBottom: '10px', resize: 'vertical' }}
-                  />
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      className="secondary-button"
-                      style={{ background: '#dc2626', color: '#fff', borderColor: '#dc2626' }}
-                      disabled={aprobandoId !== null}
-                      onClick={async () => {
-                        setAprobandoId(rechazandoId)
-                        try {
-                          await aprobarCotizacion(rechazandoId, false, usuario.nombre, comentarioRechazo)
-                          setRechazandoId(null)
-                          setComentarioRechazo('')
-                          await loadPendientes()
-                          await loadHistorial()
-                        } catch (err) {
-                          window.alert('Error al rechazar: ' + err.message)
-                        } finally {
-                          setAprobandoId(null)
-                        }
-                      }}
-                    >
-                      Confirmar rechazo
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button type="button"
+                      className={`tab-btn${cotizacionTab === 'nueva' ? ' active' : ''}`}
+                      onClick={() => setCotizacionTab('nueva')}>
+                      {editingCotizacion ? 'Editar Cotización' : 'Nueva Cotización'}
                     </button>
-                    <button
-                      className="ghost-button"
-                      disabled={aprobandoId !== null}
-                      onClick={() => { setRechazandoId(null); setComentarioRechazo('') }}
-                    >
-                      Cancelar
+                    <button type="button"
+                      className={`tab-btn${cotizacionTab === 'historial' ? ' active' : ''}`}
+                      onClick={() => { setCotizacionTab('historial'); loadHistorial() }}>
+                      Historial
+                    </button>
+                    <button type="button"
+                      className={`tab-btn${cotizacionTab === 'aprobaciones' ? ' active' : ''}`}
+                      onClick={() => { setCotizacionTab('aprobaciones'); loadPendientes() }}>
+                      Aprobaciones{pendientes.length > 0 ? ` (${pendientes.length})` : ''}
                     </button>
                   </div>
                 </div>
-              )}
+              </div>
 
-              <div className="table-wrap">
-                <table className="participants-table">
-                  <thead>
-                    <tr>
-                      <th>Folio</th>
-                      <th>Cliente</th>
-                      <th>Curso</th>
-                      <th>Coach</th>
-                      <th>Total</th>
-                      <th>Creado por</th>
-                      <th>Fecha</th>
-                      {(usuario?.rol === 'autorizador1' || usuario?.rol === 'admin') && <th>Acciones</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendientes.length === 0 ? (
-                      <tr>
-                        <td colSpan={usuario?.rol === 'autorizador1' || usuario?.rol === 'admin' ? 8 : 7}
-                            style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
-                          No hay cotizaciones pendientes de aprobación.
-                        </td>
-                      </tr>
-                    ) : (
-                      pendientes.map((p) => (
-                        <tr key={p.CotizacionId}>
-                          <td style={{ fontWeight: '600', color: '#2563eb' }}>{p.Folio}</td>
-                          <td>{p.Cliente || '-'}</td>
-                          <td>{p.Curso || '-'}</td>
-                          <td>{p.Coach || '-'}</td>
-                          <td>{'$' + Number(p.TotalConGanancia || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                          <td>{p.CreadoPor || '-'}</td>
-                          <td>{p.FechaCreacion ? new Date(p.FechaCreacion).toLocaleDateString('es-MX') : '-'}</td>
-                          {(usuario?.rol === 'autorizador1' || usuario?.rol === 'admin') && (
-                            <td>
-                              <div style={{ display: 'flex', gap: '6px' }}>
-                                <button
-                                  className="primary-button"
-                                  style={{ padding: '4px 12px', fontSize: '13px', background: '#16a34a', borderColor: '#16a34a' }}
-                                  disabled={aprobandoId !== null || rechazandoId !== null}
-                                  onClick={async () => {
-                                    if (!window.confirm(`¿Aprobar la cotización ${p.Folio}?`)) return
-                                    setAprobandoId(p.CotizacionId)
-                                    try {
-                                      await aprobarCotizacion(p.CotizacionId, true, usuario.nombre, '')
-                                      await loadPendientes()
-                                      await loadHistorial()
-                                    } catch (err) {
-                                      window.alert('Error al aprobar: ' + err.message)
-                                    } finally {
-                                      setAprobandoId(null)
-                                    }
-                                  }}
-                                >
-                                  {aprobandoId === p.CotizacionId ? '...' : 'Aprobar'}
-                                </button>
-                                <button
-                                  className="ghost-button"
-                                  style={{ padding: '4px 12px', fontSize: '13px', color: '#dc2626', borderColor: '#fca5a5' }}
-                                  disabled={aprobandoId !== null || rechazandoId !== null}
-                                  onClick={() => { setRechazandoId(p.CotizacionId); setComentarioRechazo('') }}
-                                >
-                                  Rechazar
-                                </button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="table-footer">Total pendientes: {pendientes.length}</div>
-            </section>
-          ) : activeView === 'cotizacion' ? (
-            <div>
-              <div className="cotizacion-tabs">
-                <button
-                  type="button"
-                  className={`cotizacion-tab${cotizacionTab === 'nueva' ? ' active' : ''}`}
-                  onClick={() => setCotizacionTab('nueva')}
-                >
-                  Nueva Cotización
-                </button>
-                <button
-                  type="button"
-                  className={`cotizacion-tab${cotizacionTab === 'historial' ? ' active' : ''}`}
-                  onClick={() => { setCotizacionTab('historial'); loadHistorial() }}
-                >
-                  Historial
-                </button>
-              </div>
               {cotizacionTab === 'historial' ? (
                 <HistorialCotizaciones
                   cotizaciones={
@@ -1355,6 +1221,148 @@ function App() {
                   currentUser={creadoPor}
                   currentUserRol={usuario?.rol}
                 />
+              ) : cotizacionTab === 'aprobaciones' ? (
+              <section className="panel card">
+                <div className="panel-header">
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: '13px' }}>
+                    {pendientes.length > 0
+                      ? `${pendientes.length} cotización${pendientes.length !== 1 ? 'es' : ''} pendiente${pendientes.length !== 1 ? 's' : ''} de aprobación`
+                      : 'Sin cotizaciones pendientes de aprobación'}
+                  </p>
+                </div>
+
+                {usuario?.rol !== 'autorizador1' && usuario?.rol !== 'admin' && (
+                  <div className="notification" style={{ marginBottom: '16px' }}>
+                    Solo el autorizador 1 puede aprobar o rechazar cotizaciones. Puedes consultar el listado.
+                  </div>
+                )}
+
+                {pendientesLoading && <div className="notification">Cargando pendientes...</div>}
+                {pendientesError && <div className="notification error">{pendientesError}</div>}
+
+                {rechazandoId && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                    <p style={{ fontWeight: '600', color: '#991b1b', marginBottom: '10px' }}>
+                      Rechazar cotización {pendientes.find(p => p.CotizacionId === rechazandoId)?.Folio}
+                    </p>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>
+                      Motivo de rechazo (opcional)
+                    </label>
+                    <textarea
+                      className="form-control"
+                      rows={3}
+                      value={comentarioRechazo}
+                      onChange={e => setComentarioRechazo(e.target.value)}
+                      placeholder="Describe el motivo del rechazo..."
+                      style={{ marginBottom: '10px', resize: 'vertical' }}
+                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="secondary-button"
+                        style={{ background: '#dc2626', color: '#fff', borderColor: '#dc2626' }}
+                        disabled={aprobandoId !== null}
+                        onClick={async () => {
+                          setAprobandoId(rechazandoId)
+                          try {
+                            await aprobarCotizacion(rechazandoId, false, usuario.nombre, comentarioRechazo)
+                            setRechazandoId(null)
+                            setComentarioRechazo('')
+                            await loadPendientes()
+                            await loadHistorial()
+                          } catch (err) {
+                            window.alert('Error al rechazar: ' + err.message)
+                          } finally {
+                            setAprobandoId(null)
+                          }
+                        }}
+                      >
+                        Confirmar rechazo
+                      </button>
+                      <button
+                        className="ghost-button"
+                        disabled={aprobandoId !== null}
+                        onClick={() => { setRechazandoId(null); setComentarioRechazo('') }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="table-wrap">
+                  <table className="participants-table">
+                    <thead>
+                      <tr>
+                        <th>Folio</th>
+                        <th>Cliente</th>
+                        <th>Curso</th>
+                        <th>Coach</th>
+                        <th>Total</th>
+                        <th>Creado por</th>
+                        <th>Fecha</th>
+                        {(usuario?.rol === 'autorizador1' || usuario?.rol === 'admin') && <th>Acciones</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendientes.length === 0 ? (
+                        <tr>
+                          <td colSpan={usuario?.rol === 'autorizador1' || usuario?.rol === 'admin' ? 8 : 7}
+                              style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
+                            No hay cotizaciones pendientes de aprobación.
+                          </td>
+                        </tr>
+                      ) : (
+                        pendientes.map((p) => (
+                          <tr key={p.CotizacionId}>
+                            <td style={{ fontWeight: '600', color: '#2563eb' }}>{p.Folio}</td>
+                            <td>{p.Cliente || '-'}</td>
+                            <td>{p.Curso || '-'}</td>
+                            <td>{p.Coach || '-'}</td>
+                            <td>{'$' + Number(p.TotalConGanancia || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                            <td>{p.CreadoPor || '-'}</td>
+                            <td>{p.FechaCreacion ? new Date(p.FechaCreacion).toLocaleDateString('es-MX') : '-'}</td>
+                            {(usuario?.rol === 'autorizador1' || usuario?.rol === 'admin') && (
+                              <td>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <button
+                                    className="primary-button"
+                                    style={{ padding: '4px 12px', fontSize: '13px', background: '#16a34a', borderColor: '#16a34a' }}
+                                    disabled={aprobandoId !== null || rechazandoId !== null}
+                                    onClick={async () => {
+                                      if (!window.confirm(`¿Aprobar la cotización ${p.Folio}?`)) return
+                                      setAprobandoId(p.CotizacionId)
+                                      try {
+                                        await aprobarCotizacion(p.CotizacionId, true, usuario.nombre, '')
+                                        await loadPendientes()
+                                        await loadHistorial()
+                                      } catch (err) {
+                                        window.alert('Error al aprobar: ' + err.message)
+                                      } finally {
+                                        setAprobandoId(null)
+                                      }
+                                    }}
+                                  >
+                                    {aprobandoId === p.CotizacionId ? '...' : 'Aprobar'}
+                                  </button>
+                                  <button
+                                    className="ghost-button"
+                                    style={{ padding: '4px 12px', fontSize: '13px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                    disabled={aprobandoId !== null || rechazandoId !== null}
+                                    onClick={() => { setRechazandoId(p.CotizacionId); setComentarioRechazo('') }}
+                                  >
+                                    Rechazar
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="table-footer">Total pendientes: {pendientes.length}</div>
+              </section>
               ) : (
             <NuevaCotizacion
               clientes={clientes}
