@@ -99,9 +99,9 @@ const SIDEBAR_CONFIG = [
     { vista: 'academia', label: 'Academia' },
   ]},
   { titulo: 'Administración', grupo: true, items: [
+    { vista: 'cotizacion', label: 'Cotizaciones' },
     { vista: 'ordenesCompra', label: 'Órdenes de Compra' },
     { vista: 'registroProveedores', label: 'Registro de Proveedores' },
-    { vista: 'cotizacion', label: 'Cotizaciones' },
   ]},
   { titulo: 'Catálogos', items: [
     { vista: 'cursos', label: 'Cursos' },
