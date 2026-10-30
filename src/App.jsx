@@ -77,7 +77,7 @@ const NAV_ICONS = {
   seguridad:            <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
   permisos:             <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
   dvir:                 <><path d="M9 11l3 3L22 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></>,
-  diesel:               <><path d="M3 22V8l9-6 9 6v14"/><path d="M12 2v20"/><path d="M3 12h18"/></>,
+  diesel:               <><path d="M3 22h12V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v18z"/><path d="M15 10h2a2 2 0 0 1 2 2v3a1 1 0 0 0 2 0v-5l-2-3"/><line x1="6" y1="9" x2="12" y2="9"/></>,
   formularios:          <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></>,
   academia:             <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></>,
   administracion:       <><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></>,
@@ -96,6 +96,10 @@ const SIDEBAR_CONFIG = [
     { vista: 'dashboard', label: 'Dashboard' },
     { vista: 'inicio', label: 'Inicio' },
   ]},
+  { titulo: 'Herramientas', items: [
+    { vista: 'seguridad', label: 'Módulo de Seguridad' },
+    { vista: 'academia', label: 'Academia' },
+  ]},
   { titulo: 'Mantenimiento', grupo: true, items: [
     { vista: 'mantenimiento', label: 'Órdenes de Mantenimiento' },
     { vista: 'inventario', label: 'Inventario' },
@@ -105,10 +109,6 @@ const SIDEBAR_CONFIG = [
     { vista: 'vehiculos', label: 'Vehículos' },
     { vista: 'dvir', label: 'Inspecciones DVIR' },
     { vista: 'diesel', label: 'Control de Diésel' },
-  ]},
-  { titulo: 'Herramientas', items: [
-    { vista: 'seguridad', label: 'Módulo de Seguridad' },
-    { vista: 'academia', label: 'Academia' },
   ]},
   { titulo: 'Administración', grupo: true, items: [
     { vista: 'cotizacion', label: 'Cotizaciones' },
