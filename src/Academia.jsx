@@ -659,7 +659,12 @@ export default function Academia({ usuario, activeTab }) {
 
       {/* ═══ TAB INSCRIPCIONES ═══ */}
       {tab === 'inscripciones' && (() => {
-        const cursosDisponibles = cursos.filter(c => c.Habilitado !== false && (c.Estado === 'Activo' || c.Estado === 'Próximo'))
+        const hoy = new Date(new Date().toDateString())
+        const cursosDisponibles = cursos.filter(c =>
+          c.Habilitado !== false &&
+          (c.Estado === 'Activo' || c.Estado === 'Próximo') &&
+          !(c.FechaFin && new Date(c.FechaFin) < hoy)
+        )
         const nombresUnicosInsc = [...new Set(cursosDisponibles.map(c => c.Nombre))].sort()
         const cursosDelNombreInsc = filtroNombreCursoInsc ? cursosDisponibles.filter(c => c.Nombre === filtroNombreCursoInsc) : []
         const generacionesInsc = cursosDelNombreInsc.map(c => ({ id: c.CursoAcademiaId, gen: c.Generacion || '', lugares: c.Capacidad - (c.Inscritos || 0) }))
@@ -2993,26 +2998,34 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                     <option>Completado</option>
                   </select>
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                  <div
-                    onClick={() => setHabilitado(v => !v)}
-                    style={{
-                      width: 40, height: 22, borderRadius: 11, background: habilitado ? '#2563eb' : '#d1d5db',
-                      position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
-                    }}
-                  >
-                    <div style={{
-                      position: 'absolute', top: 3, left: habilitado ? 20 : 3, width: 16, height: 16,
-                      borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
-                    }} />
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
-                    Habilitado para inscripciones
-                  </span>
-                  <span style={{ fontSize: 11, color: habilitado ? '#16a34a' : '#9ca3af', fontWeight: 600 }}>
-                    {habilitado ? 'Sí' : 'No'}
-                  </span>
-                </label>
+                {(() => {
+                  const cursoPasadoEdit = editandoCurso?.FechaFin && new Date(editandoCurso.FechaFin) < new Date(new Date().toDateString())
+                  return cursoPasadoEdit ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fca5a5' }}>
+                      <div style={{ width: 40, height: 22, borderRadius: 11, background: '#d1d5db', position: 'relative', flexShrink: 0, opacity: 0.6 }}>
+                        <div style={{ position: 'absolute', top: 3, left: 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: '#dc2626' }}>Inscripciones cerradas automáticamente — el curso ya finalizó</span>
+                    </div>
+                  ) : (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                      <div
+                        onClick={() => setHabilitado(v => !v)}
+                        style={{
+                          width: 40, height: 22, borderRadius: 11, background: habilitado ? '#2563eb' : '#d1d5db',
+                          position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
+                        }}
+                      >
+                        <div style={{
+                          position: 'absolute', top: 3, left: habilitado ? 20 : 3, width: 16, height: 16,
+                          borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+                        }} />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Habilitado para inscripciones</span>
+                      <span style={{ fontSize: 11, color: habilitado ? '#16a34a' : '#9ca3af', fontWeight: 600 }}>{habilitado ? 'Sí' : 'No'}</span>
+                    </label>
+                  )
+                })()}
               </>
             )}
 
