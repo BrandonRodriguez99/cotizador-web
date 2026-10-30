@@ -591,21 +591,27 @@ export default function Academia({ usuario, activeTab }) {
                         color: c.Estado === 'Activo' ? '#16a34a' : c.Estado === 'Próximo' ? '#2563eb' : '#6b7280',
                         border: '1px solid currentColor', opacity: 0.85,
                       }}>{c.Estado}</span>
-                      {!esCapacitacion && (
-                        <button
-                          onClick={e => handleToggleHabilitado(e, c)}
-                          title={c.Habilitado !== false ? 'Deshabilitar inscripciones' : 'Habilitar inscripciones'}
-                          style={{
-                            display: 'block', marginTop: 4, fontSize: 10, padding: '1px 8px', borderRadius: 999, cursor: 'pointer',
-                            border: '1px solid', fontWeight: 700,
-                            background: c.Habilitado !== false ? '#eff6ff' : '#fef2f2',
-                            borderColor: c.Habilitado !== false ? '#93c5fd' : '#fca5a5',
-                            color: c.Habilitado !== false ? '#2563eb' : '#dc2626',
-                          }}
-                        >
-                          {c.Habilitado !== false ? 'Abierto' : 'Cerrado'}
-                        </button>
-                      )}
+                      {!esCapacitacion && (() => {
+                        const cursoPasado = c.FechaFin && new Date(c.FechaFin) < new Date(new Date().toDateString())
+                        const estaAbierto = c.Habilitado !== false && !cursoPasado
+                        return (
+                          <button
+                            onClick={e => !cursoPasado && handleToggleHabilitado(e, c)}
+                            title={cursoPasado ? 'El curso ya finalizó' : estaAbierto ? 'Deshabilitar inscripciones' : 'Habilitar inscripciones'}
+                            style={{
+                              display: 'block', marginTop: 4, fontSize: 10, padding: '1px 8px', borderRadius: 999,
+                              cursor: cursoPasado ? 'default' : 'pointer',
+                              border: '1px solid', fontWeight: 700,
+                              background: estaAbierto ? '#eff6ff' : '#fef2f2',
+                              borderColor: estaAbierto ? '#93c5fd' : '#fca5a5',
+                              color: estaAbierto ? '#2563eb' : '#dc2626',
+                              opacity: cursoPasado ? 0.7 : 1,
+                            }}
+                          >
+                            {estaAbierto ? 'Abierto' : 'Cerrado'}
+                          </button>
+                        )
+                      })()}
                       {esCapacitacion && c.Habilitado === false && (
                         <span style={{ display: 'block', marginTop: 4, fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Sin inscripciones</span>
                       )}
