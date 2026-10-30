@@ -91,6 +91,8 @@ const GRUPO_ICONS = {
   'Mantenimiento': 'mantenimiento_grupo',
   'Formación': 'formacion_grupo',
   'Catálogos': 'catalogos_grupo',
+  'Seguridad': 'seguridad',
+  'Academia': 'academia',
 }
 
 const SIDEBAR_CONFIG = [
@@ -98,9 +100,26 @@ const SIDEBAR_CONFIG = [
     { vista: 'dashboard', label: 'Dashboard' },
     { vista: 'inicio', label: 'Inicio' },
   ]},
-  { titulo: 'Herramientas', items: [
-    { vista: 'seguridad', label: 'Módulo de Seguridad' },
-    { vista: 'academia', label: 'Academia' },
+  { titulo: 'Seguridad', grupo: true, items: [
+    { vista: 'seguridad', tab: 'dashboard',  label: 'Resumen' },
+    { vista: 'seguridad', tab: 'rondines',   label: 'Rondines' },
+    { vista: 'seguridad', tab: 'extintores', label: 'Extintores' },
+    { vista: 'seguridad', tab: 'visitas',    label: 'Visitas' },
+    { vista: 'seguridad', tab: 'acceso',     label: 'Acceso QR' },
+    { vista: 'seguridad', tab: 'asistencia', label: 'Asistencia' },
+    { vista: 'seguridad', tab: 'vehiculos',  label: 'Vehículos' },
+    { vista: 'seguridad', tab: 'catalogos',  label: 'Catálogos' },
+  ]},
+  { titulo: 'Academia', grupo: true, items: [
+    { vista: 'academia', tab: 'cursos',        label: 'Cursos' },
+    { vista: 'academia', tab: 'inscripciones', label: 'Inscripciones' },
+    { vista: 'academia', tab: 'asistencias',   label: 'Asistencias' },
+    { vista: 'academia', tab: 'solicitudes',   label: 'Solicitudes' },
+    { vista: 'academia', tab: 'historico',     label: 'Histórico' },
+    { vista: 'academia', tab: 'ubits',         label: 'Ubits' },
+    { vista: 'academia', tab: 'kardex',        label: 'Kardex' },
+    { vista: 'academia', tab: 'calendario',    label: 'Calendario' },
+    { vista: 'academia', tab: 'qr',            label: 'QR en Aula' },
   ]},
   { titulo: 'Mantenimiento', grupo: true, items: [
     { vista: 'mantenimiento', label: 'Órdenes de Mantenimiento' },
@@ -230,6 +249,8 @@ function App() {
     } catch { return new Set(['Administración']) }
   })
   const [cotizacionTab, setCotizacionTab] = useState('nueva')
+  const [academiaTab, setAcademiaTab] = useState(null)
+  const [seguridadTab, setSeguridadTab] = useState(null)
 
   function toggleGroup(titulo) {
     setExpandedGroups(prev => {
@@ -925,15 +946,29 @@ function App() {
                   </button>
                   {isOpen && sidebarExpanded && (
                     <div className="nav-group-children">
-                      {visibles.map(item => (
-                        <button key={item.vista} type="button"
-                          className={`nav-link nav-child${activeView === item.vista ? ' active' : ''}`}
-                          onClick={() => handleNavClick(item.vista)}
-                          title={item.label}>
-                          <NavIcon i={item.vista} />
-                          <span className="nav-label">{item.label}</span>
-                        </button>
-                      ))}
+                      {visibles.map((item, idx) => {
+                        const isTabItem = !!item.tab
+                        const isActive = isTabItem
+                          ? activeView === item.vista && (
+                              item.vista === 'academia' ? academiaTab === item.tab :
+                              item.vista === 'seguridad' ? seguridadTab === item.tab : false
+                            )
+                          : activeView === item.vista
+                        return (
+                          <button key={item.tab || item.vista + idx} type="button"
+                            className={`nav-link nav-child${isActive ? ' active' : ''}`}
+                            onClick={() => {
+                              if (item.vista === 'academia') { setAcademiaTab(item.tab); setActiveView('academia') }
+                              else if (item.vista === 'seguridad') { setSeguridadTab(item.tab); setActiveView('seguridad') }
+                              else handleNavClick(item.vista)
+                              setSidebarOpen(false)
+                            }}
+                            title={item.label}>
+                            {!isTabItem && <NavIcon i={item.vista} />}
+                            <span className="nav-label">{item.label}</span>
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -1171,7 +1206,7 @@ function App() {
         ) : activeView === 'registroProveedores' ? (
           <RegistroProveedores currentUser={usuario?.nombre} currentUserRol={usuario?.rol} />
         ) : activeView === 'seguridad' ? (
-          <Seguridad usuario={usuario} />
+          <Seguridad usuario={usuario} activeTab={seguridadTab} />
         ) : activeView === 'vehiculos' ? (
           <Seguridad usuario={usuario} soloVehiculos />
         ) : activeView === 'asistencia' ? (
@@ -1190,7 +1225,7 @@ function App() {
             <Formularios usuario={usuario} />
           </section>
         ) : activeView === 'academia' ? (
-          <Academia usuario={usuario} />
+          <Academia usuario={usuario} activeTab={academiaTab} />
         ) : activeView === 'cotizacion' ? (
             <div>
               {/* Barra de tabs — mismo estilo que Órdenes de Compra */}

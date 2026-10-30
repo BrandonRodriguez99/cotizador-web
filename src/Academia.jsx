@@ -83,12 +83,16 @@ function cursoLabel(c) {
   return c.Generacion ? `${c.Nombre} — ${c.Generacion}` : c.Nombre
 }
 
-export default function Academia({ usuario }) {
+export default function Academia({ usuario, activeTab }) {
   const esCapacitacion = usuario?.rol === 'capacitacion'
   const TABS = esCapacitacion
     ? TABS_ALL.filter(t => TABS_CAPACITACION.has(t.id))
     : TABS_ALL
-  const [tab, setTab] = useState(esCapacitacion ? 'inscripciones' : 'cursos')
+  const [tab, setTab] = useState(activeTab || (esCapacitacion ? 'inscripciones' : 'cursos'))
+
+  useEffect(() => {
+    if (activeTab && TABS.some(t => t.id === activeTab)) setTab(activeTab)
+  }, [activeTab])
   const [cursos, setCursos] = useState([])
   const [loading, setLoading] = useState(false)
   const [dashboard, setDashboard] = useState(null)

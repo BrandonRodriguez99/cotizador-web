@@ -80,7 +80,7 @@ function fmtDate(d) {
   return String(d).substring(0, 10)
 }
 
-export default function Seguridad({ usuario, soloVehiculos = false }) {
+export default function Seguridad({ usuario, soloVehiculos = false, activeTab }) {
   const rol        = usuario?.rol || ''
   const esAdmin    = rol === 'admin'
   const esSeguridad = rol === 'seguridad'
@@ -99,7 +99,11 @@ export default function Seguridad({ usuario, soloVehiculos = false }) {
   tabs.push({ id: 'vehiculos', label: 'Vehículos' })
   if ((esAdmin || esJefeSeg) && !soloVehiculos) tabs.push({ id: 'catalogos', label: 'Catálogos' })
 
-  const [tab, setTab] = useState(tabs[0]?.id || 'vehiculos')
+  const [tab, setTab] = useState(activeTab && tabs.some(t => t.id === activeTab) ? activeTab : (tabs[0]?.id || 'vehiculos'))
+
+  useEffect(() => {
+    if (activeTab && tabs.some(t => t.id === activeTab)) setTab(activeTab)
+  }, [activeTab])
 
   // ─── DASHBOARD ─────────────────────────────────────────────────────────────
   const [dash, setDash] = useState(null)
