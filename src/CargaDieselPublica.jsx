@@ -52,8 +52,10 @@ export default function CargaDieselPublica() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    if (!form.litros || !form.kmActual) { setError('Litros y KM son obligatorios'); return }
     if (!form.operadorNombre.trim()) { setError('El nombre del operador es obligatorio'); return }
+    if (!form.litros || !form.kmActual) { setError('Litros y KM son obligatorios'); return }
+    if (!form.folioTicket.trim()) { setError('El folio del ticket es obligatorio'); return }
+    if (!fotoUrl) { setError('La foto del ticket es obligatoria'); return }
 
     const vehiculo = vehiculos[form.vehiculoIdx]
     setSaving(true)
@@ -173,7 +175,7 @@ export default function CargaDieselPublica() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={lbl}>Folio ticket</label>
+              <label style={lbl}>Folio ticket *</label>
               <input style={inp} placeholder="89267" value={form.folioTicket} onChange={set('folioTicket')} />
             </div>
             <div>
@@ -184,7 +186,7 @@ export default function CargaDieselPublica() {
           </div>
 
           <div>
-            <label style={lbl}>Foto del ticket</label>
+            <label style={lbl}>Foto del ticket *</label>
             {fotoUrl && <img src={fotoUrl} alt="Ticket" style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />}
             <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFoto} />
             <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} style={{

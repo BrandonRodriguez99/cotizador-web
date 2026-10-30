@@ -67,6 +67,7 @@ export default function FormularioPublico() {
     if (!form) return
 
     const allPreguntas = (form.secciones || []).flatMap(s => s.preguntas || [])
+    if (!nombre.trim()) { alert('El nombre es obligatorio'); return }
     const missing = allPreguntas.filter(p => p.requerida && !valores[p.PreguntaId]?.toString().trim())
     if (missing.length) { alert(`Faltan ${missing.length} respuestas obligatorias`); return }
 
@@ -153,8 +154,8 @@ export default function FormularioPublico() {
         <form onSubmit={handleSubmit} style={{ padding: 24 }}>
           {/* Nombre del usuario */}
           <div style={{ marginBottom: 24 }}>
-            <label style={lbl}>Tu nombre</label>
-            <input style={inp} placeholder="Nombre (opcional)" value={nombre} onChange={e => setNombre(e.target.value)} />
+            <label style={lbl}>Tu nombre *</label>
+            <input style={inp} placeholder="Nombre completo" value={nombre} onChange={e => setNombre(e.target.value)} />
           </div>
 
           {(form.secciones || []).map((sec, si) => (

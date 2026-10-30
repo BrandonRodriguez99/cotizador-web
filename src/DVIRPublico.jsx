@@ -381,6 +381,17 @@ export default function DVIRPublico() {
     if (!vehiculoId) return 'Selecciona un vehículo'
     if (!tipoInspeccion) return 'Selecciona el tipo de inspección'
     if (conRemolque && !semirremolqueId) return 'Selecciona un semirremolque'
+    if (!odometro) return 'Ingresa la lectura del odómetro'
+    if (!ubicacion.trim()) return 'Ingresa la ubicación'
+    return null
+  }
+
+  function validarPaso2() {
+    const angulos = conRemolque
+      ? [...FOTOS_ANGULOS, ...FOTOS_REMOLQUE]
+      : FOTOS_ANGULOS
+    const faltantes = angulos.filter(a => !fotos[a.key])
+    if (faltantes.length > 0) return `Faltan ${faltantes.length} foto(s) por capturar`
     return null
   }
 
@@ -614,11 +625,11 @@ export default function DVIRPublico() {
               <input style={inputStyle} placeholder="Ej. 93AP7D"
                 value={matricula} onChange={e => setMatricula(e.target.value)} />
 
-              <label style={{ ...labelStyle, marginTop: '18px' }}>Odómetro (km)</label>
+              <label style={{ ...labelStyle, marginTop: '18px' }}>Odómetro (km) *</label>
               <input style={inputStyle} type="number" placeholder="Lectura actual"
                 value={odometro} onChange={e => setOdometro(e.target.value)} />
 
-              <label style={{ ...labelStyle, marginTop: '18px' }}>Ubicación</label>
+              <label style={{ ...labelStyle, marginTop: '18px' }}>Ubicación *</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input style={{ ...inputStyle, flex: 1 }} placeholder="Escribe o usa GPS"
                   value={ubicacion} onChange={e => setUbicacion(e.target.value)} />
@@ -673,7 +684,11 @@ export default function DVIRPublico() {
               </div>
             )}
 
-            <button onClick={() => { setError(''); setPaso(3) }} style={{
+            <button onClick={() => {
+              const err = validarPaso2()
+              if (err) { setError(err); return }
+              setError(''); setPaso(3)
+            }} style={{
               width: '100%', padding: '14px', background: '#f59e0b', color: '#fff',
               border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
             }}>Siguiente</button>
