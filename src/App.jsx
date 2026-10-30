@@ -1007,29 +1007,33 @@ function App() {
           })}
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="avatar">
+        <div className="sidebar-footer" style={!sidebarExpanded ? { justifyContent: 'center', gap: 0 } : {}}>
+          <div className="avatar" title={!sidebarExpanded ? (usuario?.nombre || '') : undefined}>
             {(usuario?.nombre || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
           </div>
-          <div className="sidebar-footer-info">
-            <p className="sidebar-user">{usuario?.nombre || ''}</p>
-            <span className="sidebar-role" style={{ textTransform: 'capitalize' }}>{usuario?.rol || ''}</span>
-          </div>
-          <button
-            type="button"
-            className="logout-btn"
-            onClick={handleLogout}
-            title="Cerrar sesión"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--muted)', fontSize: '18px', padding: '4px',
-              borderRadius: '6px', transition: 'color 0.2s',
-            }}
-            onMouseOver={e => e.currentTarget.style.color = 'var(--text-strong)'}
-            onMouseOut={e => e.currentTarget.style.color = 'var(--muted)'}
-          >
-            ⏻
-          </button>
+          {sidebarExpanded && (
+            <>
+              <div className="sidebar-footer-info">
+                <p className="sidebar-user">{usuario?.nombre || ''}</p>
+                <span className="sidebar-role" style={{ textTransform: 'capitalize' }}>{usuario?.rol || ''}</span>
+              </div>
+              <button
+                type="button"
+                className="logout-btn"
+                onClick={handleLogout}
+                title="Cerrar sesión"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--muted)', fontSize: '18px', padding: '4px',
+                  borderRadius: '6px', transition: 'color 0.2s',
+                }}
+                onMouseOver={e => e.currentTarget.style.color = 'var(--text-strong)'}
+                onMouseOut={e => e.currentTarget.style.color = 'var(--muted)'}
+              >
+                ⏻
+              </button>
+            </>
+          )}
         </div>
       </aside>
 
