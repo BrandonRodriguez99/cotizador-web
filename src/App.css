@@ -1028,9 +1028,10 @@ textarea.form-control {
   content: '';
   position: absolute;
   inset: 0;
-  background: url('/udat-sello-fondo.png') center center / 680px 680px no-repeat;
-  filter: invert(1) brightness(1.8);
-  opacity: 0.07;
+  background: url('/udat-sello-fondo.png') center center / 700px 700px no-repeat;
+  filter: invert(1);
+  opacity: 0.18;
+  mix-blend-mode: screen;
   pointer-events: none;
 }
 
