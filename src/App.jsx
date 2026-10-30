@@ -81,6 +81,14 @@ const NAV_ICONS = {
   formularios:          <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></>,
   academia:             <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></>,
   administracion:       <><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></>,
+  mantenimiento_grupo:  <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></>,
+  formacion_grupo:      <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></>,
+}
+
+const GRUPO_ICONS = {
+  'Administración': 'administracion',
+  'Mantenimiento': 'mantenimiento_grupo',
+  'Formación': 'formacion_grupo',
 }
 
 const SIDEBAR_CONFIG = [
@@ -88,13 +96,17 @@ const SIDEBAR_CONFIG = [
     { vista: 'dashboard', label: 'Dashboard' },
     { vista: 'inicio', label: 'Inicio' },
   ]},
-  { titulo: 'Herramientas', items: [
+  { titulo: 'Mantenimiento', grupo: true, items: [
     { vista: 'mantenimiento', label: 'Órdenes de Mantenimiento' },
     { vista: 'inventario', label: 'Inventario' },
+  ]},
+  { titulo: 'Formación', grupo: true, items: [
     { vista: 'asistencia', label: 'Asistencia' },
     { vista: 'vehiculos', label: 'Vehículos' },
     { vista: 'dvir', label: 'Inspecciones DVIR' },
     { vista: 'diesel', label: 'Control de Diésel' },
+  ]},
+  { titulo: 'Herramientas', items: [
     { vista: 'seguridad', label: 'Módulo de Seguridad' },
     { vista: 'academia', label: 'Academia' },
   ]},
@@ -212,7 +224,7 @@ function App() {
   const [expandedGroups, setExpandedGroups] = useState(() => {
     try {
       const raw = localStorage.getItem('siga_expanded_groups')
-      return new Set(raw ? JSON.parse(raw) : ['Administración'])
+      return new Set(raw ? JSON.parse(raw) : ['Administración', 'Mantenimiento', 'Formación'])
     } catch { return new Set(['Administración']) }
   })
   const [cotizacionTab, setCotizacionTab] = useState('nueva')
@@ -899,7 +911,7 @@ function App() {
                     onClick={() => toggleGroup(section.titulo)}
                     title={!sidebarExpanded ? section.titulo : undefined}
                   >
-                    <NavIcon i="administracion" />
+                    <NavIcon i={GRUPO_ICONS[section.titulo] || 'administracion'} />
                     <span className="nav-label">{section.titulo}</span>
                     <svg
                       className={`nav-group-chevron${isOpen ? ' open' : ''}`}
