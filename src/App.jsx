@@ -102,7 +102,6 @@ const SIDEBAR_CONFIG = [
     { vista: 'ordenesCompra', label: 'Órdenes de Compra' },
     { vista: 'registroProveedores', label: 'Registro de Proveedores' },
     { vista: 'cotizacion', label: 'Cotizaciones' },
-    { vista: 'aprobaciones', label: 'Aprobaciones' },
   ]},
   { titulo: 'Catálogos', items: [
     { vista: 'cursos', label: 'Cursos' },
