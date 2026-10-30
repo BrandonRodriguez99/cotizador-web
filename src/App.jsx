@@ -84,6 +84,21 @@ const NAV_ICONS = {
   mantenimiento_grupo:  <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></>,
   formacion_grupo:      <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></>,
   catalogos_grupo:      <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>,
+  // Seguridad sub-tabs
+  seg_resumen:          <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></>,
+  seg_rondines:         <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></>,
+  seg_extintores:       <><path d="M15 3h2a2 2 0 0 1 2 2v1"/><path d="M10 3H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8"/><path d="M10 3a2 2 0 0 0 0 4h4"/><line x1="12" y1="11" x2="12" y2="17"/></>,
+  seg_visitas:          <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></>,
+  seg_qr:               <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="3" y="3" width="2" height="2" fill="currentColor"/><rect x="14" y="3" width="2" height="2" fill="currentColor"/><rect x="3" y="14" width="2" height="2" fill="currentColor"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3M20 14v4"/></>,
+  seg_asistencia:       <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></>,
+  // Academia sub-tabs
+  ac_inscripciones:     <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></>,
+  ac_asistencias:       <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/></>,
+  ac_solicitudes:       <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></>,
+  ac_ubits:             <><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></>,
+  ac_kardex:            <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></>,
+  ac_calendario:        <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
+  ac_qr:                <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="3" y="3" width="2" height="2" fill="currentColor"/><rect x="14" y="3" width="2" height="2" fill="currentColor"/><rect x="3" y="14" width="2" height="2" fill="currentColor"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3M20 14v4"/></>,
 }
 
 const GRUPO_ICONS = {
@@ -101,25 +116,25 @@ const SIDEBAR_CONFIG = [
     { vista: 'inicio', label: 'Inicio' },
   ]},
   { titulo: 'Seguridad', grupo: true, items: [
-    { vista: 'seguridad', tab: 'dashboard',  label: 'Resumen' },
-    { vista: 'seguridad', tab: 'rondines',   label: 'Rondines' },
-    { vista: 'seguridad', tab: 'extintores', label: 'Extintores' },
-    { vista: 'seguridad', tab: 'visitas',    label: 'Visitas' },
-    { vista: 'seguridad', tab: 'acceso',     label: 'Acceso QR' },
-    { vista: 'seguridad', tab: 'asistencia', label: 'Asistencia' },
-    { vista: 'seguridad', tab: 'vehiculos',  label: 'Vehículos' },
-    { vista: 'seguridad', tab: 'catalogos',  label: 'Catálogos' },
+    { vista: 'seguridad', tab: 'dashboard',  label: 'Resumen',    icon: 'seg_resumen' },
+    { vista: 'seguridad', tab: 'rondines',   label: 'Rondines',   icon: 'seg_rondines' },
+    { vista: 'seguridad', tab: 'extintores', label: 'Extintores', icon: 'seg_extintores' },
+    { vista: 'seguridad', tab: 'visitas',    label: 'Visitas',    icon: 'seg_visitas' },
+    { vista: 'seguridad', tab: 'acceso',     label: 'Acceso QR',  icon: 'seg_qr' },
+    { vista: 'seguridad', tab: 'asistencia', label: 'Asistencia', icon: 'seg_asistencia' },
+    { vista: 'seguridad', tab: 'vehiculos',  label: 'Vehículos',  icon: 'vehiculos' },
+    { vista: 'seguridad', tab: 'catalogos',  label: 'Catálogos',  icon: 'catalogos_grupo' },
   ]},
   { titulo: 'Academia', grupo: true, items: [
-    { vista: 'academia', tab: 'cursos',        label: 'Cursos' },
-    { vista: 'academia', tab: 'inscripciones', label: 'Inscripciones' },
-    { vista: 'academia', tab: 'asistencias',   label: 'Asistencias' },
-    { vista: 'academia', tab: 'solicitudes',   label: 'Solicitudes' },
-    { vista: 'academia', tab: 'historico',     label: 'Histórico' },
-    { vista: 'academia', tab: 'ubits',         label: 'Ubits' },
-    { vista: 'academia', tab: 'kardex',        label: 'Kardex' },
-    { vista: 'academia', tab: 'calendario',    label: 'Calendario' },
-    { vista: 'academia', tab: 'qr',            label: 'QR en Aula' },
+    { vista: 'academia', tab: 'cursos',        label: 'Cursos',        icon: 'cursos' },
+    { vista: 'academia', tab: 'inscripciones', label: 'Inscripciones', icon: 'ac_inscripciones' },
+    { vista: 'academia', tab: 'asistencias',   label: 'Asistencias',   icon: 'ac_asistencias' },
+    { vista: 'academia', tab: 'solicitudes',   label: 'Solicitudes',   icon: 'ac_solicitudes' },
+    { vista: 'academia', tab: 'historico',     label: 'Histórico',     icon: 'historial' },
+    { vista: 'academia', tab: 'ubits',         label: 'Ubits',         icon: 'ac_ubits' },
+    { vista: 'academia', tab: 'kardex',        label: 'Kardex',        icon: 'ac_kardex' },
+    { vista: 'academia', tab: 'calendario',    label: 'Calendario',    icon: 'ac_calendario' },
+    { vista: 'academia', tab: 'qr',            label: 'QR en Aula',   icon: 'ac_qr' },
   ]},
   { titulo: 'Mantenimiento', grupo: true, items: [
     { vista: 'mantenimiento', label: 'Órdenes de Mantenimiento' },
@@ -964,7 +979,7 @@ function App() {
                               setSidebarOpen(false)
                             }}
                             title={item.label}>
-                            {!isTabItem && <NavIcon i={item.vista} />}
+                            <NavIcon i={item.icon || item.vista} />
                             <span className="nav-label">{item.label}</span>
                           </button>
                         )
