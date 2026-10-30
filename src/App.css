@@ -99,18 +99,24 @@ select {
   width: auto;
 }
 
-.sidebar.sidebar-collapsed .nav-link {
+.sidebar.sidebar-collapsed .nav-link,
+.sidebar.sidebar-collapsed .nav-group-header {
   justify-content: center;
   padding: 10px 0;
 }
 
-.sidebar.sidebar-collapsed.sidebar-hovered .nav-link {
+.sidebar.sidebar-collapsed.sidebar-hovered .nav-link,
+.sidebar.sidebar-collapsed.sidebar-hovered .nav-group-header {
   justify-content: flex-start;
   padding: 10px 14px;
 }
 
 .sidebar.sidebar-collapsed .nav-link svg {
   opacity: 1;
+}
+
+.sidebar.sidebar-collapsed:not(.sidebar-hovered) .nav-group-chevron {
+  display: none;
 }
 
 /* ── main-view shifts only on permanent collapse (not hover) ── */
