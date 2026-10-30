@@ -1018,7 +1018,7 @@ textarea.form-control {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+  background: #0b2341;
   padding: 16px;
 }
 
@@ -1045,7 +1045,7 @@ textarea.form-control {
 }
 
 .login-logo {
-  height: 68px;
+  height: 96px;
   width: auto;
   object-fit: contain;
 }

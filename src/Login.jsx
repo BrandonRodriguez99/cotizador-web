@@ -79,10 +79,7 @@ export default function Login({ onLogin }) {
     <div className="login-screen">
       <div className="login-card">
         <div className="login-brand">
-          <div className="login-brand-row">
-            <img src="/logo-udat.png" alt="UDAT" className="login-logo" />
-            <span className="login-brand-suffix">360</span>
-          </div>
+          <img src="/logo-siga.png" alt="SIGA" className="login-logo" />
         </div>
 
         {view === 'login' && (
