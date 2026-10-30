@@ -69,14 +69,13 @@ select {
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: center;
+  padding: 4px 0;
 }
 
 .sidebar-logo {
-  height: 28px;
+  height: 52px;
   width: auto;
-  filter: invert(1) brightness(5);
-  mix-blend-mode: screen;
 }
 
 .brand-name {

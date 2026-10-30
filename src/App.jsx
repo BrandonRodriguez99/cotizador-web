@@ -836,8 +836,7 @@ function App() {
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
       <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
         <div className="brand">
-          <img src="/logo-udat.png" alt="UDAT" className="sidebar-logo" />
-          <span className="brand-name">SIGA</span>
+          <img src="/logo-siga.svg" alt="SIGA" className="sidebar-logo" />
         </div>
 
         <nav className="sidebar-nav">
