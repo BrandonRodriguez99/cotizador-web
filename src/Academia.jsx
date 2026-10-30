@@ -18,6 +18,7 @@ import {
   getAcademiaAsistencias,
   registrarAsistenciaManual,
   getAcademiaHistorico,
+  eliminarRegistroHistorico,
   getAcademiaCalendario,
   searchParticipantes,
   getCursos,
@@ -85,6 +86,7 @@ function cursoLabel(c) {
 
 export default function Academia({ usuario, activeTab }) {
   const esCapacitacion = usuario?.rol === 'capacitacion'
+  const esAdmin = usuario?.rol === 'admin'
   const TABS = esCapacitacion
     ? TABS_ALL.filter(t => TABS_CAPACITACION.has(t.id))
     : TABS_ALL
@@ -1516,6 +1518,7 @@ export default function Academia({ usuario, activeTab }) {
                       <th style={{ textAlign: 'center' }}>Asistencia</th>
                       <th style={{ textAlign: 'center' }}>Horas</th>
                       <th style={{ textAlign: 'center' }}>Constancia</th>
+                      {esAdmin && <th style={{ width: 50 }}></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1566,6 +1569,33 @@ export default function Academia({ usuario, activeTab }) {
                               </span>
                             )}
                           </td>
+                          {esAdmin && (
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                title="Eliminar registro"
+                                onClick={async () => {
+                                  if (!window.confirm(`¿Eliminar el registro de ${r.NombreCompleto} del curso ${r.CursoNombre}? Esta acción no se puede deshacer.`)) return
+                                  try {
+                                    await eliminarRegistroHistorico(r.InscripcionId)
+                                    setHistoricoData(prev => prev.filter(x => x.InscripcionId !== r.InscripcionId))
+                                  } catch (err) {
+                                    alert('Error al eliminar: ' + (err.message || 'Error desconocido'))
+                                  }
+                                }}
+                                style={{
+                                  background: 'none', border: 'none', cursor: 'pointer',
+                                  color: '#dc2626', padding: '4px', borderRadius: 4,
+                                  fontSize: 14, lineHeight: 1,
+                                }}
+                                onMouseOver={e => e.currentTarget.style.background = '#fef2f2'}
+                                onMouseOut={e => e.currentTarget.style.background = 'none'}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                </svg>
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       )
                     })}
