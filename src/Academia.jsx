@@ -603,7 +603,7 @@ export default function Academia({ usuario, activeTab }) {
                             color: c.Habilitado !== false ? '#2563eb' : '#dc2626',
                           }}
                         >
-                          {c.Habilitado !== false ? '✓ Inscripciones ON' : '✗ Inscripciones OFF'}
+                          {c.Habilitado !== false ? 'Abierto' : 'Cerrado'}
                         </button>
                       )}
                       {esCapacitacion && c.Habilitado === false && (
