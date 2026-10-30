@@ -239,6 +239,77 @@ select {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* ── Grupo colapsable ── */
+.nav-group-header {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  transition: background 0.2s;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.nav-group-header:hover,
+.nav-group-header.has-active {
+  background: rgba(255, 255, 255, 0.08);
+}
+.nav-group-chevron {
+  margin-left: auto;
+  transition: transform 0.2s;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.nav-group-chevron.open {
+  transform: rotate(180deg);
+}
+.nav-group-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+.nav-link.nav-child {
+  padding-left: 32px;
+  font-size: 12.5px;
+}
+
+/* ── Tabs de Cotizaciones ── */
+.cotizacion-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 16px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.cotizacion-tab {
+  background: none;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  padding: 7px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cotizacion-tab:hover {
+  background: var(--surface-1);
+  color: var(--text-strong);
+}
+.cotizacion-tab.active {
+  background: var(--surface-1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .sidebar-footer {
   margin-top: auto;
   display: flex;

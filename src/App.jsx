@@ -80,6 +80,7 @@ const NAV_ICONS = {
   diesel:               <><path d="M3 22V8l9-6 9 6v14"/><path d="M12 2v20"/><path d="M3 12h18"/></>,
   formularios:          <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></>,
   academia:             <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></>,
+  administracion:       <><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></>,
 }
 
 const SIDEBAR_CONFIG = [
@@ -90,17 +91,18 @@ const SIDEBAR_CONFIG = [
   { titulo: 'Herramientas', items: [
     { vista: 'mantenimiento', label: 'Órdenes de Mantenimiento' },
     { vista: 'inventario', label: 'Inventario' },
-    { vista: 'ordenesCompra', label: 'Ordenes de Compra' },
-    { vista: 'registroProveedores', label: 'Registro de Proveedores' },
-    { vista: 'cotizacion', label: 'Nueva Cotización' },
-    { vista: 'historial', label: 'Historial de Cotizaciones' },
-    { vista: 'aprobaciones', label: 'Aprobaciones' },
     { vista: 'asistencia', label: 'Asistencia' },
     { vista: 'vehiculos', label: 'Vehículos' },
     { vista: 'dvir', label: 'Inspecciones DVIR' },
     { vista: 'diesel', label: 'Control de Diésel' },
     { vista: 'seguridad', label: 'Módulo de Seguridad' },
     { vista: 'academia', label: 'Academia' },
+  ]},
+  { titulo: 'Administración', grupo: true, items: [
+    { vista: 'ordenesCompra', label: 'Órdenes de Compra' },
+    { vista: 'registroProveedores', label: 'Registro de Proveedores' },
+    { vista: 'cotizacion', label: 'Cotizaciones' },
+    { vista: 'aprobaciones', label: 'Aprobaciones' },
   ]},
   { titulo: 'Catálogos', items: [
     { vista: 'cursos', label: 'Cursos' },
@@ -115,7 +117,7 @@ const SIDEBAR_CONFIG = [
   { titulo: 'App Móvil', items: [
     { vista: 'formularios', label: 'Formularios' },
   ]},
-  { titulo: 'Administración', items: [
+  { titulo: 'Sistema', items: [
     { vista: 'usuarios', label: 'Usuarios' },
     { vista: 'permisos', label: 'Permisos' },
   ]},
@@ -208,6 +210,23 @@ function App() {
     try { return localStorage.getItem('siga_sidebar_collapsed') === '1' } catch { return false }
   })
   const [sidebarHovered, setSidebarHovered] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState(() => {
+    try {
+      const raw = localStorage.getItem('siga_expanded_groups')
+      return new Set(raw ? JSON.parse(raw) : ['Administración'])
+    } catch { return new Set(['Administración']) }
+  })
+  const [cotizacionTab, setCotizacionTab] = useState('nueva')
+
+  function toggleGroup(titulo) {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(titulo)) next.delete(titulo)
+      else next.add(titulo)
+      try { localStorage.setItem('siga_expanded_groups', JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
 
   function toggleCollapse() {
     setSidebarCollapsed(c => {
@@ -515,7 +534,8 @@ function App() {
     resetCotizacionForm()
     setEditingCotizacion(null)
     await loadHistorial()
-    setActiveView('historial')
+    setCotizacionTab('historial')
+    setActiveView('cotizacion')
   }
 
   useEffect(() => {
@@ -867,6 +887,45 @@ function App() {
           {SIDEBAR_CONFIG.map(section => {
             const visibles = section.items.filter(item => vistas.has(item.vista))
             if (visibles.length === 0) return null
+
+            if (section.grupo) {
+              const isOpen = expandedGroups.has(section.titulo)
+              const hasActive = visibles.some(item => activeView === item.vista)
+              return (
+                <div key={section.titulo} className="nav-section">
+                  <button
+                    type="button"
+                    className={`nav-group-header${hasActive ? ' has-active' : ''}`}
+                    onClick={() => toggleGroup(section.titulo)}
+                    title={!sidebarExpanded ? section.titulo : undefined}
+                  >
+                    <NavIcon i="administracion" />
+                    <span className="nav-label">{section.titulo}</span>
+                    <svg
+                      className={`nav-group-chevron${isOpen ? ' open' : ''}`}
+                      width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    >
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                  {isOpen && sidebarExpanded && (
+                    <div className="nav-group-children">
+                      {visibles.map(item => (
+                        <button key={item.vista} type="button"
+                          className={`nav-link nav-child${activeView === item.vista ? ' active' : ''}`}
+                          onClick={() => handleNavClick(item.vista)}
+                          title={item.label}>
+                          <NavIcon i={item.vista} />
+                          <span className="nav-label">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
             return (
               <div key={section.titulo} className="nav-section">
                 <p className="nav-title">{section.titulo}</p>
@@ -1079,22 +1138,7 @@ function App() {
             onRejectOrden={handleRejectOrden}
             onDeleteOrden={handleDeleteOrden}
           />
-        ) : activeView === 'historial' ? (
-          <HistorialCotizaciones
-            cotizaciones={
-              ['admin', 'autorizador1', 'autorizador2'].includes(usuario?.rol)
-                ? cotizaciones
-                : cotizaciones.filter(c => c.CreadoPor === creadoPor)
-            }
-            loading={cotizacionesLoading}
-            error={cotizacionesError}
-            onVerCotizacion={loadDetallesCotizacion}
-            onEditarCotizacion={handleEditarCotizacion}
-            onDeleteCotizacion={handleDeleteCotizacion}
-            currentUser={creadoPor}
-            currentUserRol={usuario?.rol}
-          />
-          ) : activeView === 'mantenimiento' ? (
+        ) : activeView === 'mantenimiento' ? (
           <OrdenesMantenimiento
             currentUser={creadoPor}
             currentUserRol={usuario?.rol}
@@ -1278,7 +1322,40 @@ function App() {
               </div>
               <div className="table-footer">Total pendientes: {pendientes.length}</div>
             </section>
-          ) : (
+          ) : activeView === 'cotizacion' ? (
+            <div>
+              <div className="cotizacion-tabs">
+                <button
+                  type="button"
+                  className={`cotizacion-tab${cotizacionTab === 'nueva' ? ' active' : ''}`}
+                  onClick={() => setCotizacionTab('nueva')}
+                >
+                  Nueva Cotización
+                </button>
+                <button
+                  type="button"
+                  className={`cotizacion-tab${cotizacionTab === 'historial' ? ' active' : ''}`}
+                  onClick={() => { setCotizacionTab('historial'); loadHistorial() }}
+                >
+                  Historial
+                </button>
+              </div>
+              {cotizacionTab === 'historial' ? (
+                <HistorialCotizaciones
+                  cotizaciones={
+                    ['admin', 'autorizador1', 'autorizador2'].includes(usuario?.rol)
+                      ? cotizaciones
+                      : cotizaciones.filter(c => c.CreadoPor === creadoPor)
+                  }
+                  loading={cotizacionesLoading}
+                  error={cotizacionesError}
+                  onVerCotizacion={loadDetallesCotizacion}
+                  onEditarCotizacion={cotiz => { handleEditarCotizacion(cotiz); setCotizacionTab('nueva') }}
+                  onDeleteCotizacion={handleDeleteCotizacion}
+                  currentUser={creadoPor}
+                  currentUserRol={usuario?.rol}
+                />
+              ) : (
             <NuevaCotizacion
               clientes={clientes}
               cursos={cursos}
@@ -1329,7 +1406,9 @@ function App() {
               initialConcepts={editingCotizacion?.initialConcepts ?? []}
               onSaved={handleCotizacionSaved}
             />
-          )}
+              )}
+            </div>
+          ) : null}
       </main>
 
       <CatalogFormModal
