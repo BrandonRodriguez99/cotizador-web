@@ -1017,6 +1017,7 @@ function App() {
           </div>
           <button
             type="button"
+            className="logout-btn"
             onClick={handleLogout}
             title="Cerrar sesión"
             style={{
