@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 160" width="420" height="160">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F5921E"/>
+      <stop offset="100%" style="stop-color:#F0C830"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon: four rounded squares in a 2x2 grid -->
+  <g transform="translate(32, 28)">
+    <rect x="0" y="0" width="44" height="44" rx="9" fill="#1A2044"/>
+    <rect x="52" y="0" width="44" height="44" rx="9" fill="url(#g1)"/>
+    <rect x="0" y="52" width="44" height="44" rx="9" fill="url(#g1)"/>
+    <rect x="52" y="52" width="44" height="44" rx="9" fill="#1A2044"/>
+    <circle cx="48" cy="48" r="7" fill="#F5921E"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="175" y="100" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="82" font-weight="700" fill="#1A2044" letter-spacing="5">SIGA</text>
+</svg>
