@@ -87,26 +87,31 @@ export default function Login({ onLogin }) {
 
         {view === 'login' && (
           <form onSubmit={handleLogin} className="login-form">
-            <h2>Iniciar sesión</h2>
             {error && <p className="login-error">{error}</p>}
-            <div className="form-field">
-              <label>Correo electrónico</label>
+            <div className="login-input-wrap">
+              <svg className="login-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0b2341" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
               <input
+                className="login-input-icon-field"
                 type="email"
                 value={correo}
                 onChange={e => setCorreo(e.target.value)}
-                placeholder="tu@correo.com"
+                placeholder="Correo electrónico"
                 required
                 autoFocus
               />
             </div>
-            <div className="form-field">
-              <label>Contraseña</label>
+            <div className="login-input-wrap">
+              <svg className="login-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0b2341" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
               <input
+                className="login-input-icon-field"
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Contraseña"
                 required
               />
             </div>

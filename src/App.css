@@ -1045,17 +1045,49 @@ textarea.form-control {
 }
 
 .login-logo {
-  height: 88px;
+  height: 110px;
   width: auto;
   object-fit: contain;
 }
 
 .login-brand-name {
-  font-size: 52px;
+  font-size: 64px;
   font-weight: 800;
   color: #0b2341;
   letter-spacing: 0.04em;
   line-height: 1;
+}
+
+.login-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 14px;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.login-input-icon-field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px 12px 44px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--text-strong);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  font-family: inherit;
+}
+
+.login-input-icon-field:focus {
+  border-color: #0b2341;
+  box-shadow: 0 0 0 3px rgba(11, 35, 65, 0.1);
 }
 
 .login-brand-suffix {
