@@ -202,7 +202,7 @@ export default function Academia({ usuario, activeTab }) {
   function loadHistorico() {
     setLoadingHistorico(true)
     getAcademiaHistorico()
-      .then(d => setHistoricoData(d))
+      .then(d => setHistoricoData(d.filter(r => r.InscripcionActiva !== false && r.InscripcionActiva !== 0)))
       .catch(console.error)
       .finally(() => setLoadingHistorico(false))
   }
@@ -2144,9 +2144,12 @@ export default function Academia({ usuario, activeTab }) {
             ).slice(0, 8)
           : []
 
-        // Cursos del empleado seleccionado
+        // Cursos del empleado seleccionado (excluye bajas — registros eliminados)
         const cursosEmpleado = kardexEmpleado
-          ? historicoData.filter(r => String(r.NumeroEmpleado) === String(kardexEmpleado.NumeroEmpleado))
+          ? historicoData.filter(r =>
+              String(r.NumeroEmpleado) === String(kardexEmpleado.NumeroEmpleado) &&
+              r.InscripcionActiva !== false && r.InscripcionActiva !== 0
+            )
           : []
 
         const getEstado = r => {
