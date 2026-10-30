@@ -1064,10 +1064,10 @@ textarea.form-control {
 }
 
 .login-brand-name {
-  font-size: 64px;
+  font-size: 80px;
   font-weight: 800;
   color: #0b2341;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   line-height: 1;
 }
 
