@@ -1045,13 +1045,13 @@ textarea.form-control {
 }
 
 .login-logo {
-  height: 64px;
+  height: 88px;
   width: auto;
   object-fit: contain;
 }
 
 .login-brand-name {
-  font-size: 36px;
+  font-size: 52px;
   font-weight: 800;
   color: #0b2341;
   letter-spacing: 0.04em;
