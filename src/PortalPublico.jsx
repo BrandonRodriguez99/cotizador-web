@@ -1,7 +1,8 @@
 const ICONS = {
   dvir: <><path d="M9 11l3 3L22 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></>,
   formularios: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></>,
-  diesel: <><path d="M3 22V8l9-6 9 6v14"/><path d="M12 2v20"/><path d="M3 12h18"/></>,
+  diesel: <><rect x="2" y="6" width="13" height="16" rx="2"/><path d="M6 6V4a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v2"/><path d="M2 12h13"/><path d="M19 10l2 2v5a2 2 0 0 1-2 2h0"/><path d="M15 10h4"/></>,
+  evaluaciones: <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></>,
 }
 
 function Icon({ name, color, size = 28 }) {
@@ -39,6 +40,15 @@ export default function PortalPublico() {
       iconName: 'diesel',
       color: '#f59e0b',
     },
+    {
+      title: 'Mis Evaluaciones',
+      subtitle: 'Evaluaciones de desempeño',
+      desc: 'Consulta y completa tus evaluaciones asignadas.',
+      href: 'https://udat.sip360.app/aplicacion/mis-evaluaciones',
+      iconName: 'evaluaciones',
+      color: '#10b981',
+      external: true,
+    },
   ]
 
   return (
@@ -71,7 +81,9 @@ export default function PortalPublico() {
         width: '100%', maxWidth: 420,
       }}>
         {cards.map(c => (
-          <a key={c.href} href={c.href} style={{
+          <a key={c.href} href={c.href}
+          {...(c.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+          style={{
             textDecoration: 'none', color: 'inherit',
             background: '#1e293b', borderRadius: 16,
             border: '1px solid #334155',
