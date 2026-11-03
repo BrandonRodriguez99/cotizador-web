@@ -39,6 +39,7 @@ const SECCIONES = [
     { id: 'dvir', label: 'DVIR' },
     { id: 'diesel', label: 'Diésel' },
     { id: 'academia', label: 'Academia' },
+    { id: 'cincos', label: 'Lean 5S' },
   ]},
   { titulo: 'Catálogos', vistas: [
     { id: 'cursos', label: 'Cursos' },
