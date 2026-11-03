@@ -22,12 +22,26 @@ const ESTADOS = [
   { value: 'evaluar', label: 'Evaluar', color: '#6366f1' },
 ]
 
+const SvgIcon = ({ d, color = 'currentColor', size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    {typeof d === 'string' ? <path d={d} /> : d}
+  </svg>
+)
+
+const ICON_PATHS = {
+  eliminar: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
+  reparar: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></>,
+  red_tag: <><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>,
+  reubicar: <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
+  mantener: <><polyline points="20 6 9 17 4 12"/></>,
+}
+
 const ACCIONES_MAP = {
-  eliminar: { label: 'Eliminar', icon: '🗑️', color: '#dc2626', bg: '#fee2e2' },
-  reparar: { label: 'Reparar', icon: '🔧', color: '#d97706', bg: '#fef3c7' },
-  red_tag: { label: 'Red Tag', icon: '🏷️', color: '#2563eb', bg: '#dbeafe' },
-  reubicar: { label: 'Reubicar', icon: '📦', color: '#7c3aed', bg: '#ede9fe' },
-  mantener: { label: 'Mantener', icon: '✅', color: '#16a34a', bg: '#dcfce7' },
+  eliminar: { label: 'Eliminar', icon: ICON_PATHS.eliminar, color: '#dc2626', bg: '#fee2e2' },
+  reparar: { label: 'Reparar', icon: ICON_PATHS.reparar, color: '#d97706', bg: '#fef3c7' },
+  red_tag: { label: 'Red Tag', icon: ICON_PATHS.red_tag, color: '#2563eb', bg: '#dbeafe' },
+  reubicar: { label: 'Reubicar', icon: ICON_PATHS.reubicar, color: '#7c3aed', bg: '#ede9fe' },
+  mantener: { label: 'Mantener', icon: ICON_PATHS.mantener, color: '#16a34a', bg: '#dcfce7' },
 }
 
 function calcularAccionRecomendada(clasificacion, frecuencia, estado) {
@@ -214,6 +228,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editId, setEditId] = useState(null)
+  const [detalleElemento, setDetalleElemento] = useState(null)
   const fileRef = useRef(null)
 
   const loadElementos = async () => {
@@ -438,9 +453,9 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                     return (
                       <tr key={el.ElementoId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={tdStyle}>
-                          {el.Foto ? <img src={el.Foto} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} /> : <span style={{ color: '#cbd5e1' }}>—</span>}
+                          {el.Foto ? <img src={el.Foto} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, cursor: 'pointer' }} onClick={() => setDetalleElemento(el)} /> : <span style={{ color: '#cbd5e1' }}>—</span>}
                         </td>
-                        <td style={{ ...tdStyle, fontWeight: 500 }}>{el.Nombre}</td>
+                        <td style={{ ...tdStyle, fontWeight: 500, cursor: 'pointer', color: '#2563eb' }} onClick={() => setDetalleElemento(el)}>{el.Nombre}</td>
                         <td style={tdStyle}><span style={{ fontSize: 12, color: '#6b7280' }}>{el.Terminal}</span><br />{el.Area}</td>
                         <td style={tdStyle}>{el.Cantidad}</td>
                         <td style={tdStyle}>
@@ -449,8 +464,8 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                         <td style={tdStyle}>{FRECUENCIAS.find(f => f.value === el.FrecuenciaUso)?.label}</td>
                         <td style={tdStyle}><span style={{ color: est.color, fontWeight: 500, fontSize: 13 }}>{est.label}</span></td>
                         <td style={tdStyle}>
-                          <span style={{ background: acc.bg, color: acc.color, padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
-                            {acc.icon} {acc.label}
+                          <span style={{ background: acc.bg, color: acc.color, padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <SvgIcon d={acc.icon} color={acc.color} size={14} /> {acc.label}
                           </span>
                         </td>
                         <td style={tdStyle}>
@@ -475,8 +490,8 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                 if (!count) return null
                 const m = ACCIONES_MAP[tipo]
                 return (
-                  <div key={tipo} style={{ background: m.bg, color: m.color, padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
-                    {m.icon} {m.label}: {count}
+                  <div key={tipo} style={{ background: m.bg, color: m.color, padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <SvgIcon d={m.icon} color={m.color} size={14} /> {m.label}: {count}
                   </div>
                 )
               })}
@@ -492,6 +507,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
           )}
         </>
       )}
+      <DetalleElementoModal elemento={detalleElemento} areas={areas} onClose={() => setDetalleElemento(null)} />
     </div>
   )
 }
@@ -503,6 +519,7 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
   const [loading, setLoading] = useState(true)
   const [areaFiltro, setAreaFiltro] = useState('')
   const [dashboard, setDashboard] = useState(null)
+  const [lightboxSrc, setLightboxSrc] = useState(null)
 
   const loadAcciones = async () => {
     setLoading(true)
@@ -532,9 +549,9 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
   const pctTab = acciones.length ? Math.round(completados.length / acciones.length * 100) : 0
 
   const tabs = [
-    { key: 'eliminar', label: 'Eliminar', icon: '🗑️', color: '#dc2626' },
-    { key: 'reparar', label: 'Reparar', icon: '🔧', color: '#d97706' },
-    { key: 'red_tag', label: 'Red Tags', icon: '🏷️', color: '#2563eb' },
+    { key: 'eliminar', label: 'Eliminar', icon: ICON_PATHS.eliminar, color: '#dc2626' },
+    { key: 'reparar', label: 'Reparar', icon: ICON_PATHS.reparar, color: '#d97706' },
+    { key: 'red_tag', label: 'Red Tags', icon: ICON_PATHS.red_tag, color: '#2563eb' },
   ]
 
   // Dashboard KPIs
@@ -571,7 +588,10 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
               borderBottom: tab === t.key ? `3px solid ${t.color}` : '3px solid transparent',
               marginBottom: -2,
             }}>
-            {t.icon} {t.label} ({acciones.length > 0 || tab === t.key ? filtered.length : '...'})
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <SvgIcon d={t.icon} color={tab === t.key ? t.color : '#6b7280'} size={16} />
+              {t.label} ({acciones.length > 0 || tab === t.key ? filtered.length : '...'})
+            </span>
           </button>
         ))}
       </div>
@@ -602,7 +622,7 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
             <>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>Pendientes ({pendientes.length})</div>
               {pendientes.map(a => (
-                <AccionCard key={a.AccionId} accion={a} onStatusChange={handleStatusChange} />
+                <AccionCard key={a.AccionId} accion={a} onStatusChange={handleStatusChange} onFotoClick={setLightboxSrc} />
               ))}
             </>
           )}
@@ -613,7 +633,7 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
                 Completados ({completados.length})
               </div>
               {completados.map(a => (
-                <AccionCard key={a.AccionId} accion={a} onStatusChange={handleStatusChange} />
+                <AccionCard key={a.AccionId} accion={a} onStatusChange={handleStatusChange} onFotoClick={setLightboxSrc} />
               ))}
             </>
           )}
@@ -648,11 +668,81 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
           )}
         </>
       )}
+      <FotoLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
     </div>
   )
 }
 
-function AccionCard({ accion: a, onStatusChange }) {
+function FotoLightbox({ src, onClose }) {
+  if (!src) return null
+  return (
+    <div onClick={onClose} style={overlayStyle}>
+      <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+        <img src={src} alt="" style={{ maxWidth: '90vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,.5)' }} />
+        <button onClick={onClose} style={{ position: 'absolute', top: -12, right: -12, width: 32, height: 32, borderRadius: '50%', border: 'none', background: '#1e293b', color: '#f1f5f9', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+      </div>
+    </div>
+  )
+}
+
+function DetalleElementoModal({ elemento: el, areas, onClose }) {
+  const [lightboxSrc, setLightboxSrc] = useState(null)
+  if (!el) return null
+  const acc = ACCIONES_MAP[el.AccionRecomendada] || {}
+  const clas = CLASIFICACIONES.find(c => c.value === el.Clasificacion) || {}
+  const est = ESTADOS.find(e => e.value === el.Estado) || {}
+  const freq = FRECUENCIAS.find(f => f.value === el.FrecuenciaUso)
+
+  return (
+    <div style={overlayStyle} onClick={onClose}>
+      <div style={{ ...modalStyle, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+        {el.Foto && (
+          <img src={el.Foto} alt="" onClick={() => setLightboxSrc(el.Foto)}
+            style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: '12px 12px 0 0', marginTop: -24, marginLeft: -24, marginRight: -24, width: 'calc(100% + 48px)', cursor: 'pointer' }} />
+        )}
+        <h3 style={{ margin: el.Foto ? '16px 0 4px' : '0 0 4px', fontSize: 20 }}>{el.Nombre}</h3>
+        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>{el.Terminal} — {el.Area}</div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>CLASIFICACIÓN</div>
+            <span style={{ background: clas.bg, color: clas.color, padding: '3px 10px', borderRadius: 12, fontSize: 13, fontWeight: 600 }}>{clas.label}</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>CANTIDAD</div>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>{el.Cantidad}</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>FRECUENCIA</div>
+            <span style={{ fontSize: 14 }}>{freq?.label || el.FrecuenciaUso}</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>ESTADO</div>
+            <span style={{ color: est.color, fontWeight: 500, fontSize: 14 }}>{est.label}</span>
+          </div>
+        </div>
+
+        {acc.label && (
+          <div style={{ background: acc.bg, border: `1px solid ${acc.color}20`, borderRadius: 8, padding: 12, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <SvgIcon d={acc.icon} color={acc.color} size={18} />
+            <span style={{ fontWeight: 600, color: acc.color, fontSize: 14 }}>Acción: {acc.label}</span>
+          </div>
+        )}
+
+        {el.FechaRegistro && (
+          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Registrado: {new Date(el.FechaRegistro).toLocaleDateString('es-MX')}</div>
+        )}
+
+        <div style={{ textAlign: 'right', marginTop: 16 }}>
+          <button onClick={onClose} style={{ ...btnSmall, background: '#f1f5f9' }}>Cerrar</button>
+        </div>
+        <FotoLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      </div>
+    </div>
+  )
+}
+
+function AccionCard({ accion: a, onStatusChange, onFotoClick }) {
   const isCompleted = a.Estatus === 'completado'
   return (
     <div style={{
@@ -669,7 +759,7 @@ function AccionCard({ accion: a, onStatusChange }) {
         }}>
         {isCompleted && '✓'}
       </button>
-      {a.Foto && <img src={a.Foto} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />}
+      {a.Foto && <img src={a.Foto} alt="" onClick={() => onFotoClick?.(a.Foto)} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, flexShrink: 0, cursor: 'pointer' }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 500, fontSize: 14, textDecoration: isCompleted ? 'line-through' : 'none' }}>{a.Descripcion || a.Elemento}</div>
         <div style={{ fontSize: 12, color: '#6b7280' }}>{a.Terminal} — {a.Area} · Cant: {a.Cantidad}</div>
