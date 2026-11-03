@@ -890,7 +890,10 @@ export default function CincoS({ usuario }) {
           <button onClick={() => { setProyectoActivo(null); setVista('inicio') }}
             style={{ ...btnSmall, background: '#f1f5f9' }}>← Proyectos</button>
           <button onClick={() => setVista('edit')}
-            style={{ ...btnSmall, background: '#dbeafe', color: '#1d4ed8' }}>✏️ Editar Proyecto</button>
+            style={{ ...btnSmall, background: '#dbeafe', color: '#1d4ed8', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Editar Proyecto
+          </button>
         </div>
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ margin: '0 0 4px', fontSize: 20 }}>Proyecto 5S — {proyectoActivo.Empresa}</h2>
@@ -910,7 +913,9 @@ export default function CincoS({ usuario }) {
             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+            <div style={{ marginBottom: 8 }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+            </div>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Implementar 1S</div>
             <div style={{ fontSize: 13, opacity: 0.9 }}>Inventario, clasificación y ejecución de acciones</div>
           </div>
@@ -918,13 +923,15 @@ export default function CincoS({ usuario }) {
           <div
             onClick={() => setVista('acciones')}
             style={{
-              background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)', borderRadius: 12, padding: 28, cursor: 'pointer',
+              background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)', borderRadius: 12, padding: 28, cursor: 'pointer',
               color: '#fff', transition: 'transform .15s',
             }}
             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
+            <div style={{ marginBottom: 8 }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="17" x2="8" y2="11"/><line x1="12" y1="17" x2="12" y2="7"/><line x1="16" y1="17" x2="16" y2="13"/></svg>
+            </div>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Seguimiento / Dashboard</div>
             <div style={{ fontSize: 13, opacity: 0.9 }}>Progreso del Champion y tablero de indicadores</div>
           </div>
