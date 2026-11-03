@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  getCincoSProyectos, getCincoSProyecto, createCincoSProyecto,
+  getCincoSProyectos, getCincoSProyecto, createCincoSProyecto, updateCincoSProyecto,
   getCincoSAreas, getCincoSElementos, createCincoSElemento, updateCincoSElemento, deleteCincoSElemento,
-  getCincoSAcciones, updateCincoSAccion, getCincoSDashboard, uploadFoto5S
+  getCincoSAcciones, updateCincoSAccion, getCincoSDashboard, uploadFoto5S, getCincoSUsuarios
 } from './api'
 
 const CLASIFICACIONES = [
@@ -52,18 +52,45 @@ function getInstruccion(clasificacion, frecuencia, estado) {
   return instrucciones[accion]
 }
 
-// ─── Setup Component ────────────────────────────────────────────────────────
-function SetupProyecto({ onCreated }) {
+// ─── Setup Component (create + edit) ────────────────────────────────────────
+function SetupProyecto({ onCreated, editProyectoId }) {
   const [empresa, setEmpresa] = useState('')
   const [gerente, setGerente] = useState('')
   const [encargado, setEncargado] = useState('')
-  const [terminales, setTerminales] = useState([{ nombre: '', areas: [{ nombre: '', champion: '' }] }])
+  const [terminales, setTerminales] = useState([{ nombre: '', areas: [{ nombre: '', champion: '', championId: null }] }])
+  const [usuarios, setUsuarios] = useState([])
   const [saving, setSaving] = useState(false)
+  const [loadingEdit, setLoadingEdit] = useState(false)
 
-  const addTerminal = () => setTerminales([...terminales, { nombre: '', areas: [{ nombre: '', champion: '' }] }])
+  useEffect(() => {
+    getCincoSUsuarios().then(setUsuarios).catch(() => {})
+    if (editProyectoId) {
+      setLoadingEdit(true)
+      getCincoSProyecto(editProyectoId).then(p => {
+        setEmpresa(p.Empresa || '')
+        setGerente(p.Gerente || '')
+        setEncargado(p.Encargado || '')
+        if (p.terminales?.length) {
+          setTerminales(p.terminales.map(t => ({
+            terminalId: t.TerminalId,
+            nombre: t.Nombre,
+            areas: (t.areas || []).map(a => ({
+              areaId: a.AreaId,
+              nombre: a.Nombre,
+              champion: a.Champion || '',
+              championId: a.ChampionId || null,
+            }))
+          })))
+        }
+      }).catch(e => alert('Error cargando proyecto: ' + e.message))
+        .finally(() => setLoadingEdit(false))
+    }
+  }, [editProyectoId])
+
+  const addTerminal = () => setTerminales([...terminales, { nombre: '', areas: [{ nombre: '', champion: '', championId: null }] }])
   const addArea = (ti) => {
     const t = [...terminales]
-    t[ti].areas.push({ nombre: '', champion: '' })
+    t[ti].areas.push({ nombre: '', champion: '', championId: null })
     setTerminales(t)
   }
   const removeTerminal = (ti) => setTerminales(terminales.filter((_, i) => i !== ti))
@@ -84,17 +111,26 @@ function SetupProyecto({ onCreated }) {
     }
     setSaving(true)
     try {
-      const r = await createCincoSProyecto({ empresa, gerente, encargado, terminales })
-      onCreated(r.ProyectoId)
+      if (editProyectoId) {
+        await updateCincoSProyecto(editProyectoId, { empresa, gerente, encargado, terminales })
+        onCreated(editProyectoId)
+      } else {
+        const r = await createCincoSProyecto({ empresa, gerente, encargado, terminales })
+        onCreated(r.ProyectoId)
+      }
     } catch (err) {
       alert('Error: ' + err.message)
     }
     setSaving(false)
   }
 
+  if (loadingEdit) return <div style={{ padding: 20 }}>Cargando proyecto...</div>
+
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: 700 }}>
-      <h2 style={{ margin: '0 0 4px', fontSize: 20 }}>Datos Generales del Proyecto 5S</h2>
+      <h2 style={{ margin: '0 0 4px', fontSize: 20 }}>
+        {editProyectoId ? 'Editar Proyecto 5S' : 'Datos Generales del Proyecto 5S'}
+      </h2>
       <p style={{ color: '#6b7280', margin: '0 0 20px', fontSize: 13 }}>
         Configure la empresa, terminales y áreas. Este proyecto podrá ser replicado para otras empresas.
       </p>
@@ -131,8 +167,20 @@ function SetupProyecto({ onCreated }) {
             <div key={ai} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, marginBottom: 8, paddingLeft: 16 }}>
               <input style={inputStyle} value={a.nombre} placeholder={`Área ${ai + 1}`}
                 onChange={e => { const ts = [...terminales]; ts[ti].areas[ai].nombre = e.target.value; setTerminales(ts) }} />
-              <input style={inputStyle} value={a.champion} placeholder="Champion (opcional)"
-                onChange={e => { const ts = [...terminales]; ts[ti].areas[ai].champion = e.target.value; setTerminales(ts) }} />
+              <select style={inputStyle} value={a.championId || ''}
+                onChange={e => {
+                  const ts = [...terminales]
+                  const uid = e.target.value ? parseInt(e.target.value) : null
+                  const user = usuarios.find(u => u.UsuarioId === uid)
+                  ts[ti].areas[ai].championId = uid
+                  ts[ti].areas[ai].champion = user ? user.Nombre : ''
+                  setTerminales(ts)
+                }}>
+                <option value="">Sin Champion</option>
+                {usuarios.map(u => (
+                  <option key={u.UsuarioId} value={u.UsuarioId}>{u.Nombre}</option>
+                ))}
+              </select>
               {t.areas.length > 1 && (
                 <button type="button" onClick={() => removeArea(ti, ai)}
                   style={{ ...btnSmall, background: '#fee2e2', color: '#dc2626' }}>✕</button>
@@ -149,7 +197,7 @@ function SetupProyecto({ onCreated }) {
       <div>
         <button type="submit" disabled={saving}
           style={{ ...btnPrimary, width: '100%' }}>
-          {saving ? 'Guardando...' : 'Crear Proyecto 5S'}
+          {saving ? 'Guardando...' : editProyectoId ? 'Guardar Cambios' : 'Crear Proyecto 5S'}
         </button>
       </div>
     </form>
@@ -670,7 +718,7 @@ export default function CincoS({ usuario }) {
   const [loading, setLoading] = useState(true)
   const [proyectoActivo, setProyectoActivo] = useState(null)
   const [areas, setAreas] = useState([])
-  const [vista, setVista] = useState('inicio') // inicio | setup | registro | acciones
+  const [vista, setVista] = useState('inicio') // inicio | setup | edit | registro | acciones
 
   const loadProyectos = async () => {
     setLoading(true)
@@ -701,12 +749,22 @@ export default function CincoS({ usuario }) {
 
   if (loading) return <div style={{ padding: 20 }}>Cargando...</div>
 
-  // Vista: Setup
+  // Vista: Setup (crear)
   if (vista === 'setup') {
     return (
       <div>
         <button onClick={() => setVista('inicio')} style={{ ...btnSmall, background: '#f1f5f9', marginBottom: 16 }}>← Atrás</button>
         <SetupProyecto onCreated={handleCreated} />
+      </div>
+    )
+  }
+
+  // Vista: Edit (editar proyecto existente)
+  if (vista === 'edit' && proyectoActivo) {
+    return (
+      <div>
+        <button onClick={() => setVista('menu')} style={{ ...btnSmall, background: '#f1f5f9', marginBottom: 16 }}>← Atrás</button>
+        <SetupProyecto editProyectoId={proyectoActivo.ProyectoId} onCreated={handleCreated} />
       </div>
     )
   }
@@ -738,8 +796,12 @@ export default function CincoS({ usuario }) {
   if (vista === 'menu' && proyectoActivo) {
     return (
       <div>
-        <button onClick={() => { setProyectoActivo(null); setVista('inicio') }}
-          style={{ ...btnSmall, background: '#f1f5f9', marginBottom: 16 }}>← Proyectos</button>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <button onClick={() => { setProyectoActivo(null); setVista('inicio') }}
+            style={{ ...btnSmall, background: '#f1f5f9' }}>← Proyectos</button>
+          <button onClick={() => setVista('edit')}
+            style={{ ...btnSmall, background: '#dbeafe', color: '#1d4ed8' }}>✏️ Editar Proyecto</button>
+        </div>
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ margin: '0 0 4px', fontSize: 20 }}>Proyecto 5S — {proyectoActivo.Empresa}</h2>
           <p style={{ color: '#6b7280', fontSize: 13, margin: 0 }}>

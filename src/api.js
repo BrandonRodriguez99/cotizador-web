@@ -832,7 +832,9 @@ export function getFormularioRespuestas(id) { return fetchJson(`formularios/${id
 export function getCincoSProyectos() { return fetchJson('cincos/proyectos', { headers: authHeaders() }) }
 export function getCincoSProyecto(id) { return fetchJson(`cincos/proyectos/${id}`, { headers: authHeaders() }) }
 export function createCincoSProyecto(data) { return fetchJson('cincos/proyectos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateCincoSProyecto(id, data) { return fetchJson(`cincos/proyectos/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function getCincoSAreas(proyectoId) { return fetchJson(`cincos/proyectos/${proyectoId}/areas`, { headers: authHeaders() }) }
+export function getCincoSUsuarios() { return fetchJson('cincos/usuarios', { headers: authHeaders() }) }
 export function getCincoSElementos(params) { const qs = new URLSearchParams(params).toString(); return fetchJson(`cincos/elementos?${qs}`, { headers: authHeaders() }) }
 export function createCincoSElemento(data) { return fetchJson('cincos/elementos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function updateCincoSElemento(id, data) { return fetchJson(`cincos/elementos/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
