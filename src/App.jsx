@@ -47,6 +47,7 @@ import RegistroVisitaPublica from './RegistroVisitaPublica'
 import PermisosPanel from './PermisosPanel'
 import Formularios from './Formularios'
 import Academia from './Academia'
+import CincoS from './CincoS'
 import PortalPublico from './PortalPublico'
 import FormularioPublico from './FormularioPublico'
 import FormulariosPublico from './FormulariosPublico'
@@ -108,6 +109,7 @@ const GRUPO_ICONS = {
   'Catálogos': 'catalogos_grupo',
   'Seguridad': 'seguridad',
   'Academia': 'academia',
+  'Lean 5S': 'lean5s',
 }
 
 const SIDEBAR_CONFIG = [
@@ -160,6 +162,9 @@ const SIDEBAR_CONFIG = [
     { vista: 'proveedores', label: 'Proveedores' },
     { vista: 'unidadesNegocio', label: 'Unidad de Negocio' },
     { vista: 'areasConsumo', label: 'Áreas de Consumo' },
+  ]},
+  { titulo: 'Lean 5S', grupo: true, items: [
+    { vista: 'cincos', label: 'Programa 5S', icon: 'lean5s' },
   ]},
   { titulo: 'App Móvil', items: [
     { vista: 'formularios', label: 'Formularios' },
@@ -856,7 +861,9 @@ function App() {
                                     ? 'Formularios'
                                     : activeView === 'academia'
                                       ? 'Academia'
-                                      : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                                      : activeView === 'cincos'
+                                        ? 'Programa 5S'
+                                        : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -887,7 +894,9 @@ function App() {
                                   ? 'App Móvil > Formularios'
                                   : activeView === 'academia'
                                     ? 'Herramientas > Academia'
-                                    : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                                    : activeView === 'cincos'
+                                      ? 'Lean 5S > Programa 5S'
+                                      : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   // Rutas públicas (sin autenticación)
   if (window.location.pathname === '/portal') return <PortalPublico />
@@ -1246,6 +1255,8 @@ function App() {
           </section>
         ) : activeView === 'academia' ? (
           <Academia usuario={usuario} activeTab={academiaTab} />
+        ) : activeView === 'cincos' ? (
+          <CincoS usuario={usuario} />
         ) : activeView === 'cotizacion' ? (
             <div>
               {/* Barra de tabs — mismo estilo que Órdenes de Compra */}
