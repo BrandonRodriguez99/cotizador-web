@@ -827,3 +827,17 @@ export function updateFormulario(id, body) { return fetchJson(`formularios/${id}
 export function toggleFormularioActivo(id, activo) { return fetchJson(`formularios/${id}/activo`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activo }) }) }
 export function deleteFormulario(id) { return fetchJson(`formularios/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function getFormularioRespuestas(id) { return fetchJson(`formularios/${id}/respuestas`, { headers: authHeaders() }) }
+
+// ── 5S ──
+export function getCincoSProyectos() { return fetchJson('cincos/proyectos', { headers: authHeaders() }) }
+export function getCincoSProyecto(id) { return fetchJson(`cincos/proyectos/${id}`, { headers: authHeaders() }) }
+export function createCincoSProyecto(data) { return fetchJson('cincos/proyectos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function getCincoSAreas(proyectoId) { return fetchJson(`cincos/proyectos/${proyectoId}/areas`, { headers: authHeaders() }) }
+export function getCincoSElementos(params) { const qs = new URLSearchParams(params).toString(); return fetchJson(`cincos/elementos?${qs}`, { headers: authHeaders() }) }
+export function createCincoSElemento(data) { return fetchJson('cincos/elementos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateCincoSElemento(id, data) { return fetchJson(`cincos/elementos/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteCincoSElemento(id) { return fetchJson(`cincos/elementos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function getCincoSAcciones(params) { const qs = new URLSearchParams(params).toString(); return fetchJson(`cincos/acciones?${qs}`, { headers: authHeaders() }) }
+export function updateCincoSAccion(id, data) { return fetchJson(`cincos/acciones/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function getCincoSDashboard(proyectoId) { return fetchJson(`cincos/dashboard/${proyectoId}`, { headers: authHeaders() }) }
+export function uploadFoto5S(base64) { return fetchJson('upload/foto-5s', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) }) }
