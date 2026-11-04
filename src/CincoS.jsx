@@ -973,7 +973,10 @@ function NotificacionesBell() {
                 padding: '10px 16px', borderBottom: '1px solid #f8fafc', cursor: n.Leida ? 'default' : 'pointer',
                 background: n.Leida ? '#fff' : '#eff6ff',
               }}>
-              <div style={{ fontWeight: n.Leida ? 400 : 600, fontSize: 13, color: '#1e293b' }}>{n.Titulo}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: n.Leida ? 400 : 600, fontSize: 13, color: '#1e293b' }}>{n.Titulo}</div>
+                {n.UsuarioNombre && <span style={{ fontSize: 11, color: '#3b82f6', fontWeight: 500, flexShrink: 0, marginLeft: 8 }}>{n.UsuarioNombre}</span>}
+              </div>
               <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{n.Mensaje}</div>
               <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{new Date(n.FechaCreacion).toLocaleString('es-MX')}</div>
             </div>
