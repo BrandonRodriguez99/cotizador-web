@@ -38,11 +38,11 @@ const ICON_PATHS = {
 }
 
 const ACCIONES_MAP = {
-  eliminar: { label: 'Eliminar', icon: ICON_PATHS.eliminar, color: '#dc2626', bg: '#fee2e2' },
+  eliminar: { label: 'Eliminar', icon: ICON_PATHS.eliminar, color: '#16a34a', bg: '#dcfce7' },
   reparar: { label: 'Reparar', icon: ICON_PATHS.reparar, color: '#d97706', bg: '#fef3c7' },
-  red_tag: { label: 'Red Tag', icon: ICON_PATHS.red_tag, color: '#2563eb', bg: '#dbeafe' },
+  red_tag: { label: 'Red Tag', icon: ICON_PATHS.red_tag, color: '#dc2626', bg: '#fee2e2' },
   reubicar: { label: 'Reubicar', icon: ICON_PATHS.reubicar, color: '#7c3aed', bg: '#ede9fe' },
-  mantener: { label: 'Mantener', icon: ICON_PATHS.mantener, color: '#16a34a', bg: '#dcfce7' },
+  mantener: { label: 'Mantener', icon: ICON_PATHS.mantener, color: '#059669', bg: '#d1fae5' },
 }
 
 function calcularAccionRecomendada(clasificacion, frecuencia, estado) {
@@ -425,9 +425,9 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                     <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Seleccione a dónde destinar este elemento:</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {[
-                        { key: 'eliminar', label: 'Eliminar', color: '#dc2626', bg: '#fee2e2', icon: ICON_PATHS.eliminar },
+                        { key: 'eliminar', label: 'Eliminar', color: '#16a34a', bg: '#dcfce7', icon: ICON_PATHS.eliminar },
                         { key: 'reparar', label: 'Reparar', color: '#d97706', bg: '#fef3c7', icon: ICON_PATHS.reparar },
-                        { key: 'red_tag', label: 'Red Tag', color: '#2563eb', bg: '#dbeafe', icon: ICON_PATHS.red_tag },
+                        { key: 'red_tag', label: 'Red Tag', color: '#dc2626', bg: '#fee2e2', icon: ICON_PATHS.red_tag },
                       ].map(opt => (
                         <button key={opt.key} type="button"
                           onClick={() => setForm(f => ({ ...f, accionManual: opt.key, fechaCompromiso: opt.key !== 'red_tag' ? '' : f.fechaCompromiso }))}
@@ -571,6 +571,8 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
   const [acciones, setAcciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [areaFiltro, setAreaFiltro] = useState('')
+  const [terminalFiltro, setTerminalFiltro] = useState('')
+  const [championFiltro, setChampionFiltro] = useState('')
   const [dashboard, setDashboard] = useState(null)
   const [lightboxSrc, setLightboxSrc] = useState(null)
 
@@ -596,22 +598,37 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
     } catch (e) { alert(e.message) }
   }
 
-  const filtered = areaFiltro ? acciones.filter(a => String(a.AreaId) === areaFiltro) : acciones
+  const filtered = acciones.filter(a => {
+    if (areaFiltro && String(a.AreaId) !== areaFiltro) return false
+    if (terminalFiltro && a.Terminal !== terminalFiltro) return false
+    if (championFiltro && a.Champion !== championFiltro) return false
+    return true
+  })
   const pendientes = filtered.filter(a => a.Estatus !== 'completado')
   const completados = filtered.filter(a => a.Estatus === 'completado')
   const pctTab = acciones.length ? Math.round(completados.length / acciones.length * 100) : 0
 
+  const r = dashboard?.resumen || {}
+  const tabCounts = {
+    eliminar: r.totalEliminar || 0,
+    reparar: r.totalReparar || 0,
+    red_tag: r.totalRedTag || 0,
+  }
+
   const tabs = [
-    { key: 'eliminar', label: 'Eliminar', icon: ICON_PATHS.eliminar, color: '#dc2626' },
+    { key: 'eliminar', label: 'Eliminar', icon: ICON_PATHS.eliminar, color: '#16a34a' },
     { key: 'reparar', label: 'Reparar', icon: ICON_PATHS.reparar, color: '#d97706' },
-    { key: 'red_tag', label: 'Red Tags', icon: ICON_PATHS.red_tag, color: '#2563eb' },
+    { key: 'red_tag', label: 'Red Tags', icon: ICON_PATHS.red_tag, color: '#dc2626' },
   ]
 
   // Dashboard KPIs
-  const r = dashboard?.resumen || {}
   const totalAcciones = (r.totalEliminar || 0) + (r.totalReparar || 0) + (r.totalRedTag || 0)
   const totalCompletados = (r.completadosEliminar || 0) + (r.completadosReparar || 0) + (r.completadosRedTag || 0)
   const pctGeneral = totalAcciones ? Math.round(totalCompletados / totalAcciones * 100) : 0
+
+  // Unique terminals and champions for filters
+  const terminales = [...new Set((dashboard?.porArea || []).map(a => a.Terminal))].filter(Boolean)
+  const champions = [...new Set((dashboard?.porArea || []).map(a => a.Champion))].filter(Boolean)
 
   return (
     <div>
@@ -623,9 +640,9 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
       {/* KPI Cards */}
       {dashboard && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-          <KPICard label="Elementos por eliminar" total={r.totalEliminar} done={r.completadosEliminar} color="#dc2626" />
+          <KPICard label="Elementos por eliminar" total={r.totalEliminar} done={r.completadosEliminar} color="#16a34a" />
           <KPICard label="Elementos por reparar" total={r.totalReparar} done={r.completadosReparar} color="#d97706" />
-          <KPICard label="Red Tags atendidas" total={r.totalRedTag} done={r.completadosRedTag} color="#2563eb" />
+          <KPICard label="Red Tags atendidas" total={r.totalRedTag} done={r.completadosRedTag} color="#dc2626" />
           <KPICard label="Avance general 1S" total={totalAcciones} done={totalCompletados} color="#16a34a" />
         </div>
       )}
@@ -643,18 +660,28 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
             }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <SvgIcon d={t.icon} color={tab === t.key ? t.color : '#6b7280'} size={16} />
-              {t.label} ({acciones.length > 0 || tab === t.key ? filtered.length : '...'})
+              {t.label} ({dashboard ? tabCounts[t.key] : '...'})
             </span>
           </button>
         ))}
       </div>
 
-      {/* Filtro área + progress */}
+      {/* Filtros + progress */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <select style={inputStyle} value={areaFiltro} onChange={e => setAreaFiltro(e.target.value)}>
-          <option value="">Todas las áreas</option>
-          {areas.map(a => <option key={a.AreaId} value={a.AreaId}>{a.Terminal} — {a.Area}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+          <select style={{ ...inputStyle, maxWidth: 200 }} value={terminalFiltro} onChange={e => { setTerminalFiltro(e.target.value); setAreaFiltro('') }}>
+            <option value="">Todas las terminales</option>
+            {terminales.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select style={{ ...inputStyle, maxWidth: 200 }} value={areaFiltro} onChange={e => setAreaFiltro(e.target.value)}>
+            <option value="">Todas las áreas</option>
+            {areas.filter(a => !terminalFiltro || a.Terminal === terminalFiltro).map(a => <option key={a.AreaId} value={a.AreaId}>{a.Terminal} — {a.Area}</option>)}
+          </select>
+          <select style={{ ...inputStyle, maxWidth: 200 }} value={championFiltro} onChange={e => setChampionFiltro(e.target.value)}>
+            <option value="">Todos los Champions</option>
+            {champions.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 120, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
             <div style={{ width: `${pctTab}%`, height: '100%', background: tabs.find(t => t.key === tab)?.color, transition: 'width .3s' }} />
@@ -700,18 +727,23 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
                   <thead>
                     <tr>
                       <th style={thStyle}>Área</th>
+                      <th style={thStyle}>Champion</th>
                       <th style={thStyle}>Eliminar</th>
                       <th style={thStyle}>Reparar</th>
                       <th style={thStyle}>Red Tags</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dashboard.porArea.map(a => (
+                    {dashboard.porArea
+                      .filter(a => !terminalFiltro || a.Terminal === terminalFiltro)
+                      .filter(a => !championFiltro || a.Champion === championFiltro)
+                      .map(a => (
                       <tr key={a.AreaId}>
                         <td style={tdStyle}><span style={{ fontSize: 11, color: '#9ca3af' }}>{a.Terminal}</span><br /><strong>{a.Area}</strong></td>
-                        <td style={tdStyle}><ProgressMini done={a.eliminarOk} total={a.eliminar} color="#dc2626" /></td>
+                        <td style={tdStyle}><span style={{ fontSize: 13, color: '#3b82f6', fontWeight: 500 }}>{a.Champion || '—'}</span></td>
+                        <td style={tdStyle}><ProgressMini done={a.eliminarOk} total={a.eliminar} color="#16a34a" /></td>
                         <td style={tdStyle}><ProgressMini done={a.repararOk} total={a.reparar} color="#d97706" /></td>
-                        <td style={tdStyle}><ProgressMini done={a.redTagOk} total={a.redTag} color="#2563eb" /></td>
+                        <td style={tdStyle}><ProgressMini done={a.redTagOk} total={a.redTag} color="#dc2626" /></td>
                       </tr>
                     ))}
                   </tbody>
