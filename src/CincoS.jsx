@@ -11,16 +11,10 @@ const CLASIFICACIONES = [
   { value: 'innecesario', label: 'Innecesario', color: '#dc2626', bg: '#fee2e2' },
   { value: 'dudoso', label: 'Dudoso', color: '#d97706', bg: '#fef3c7' },
 ]
-const FRECUENCIAS = [
-  { value: 'diario', label: 'Diario' },
-  { value: 'semanal', label: 'Semanal' },
-  { value: 'ocasional', label: 'Ocasional' },
-]
 const ESTADOS = [
   { value: 'funciona', label: 'Funciona', color: '#16a34a' },
   { value: 'no_funciona', label: 'No funciona', color: '#dc2626' },
   { value: 'necesita_reparacion', label: 'Necesita reparación', color: '#d97706' },
-  { value: 'evaluar', label: 'Evaluar', color: '#6366f1' },
 ]
 
 const SvgIcon = ({ d, color = 'currentColor', size = 16 }) => (
@@ -33,7 +27,6 @@ const ICON_PATHS = {
   eliminar: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
   reparar: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></>,
   red_tag: <><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>,
-  reubicar: <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
   mantener: <><polyline points="20 6 9 17 4 12"/></>,
 }
 
@@ -41,28 +34,27 @@ const ACCIONES_MAP = {
   eliminar: { label: 'Eliminar', icon: ICON_PATHS.eliminar, color: '#16a34a', bg: '#dcfce7' },
   reparar: { label: 'Reparar', icon: ICON_PATHS.reparar, color: '#d97706', bg: '#fef3c7' },
   red_tag: { label: 'Red Tag', icon: ICON_PATHS.red_tag, color: '#dc2626', bg: '#fee2e2' },
-  reubicar: { label: 'Reubicar', icon: ICON_PATHS.reubicar, color: '#7c3aed', bg: '#ede9fe' },
   mantener: { label: 'Mantener', icon: ICON_PATHS.mantener, color: '#059669', bg: '#d1fae5' },
 }
 
-function calcularAccionRecomendada(clasificacion, frecuencia, estado) {
+function calcularAccionRecomendada(clasificacion, estado) {
   if (clasificacion === 'innecesario') return 'eliminar'
   if (clasificacion === 'dudoso') return 'red_tag'
+  if (estado === 'funciona') return 'mantener'
   if (estado === 'no_funciona') return 'eliminar'
   if (estado === 'necesita_reparacion') return 'reparar'
-  if (estado === 'evaluar') return 'red_tag'
-  if (frecuencia === 'ocasional') return 'reubicar'
   return 'mantener'
 }
 
-function getInstruccion(clasificacion, frecuencia, estado) {
-  const accion = calcularAccionRecomendada(clasificacion, frecuencia, estado)
+function getInstruccion(clasificacion, estado) {
+  const accion = calcularAccionRecomendada(clasificacion, estado)
   const instrucciones = {
-    eliminar: 'Este elemento debe ser eliminado del área. No es necesario o no funciona.',
-    reparar: 'Este elemento necesita reparación antes de poder seguir en uso.',
-    red_tag: 'Este elemento requiere evaluación. Se le asignará una etiqueta roja para revisión.',
-    reubicar: 'Este elemento es necesario pero de uso ocasional. Considere reubicarlo a un almacén o zona secundaria.',
-    mantener: 'Este elemento está en buen estado y se usa frecuentemente. Mantener en su lugar.',
+    eliminar: clasificacion === 'innecesario'
+      ? 'Innecesario → Eliminar del área.'
+      : 'Necesario pero no funciona → Eliminar del área.',
+    reparar: 'Necesario pero requiere reparación → Reparar antes de continuar uso.',
+    red_tag: 'Dudoso → Evaluar (Red Tag). Se asignará etiqueta roja para revisión.',
+    mantener: 'Necesario y funciona → Mantener en su lugar.',
   }
   return instrucciones[accion]
 }
@@ -225,7 +217,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
   const [loading, setLoading] = useState(true)
   const [areaFiltro, setAreaFiltro] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '', areaId: '', accionManual: '', fechaCompromiso: '' })
+  const [form, setForm] = useState({ nombre: '', foto: '', cantidad: 1, clasificacion: '', estado: '', areaId: '', accionManual: '', fechaCompromiso: '' })
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editId, setEditId] = useState(null)
@@ -263,7 +255,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.areaId || !form.nombre || !form.clasificacion || !form.frecuenciaUso || !form.estado || !form.accionManual) {
+    if (!form.areaId || !form.nombre || !form.clasificacion || !form.accionManual || (form.clasificacion === 'necesario' && !form.estado)) {
       return alert('Complete todos los campos requeridos (incluyendo la acción)')
     }
     if (form.accionManual === 'red_tag' && !form.fechaCompromiso) {
@@ -279,7 +271,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
         await createCincoSElemento(payload)
       }
       setShowForm(false)
-      setForm({ nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '', areaId: form.areaId, accionManual: '', fechaCompromiso: '' })
+      setForm({ nombre: '', foto: '', cantidad: 1, clasificacion: '', estado: '', areaId: form.areaId, accionManual: '', fechaCompromiso: '' })
       setEditId(null)
       loadElementos()
     } catch (err) {
@@ -291,7 +283,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
   const startEdit = (el) => {
     setForm({
       nombre: el.Nombre, foto: el.Foto || '', cantidad: el.Cantidad,
-      clasificacion: el.Clasificacion, frecuenciaUso: el.FrecuenciaUso,
+      clasificacion: el.Clasificacion,
       estado: el.Estado, areaId: el.AreaId,
       accionManual: el.AccionManual || el.AccionRecomendada || '',
       fechaCompromiso: el.FechaCompromiso ? el.FechaCompromiso.split('T')[0] : ''
@@ -306,10 +298,10 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
   }
 
   const filtered = areaFiltro ? elementos.filter(e => String(e.AreaId) === areaFiltro) : elementos
-  const accion = form.clasificacion && form.frecuenciaUso && form.estado
-    ? calcularAccionRecomendada(form.clasificacion, form.frecuenciaUso, form.estado) : null
-  const instruccion = form.clasificacion && form.frecuenciaUso && form.estado
-    ? getInstruccion(form.clasificacion, form.frecuenciaUso, form.estado) : null
+  const needsEstado = form.clasificacion === 'necesario'
+  const canRecommend = form.clasificacion && (!needsEstado || form.estado)
+  const accion = canRecommend ? calcularAccionRecomendada(form.clasificacion, form.estado) : null
+  const instruccion = canRecommend ? getInstruccion(form.clasificacion, form.estado) : null
 
   return (
     <div>
@@ -323,7 +315,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
             <option value="">Todas las áreas</option>
             {areas.map(a => <option key={a.AreaId} value={a.AreaId}>{a.Terminal} — {a.Area}</option>)}
           </select>
-          <button onClick={() => { setShowForm(true); setEditId(null); setForm(f => ({ ...f, nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '', accionManual: '', fechaCompromiso: '' })) }}
+          <button onClick={() => { setShowForm(true); setEditId(null); setForm(f => ({ ...f, nombre: '', foto: '', cantidad: 1, clasificacion: '', estado: '', accionManual: '', fechaCompromiso: '' })) }}
             style={btnPrimary}>+ Registrar Elemento</button>
         </div>
       </div>
@@ -377,7 +369,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                   <div style={{ display: 'flex', gap: 8 }}>
                     {CLASIFICACIONES.map(c => (
                       <button key={c.value} type="button"
-                        onClick={() => setForm(f => ({ ...f, clasificacion: c.value }))}
+                        onClick={() => setForm(f => ({ ...f, clasificacion: c.value, estado: c.value === 'necesario' ? f.estado : '', accionManual: '', fechaCompromiso: '' }))}
                         style={{
                           flex: 1, padding: '10px 8px', borderRadius: 8, border: `2px solid ${form.clasificacion === c.value ? c.color : '#e2e8f0'}`,
                           background: form.clasificacion === c.value ? c.bg : '#fff', color: c.color,
@@ -389,16 +381,8 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                   </div>
                 </div>
 
-                {/* Frecuencia */}
-                <div>
-                  <label style={labelStyle}>Frecuencia de uso *</label>
-                  <select style={inputStyle} value={form.frecuenciaUso} onChange={e => setForm(f => ({ ...f, frecuenciaUso: e.target.value }))} required>
-                    <option value="">Seleccionar</option>
-                    {FRECUENCIAS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                  </select>
-                </div>
-
-                {/* Estado */}
+                {/* Estado (solo si necesario) */}
+                {form.clasificacion === 'necesario' && (
                 <div>
                   <label style={labelStyle}>Estado *</label>
                   <select style={inputStyle} value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))} required>
@@ -406,6 +390,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                     {ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
                   </select>
                 </div>
+                )}
 
                 {/* Acción recomendada (informativa) */}
                 {accion && (
@@ -419,7 +404,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                 )}
 
                 {/* Acción del Champion (obligatoria) */}
-                {form.clasificacion && form.frecuenciaUso && form.estado && (
+                {canRecommend && (
                   <div>
                     <label style={labelStyle}>Acción del Champion *</label>
                     <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Seleccione a dónde destinar este elemento:</div>
@@ -488,7 +473,6 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                     <th style={thStyle}>Área</th>
                     <th style={thStyle}>Cant.</th>
                     <th style={thStyle}>Clasificación</th>
-                    <th style={thStyle}>Frecuencia</th>
                     <th style={thStyle}>Estado</th>
                     <th style={thStyle}>Acción</th>
                     <th style={thStyle}></th>
@@ -510,7 +494,6 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                         <td style={tdStyle}>
                           <span style={{ background: clas.bg, color: clas.color, padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{clas.label}</span>
                         </td>
-                        <td style={tdStyle}>{FRECUENCIAS.find(f => f.value === el.FrecuenciaUso)?.label}</td>
                         <td style={tdStyle}><span style={{ color: est.color, fontWeight: 500, fontSize: 13 }}>{est.label}</span></td>
                         <td style={tdStyle}>
                           <span style={{ background: acc.bg, color: acc.color, padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -538,7 +521,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
           {/* Resumen rápido */}
           {filtered.length > 0 && (
             <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-              {['eliminar', 'reparar', 'red_tag', 'reubicar', 'mantener'].map(tipo => {
+              {['eliminar', 'reparar', 'red_tag', 'mantener'].map(tipo => {
                 const count = filtered.filter(e => (e.AccionManual || e.AccionRecomendada) === tipo).length
                 if (!count) return null
                 const m = ACCIONES_MAP[tipo]
@@ -776,8 +759,6 @@ function DetalleElementoModal({ elemento: el, areas, onClose }) {
   const acc = ACCIONES_MAP[el.AccionManual || el.AccionRecomendada] || {}
   const clas = CLASIFICACIONES.find(c => c.value === el.Clasificacion) || {}
   const est = ESTADOS.find(e => e.value === el.Estado) || {}
-  const freq = FRECUENCIAS.find(f => f.value === el.FrecuenciaUso)
-
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div style={{ ...modalStyle, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
@@ -796,10 +777,6 @@ function DetalleElementoModal({ elemento: el, areas, onClose }) {
           <div>
             <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>CANTIDAD</div>
             <span style={{ fontSize: 15, fontWeight: 600 }}>{el.Cantidad}</span>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>FRECUENCIA</div>
-            <span style={{ fontSize: 14 }}>{freq?.label || el.FrecuenciaUso}</span>
           </div>
           <div>
             <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>ESTADO</div>
