@@ -2670,30 +2670,53 @@ export default function Academia({ usuario, activeTab }) {
                   <div key={s.SolicitudId} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px', background: '#fff' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 700, fontSize: 14 }}>{s.Nombre}</span>
+                        {/* Encabezado: nombre + badges */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: 15 }}>{s.Nombre}</span>
                           <span style={{ background: c.bg, color: c.text, border: `1px solid ${c.border}`, borderRadius: 12, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>{s.Estado}</span>
                           {s.TipoCurso && <span style={{ fontSize: 11, color: '#6b7280', background: '#f3f4f6', borderRadius: 8, padding: '2px 8px' }}>{s.TipoCurso}</span>}
-                        </div>
-                        {s.Descripcion && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#4b5563' }}>{s.Descripcion}</p>}
-                        <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                           {s.Modalidad && <span style={{ fontSize: 11, fontWeight: 600, color: s.Modalidad === 'busqueda_proveedor' ? '#7c3aed' : '#0369a1', background: s.Modalidad === 'busqueda_proveedor' ? '#f5f3ff' : '#f0f9ff', border: `1px solid ${s.Modalidad === 'busqueda_proveedor' ? '#ddd6fe' : '#bae6fd'}`, borderRadius: 8, padding: '2px 8px' }}>
                             {s.Modalidad === 'busqueda_proveedor' ? 'Búsqueda de proveedor' : 'Desarrollo de contenido'}
                           </span>}
-                          {s.Horas > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>h</span> {s.Horas}h</span>}
-                          {s.DuracionDefaultDias > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>días</span> {s.DuracionDefaultDias}</span>}
-                          {s.FechaTentativa && <span style={{ fontSize: 12, color: '#6b7280' }}>Tentativa: {new Date(s.FechaTentativa).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
-                          {s.RequiereConstancia && <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>Constancia</span>}
-                          {s.RequiereDC3 && <span style={{ fontSize: 11, background: '#fee2e2', color: '#991b1b', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>DC3</span>}
                         </div>
-                        {(s.NombreComercial || s.RazonSocial) && (
-                          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                            {s.NombreComercial && <span>Proveedor: <strong>{s.NombreComercial}</strong></span>}
-                            {s.RazonSocial && <span>{s.NombreComercial ? ' · ' : ''}R.S.: {s.RazonSocial}</span>}
+
+                        {/* Descripción */}
+                        {s.Descripcion && <p style={{ margin: '6px 0 0', fontSize: 13, color: '#4b5563' }}>{s.Descripcion}</p>}
+
+                        {/* Datos del curso: horas, días, fecha */}
+                        {(s.Horas > 0 || s.DuracionDefaultDias > 0 || s.FechaTentativa) && (
+                          <div style={{ display: 'flex', gap: 20, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                            {s.Horas > 0 && <span style={{ fontSize: 12, color: '#374151' }}><strong style={{ color: '#0b2341' }}>Horas:</strong> {s.Horas}</span>}
+                            {s.DuracionDefaultDias > 0 && <span style={{ fontSize: 12, color: '#374151' }}><strong style={{ color: '#0b2341' }}>Días:</strong> {s.DuracionDefaultDias}</span>}
+                            {s.FechaTentativa && <span style={{ fontSize: 12, color: '#374151' }}><strong style={{ color: '#0b2341' }}>Fecha tentativa:</strong> {new Date(s.FechaTentativa).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
                           </div>
                         )}
-                        {s.Justificacion && <div style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic', marginTop: 4 }}>"{s.Justificacion}"</div>}
-                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+
+                        {/* Proveedor */}
+                        {(s.NombreComercial || s.RazonSocial) && (
+                          <div style={{ marginTop: 8, padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12 }}>
+                            {s.NombreComercial && <div style={{ color: '#374151' }}><strong style={{ color: '#0b2341' }}>Proveedor:</strong> {s.NombreComercial}</div>}
+                            {s.RazonSocial && <div style={{ color: '#374151', marginTop: s.NombreComercial ? 2 : 0 }}><strong style={{ color: '#0b2341' }}>Razón social:</strong> {s.RazonSocial}</div>}
+                          </div>
+                        )}
+
+                        {/* Requisitos: constancia y DC3 */}
+                        {(s.RequiereConstancia || s.RequiereDC3) && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                            {s.RequiereConstancia && <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', borderRadius: 8, padding: '3px 10px', fontWeight: 600, border: '1px solid #fde68a' }}>Requiere Constancia</span>}
+                            {s.RequiereDC3 && <span style={{ fontSize: 11, background: '#fee2e2', color: '#991b1b', borderRadius: 8, padding: '3px 10px', fontWeight: 600, border: '1px solid #fecaca' }}>Requiere DC3</span>}
+                          </div>
+                        )}
+
+                        {/* Justificación */}
+                        {s.Justificacion && (
+                          <div style={{ marginTop: 8, padding: '8px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, fontSize: 12, color: '#78350f', fontStyle: 'italic' }}>
+                            "{s.Justificacion}"
+                          </div>
+                        )}
+
+                        {/* Metadatos */}
+                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 10, borderTop: '1px solid #f3f4f6', paddingTop: 8 }}>
                           Solicitado por <strong>{s.SolicitadoPor}</strong> · {s.FechaSolicitud ? new Date(s.FechaSolicitud).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                           {s.ResueltoPor && <> · Resuelto por <strong>{s.ResueltoPor}</strong></>}
                           {s.Comentario && <> · <em>"{s.Comentario}"</em></>}
