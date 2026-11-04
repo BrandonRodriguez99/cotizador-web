@@ -2677,7 +2677,6 @@ export default function Academia({ usuario, activeTab }) {
                         {s.Descripcion && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#4b5563' }}>{s.Descripcion}</p>}
                         <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
                           {s.Horas > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>h</span> {s.Horas}h</span>}
-                          {s.Costo > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>$</span> {Number(s.Costo).toLocaleString('es-MX')}</span>}
                           {s.DuracionDefaultDias > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>días</span> {s.DuracionDefaultDias}</span>}
                           {s.Justificacion && <span style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>"{s.Justificacion}"</span>}
                         </div>
@@ -2916,7 +2915,6 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                               {c.TipoCurso || ''}{c.Horas ? ` · ${c.Horas}h` : ''}{c.DuracionDefaultDias ? ` · ${c.DuracionDefaultDias} día(s)` : ''}
                             </div>
                           </div>
-                          {c.Costo > 0 && <span style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>${Number(c.Costo).toFixed(0)}</span>}
                         </div>
                       ))}
                     </div>
@@ -2973,8 +2971,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                             onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                             <span style={{ fontWeight: 600 }}>{c.Nombre}</span>
-                            {c.Costo > 0 && <span style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>${Number(c.Costo).toFixed(0)}</span>}
-                          </div>
+                            </div>
                         ))}
                       </div>
                     )}
@@ -3102,7 +3099,6 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
   const [descripcion, setDescripcion] = useState('')
   const [tipoCurso, setTipoCurso] = useState('')
   const [horas, setHoras] = useState('')
-  const [costo, setCosto] = useState('')
   const [duracionDias, setDuracionDias] = useState('')
   const [justificacion, setJustificacion] = useState('')
   const [saving, setSaving] = useState(false)
@@ -3117,7 +3113,7 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
         Descripcion: descripcion || null,
         TipoCurso: tipoCurso || null,
         Horas: horas !== '' ? Number(horas) : null,
-        Costo: costo !== '' ? Number(costo) : null,
+        Costo: null,
         DuracionDefaultDias: duracionDias !== '' ? Number(duracionDias) : null,
         Justificacion: justificacion || null,
       })
@@ -3154,14 +3150,10 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
                 <option>Extraordinario</option>
               </select>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Horas</label>
                 <input className="form-control" type="number" value={horas} onChange={e => setHoras(e.target.value)} min={0} step={0.5} placeholder="0" style={{ width: '100%' }} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Costo ($)</label>
-                <input className="form-control" type="number" value={costo} onChange={e => setCosto(e.target.value)} min={0} placeholder="0" style={{ width: '100%' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Duración (días)</label>
