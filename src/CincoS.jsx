@@ -837,8 +837,8 @@ function DetalleElementoModal({ elemento: el, areas, onClose }) {
 function AccionCard({ accion: a, onStatusChange, onFotoClick }) {
   const isCompleted = a.Estatus === 'completado'
   const isRedTag = a.Tipo === 'red_tag'
-  const [accionRealizada, setAccionRealizada] = React.useState(a.AccionRealizada || '')
-  const [saving, setSaving] = React.useState(false)
+  const [accionRealizada, setAccionRealizada] = useState(a.AccionRealizada || '')
+  const [saving, setSaving] = useState(false)
   const needsAccion = isRedTag && !isCompleted && !accionRealizada.trim()
 
   const handleCheck = async () => {
