@@ -591,9 +591,9 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
 
   useEffect(() => { loadAcciones() }, [proyectoId, tab])
 
-  const handleStatusChange = async (accionId, estatus) => {
+  const handleStatusChange = async (accionId, estatus, extra = {}) => {
     try {
-      await updateCincoSAccion(accionId, { estatus })
+      await updateCincoSAccion(accionId, { estatus, ...extra })
       loadAcciones()
     } catch (e) { alert(e.message) }
   }
@@ -836,18 +836,46 @@ function DetalleElementoModal({ elemento: el, areas, onClose }) {
 
 function AccionCard({ accion: a, onStatusChange, onFotoClick }) {
   const isCompleted = a.Estatus === 'completado'
+  const isRedTag = a.Tipo === 'red_tag'
+  const [accionRealizada, setAccionRealizada] = React.useState(a.AccionRealizada || '')
+  const [saving, setSaving] = React.useState(false)
+  const needsAccion = isRedTag && !isCompleted && !accionRealizada.trim()
+
+  const handleCheck = async () => {
+    if (isCompleted) {
+      onStatusChange(a.AccionId, 'pendiente')
+      return
+    }
+    if (isRedTag && !accionRealizada.trim()) {
+      alert('Debe indicar la acción realizada antes de completar un Red Tag')
+      return
+    }
+    const extra = isRedTag ? { accionRealizada: accionRealizada.trim() } : {}
+    onStatusChange(a.AccionId, 'completado', extra)
+  }
+
+  const handleSaveAccion = async () => {
+    if (!accionRealizada.trim()) return
+    setSaving(true)
+    try {
+      await updateCincoSAccion(a.AccionId, { estatus: a.Estatus, accionRealizada: accionRealizada.trim() })
+    } catch (e) { alert(e.message) }
+    setSaving(false)
+  }
+
   return (
     <div style={{
-      display: 'flex', gap: 12, alignItems: 'center', padding: 12,
+      display: 'flex', gap: 12, alignItems: 'flex-start', padding: 12,
       background: isCompleted ? '#f0fdf4' : '#fff', border: '1px solid #e2e8f0',
       borderRadius: 8, marginBottom: 8, opacity: isCompleted ? 0.7 : 1,
     }}>
       <button
-        onClick={() => onStatusChange(a.AccionId, isCompleted ? 'pendiente' : 'completado')}
+        onClick={handleCheck}
+        title={needsAccion ? 'Escriba la acción realizada primero' : ''}
         style={{
-          width: 28, height: 28, borderRadius: '50%', border: `2px solid ${isCompleted ? '#16a34a' : '#cbd5e1'}`,
-          background: isCompleted ? '#16a34a' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: 14, flexShrink: 0,
+          width: 28, height: 28, borderRadius: '50%', border: `2px solid ${isCompleted ? '#16a34a' : needsAccion ? '#fca5a5' : '#cbd5e1'}`,
+          background: isCompleted ? '#16a34a' : '#fff', cursor: needsAccion ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontSize: 14, flexShrink: 0, marginTop: 2,
         }}>
         {isCompleted && '✓'}
       </button>
@@ -855,6 +883,29 @@ function AccionCard({ accion: a, onStatusChange, onFotoClick }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 500, fontSize: 14, textDecoration: isCompleted ? 'line-through' : 'none' }}>{a.Descripcion || a.Elemento}</div>
         <div style={{ fontSize: 12, color: '#6b7280' }}>{a.Terminal} — {a.Area} · Cant: {a.Cantidad}</div>
+        {isRedTag && !isCompleted && (
+          <div style={{ marginTop: 8 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: '#dc2626', display: 'block', marginBottom: 4 }}>Accion realizada *</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                value={accionRealizada}
+                onChange={e => setAccionRealizada(e.target.value)}
+                placeholder="Describa que se hizo con este Red Tag..."
+                style={{ flex: 1, padding: '6px 10px', fontSize: 13, border: '1px solid #fca5a5', borderRadius: 6, background: '#fff7f7' }}
+              />
+              {accionRealizada.trim() && !a.AccionRealizada && (
+                <button onClick={handleSaveAccion} disabled={saving} style={{
+                  padding: '6px 12px', fontSize: 12, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer',
+                }}>
+                  {saving ? '...' : 'Guardar'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        {isRedTag && isCompleted && a.AccionRealizada && (
+          <div style={{ marginTop: 4, fontSize: 12, color: '#16a34a', fontStyle: 'italic' }}>Accion realizada: {a.AccionRealizada}</div>
+        )}
       </div>
       <span style={{
         fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12,
