@@ -2676,11 +2676,23 @@ export default function Academia({ usuario, activeTab }) {
                           {s.TipoCurso && <span style={{ fontSize: 11, color: '#6b7280', background: '#f3f4f6', borderRadius: 8, padding: '2px 8px' }}>{s.TipoCurso}</span>}
                         </div>
                         {s.Descripcion && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#4b5563' }}>{s.Descripcion}</p>}
-                        <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {s.Modalidad && <span style={{ fontSize: 11, fontWeight: 600, color: s.Modalidad === 'busqueda_proveedor' ? '#7c3aed' : '#0369a1', background: s.Modalidad === 'busqueda_proveedor' ? '#f5f3ff' : '#f0f9ff', border: `1px solid ${s.Modalidad === 'busqueda_proveedor' ? '#ddd6fe' : '#bae6fd'}`, borderRadius: 8, padding: '2px 8px' }}>
+                            {s.Modalidad === 'busqueda_proveedor' ? 'Búsqueda de proveedor' : 'Desarrollo de contenido'}
+                          </span>}
                           {s.Horas > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>h</span> {s.Horas}h</span>}
                           {s.DuracionDefaultDias > 0 && <span style={{ fontSize: 12, color: '#6b7280' }}><span style={{ color: '#0b2341', fontWeight: 700 }}>días</span> {s.DuracionDefaultDias}</span>}
-                          {s.Justificacion && <span style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>"{s.Justificacion}"</span>}
+                          {s.FechaTentativa && <span style={{ fontSize: 12, color: '#6b7280' }}>Tentativa: {new Date(s.FechaTentativa).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
+                          {s.RequiereConstancia && <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>Constancia</span>}
+                          {s.RequiereDC3 && <span style={{ fontSize: 11, background: '#fee2e2', color: '#991b1b', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>DC3</span>}
                         </div>
+                        {(s.NombreComercial || s.RazonSocial) && (
+                          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                            {s.NombreComercial && <span>Proveedor: <strong>{s.NombreComercial}</strong></span>}
+                            {s.RazonSocial && <span>{s.NombreComercial ? ' · ' : ''}R.S.: {s.RazonSocial}</span>}
+                          </div>
+                        )}
+                        {s.Justificacion && <div style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic', marginTop: 4 }}>"{s.Justificacion}"</div>}
                         <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
                           Solicitado por <strong>{s.SolicitadoPor}</strong> · {s.FechaSolicitud ? new Date(s.FechaSolicitud).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                           {s.ResueltoPor && <> · Resuelto por <strong>{s.ResueltoPor}</strong></>}
@@ -3110,11 +3122,18 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
   const [horas, setHoras] = useState('')
   const [duracionDias, setDuracionDias] = useState('')
   const [justificacion, setJustificacion] = useState('')
+  const [modalidad, setModalidad] = useState('')
+  const [fechaTentativa, setFechaTentativa] = useState('')
+  const [nombreComercial, setNombreComercial] = useState('')
+  const [razonSocial, setRazonSocial] = useState('')
+  const [requiereConstancia, setRequiereConstancia] = useState(false)
+  const [requiereDC3, setRequiereDC3] = useState(false)
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!nombre.trim()) { window.alert('El nombre es requerido'); return }
+    if (!modalidad) { window.alert('Selecciona la modalidad de la solicitud'); return }
     setSaving(true)
     try {
       await createSolicitudCatalogo({
@@ -3125,15 +3144,23 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
         Costo: null,
         DuracionDefaultDias: duracionDias !== '' ? Number(duracionDias) : null,
         Justificacion: justificacion || null,
+        Modalidad: modalidad,
+        FechaTentativa: fechaTentativa || null,
+        NombreComercial: modalidad === 'busqueda_proveedor' ? (nombreComercial || null) : null,
+        RazonSocial: modalidad === 'busqueda_proveedor' ? (razonSocial || null) : null,
+        RequiereConstancia: requiereConstancia,
+        RequiereDC3: requiereDC3,
       })
       onSaved()
     } catch (err) { window.alert('Error: ' + err.message) } finally { setSaving(false) }
   }
 
+  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }
+
   return (
     <>
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000 }} onClick={onClose} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'min(500px, 95vw)', maxHeight: '90vh', background: '#fff', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 1001, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'min(540px, 95vw)', maxHeight: '90vh', background: '#fff', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 1001, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '18px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Solicitar nuevo curso</h2>
@@ -3144,15 +3171,15 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <div style={{ display: 'grid', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Nombre del curso *</label>
+              <label style={labelStyle}>Nombre del curso *</label>
               <input className="form-control" value={nombre} onChange={e => setNombre(e.target.value)} required placeholder="Ej: Excel Avanzado" style={{ width: '100%' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Descripción</label>
+              <label style={labelStyle}>Descripción</label>
               <textarea className="form-control" value={descripcion} onChange={e => setDescripcion(e.target.value)} rows={2} placeholder="¿De qué trata el curso?" style={{ width: '100%', resize: 'vertical' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Tipo de curso</label>
+              <label style={labelStyle}>Tipo de curso</label>
               <select className="form-control" value={tipoCurso} onChange={e => setTipoCurso(e.target.value)} style={{ width: '100%' }}>
                 <option value="">Seleccionar...</option>
                 <option>Mandatorio</option>
@@ -3161,16 +3188,69 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Horas</label>
+                <label style={labelStyle}>Horas</label>
                 <input className="form-control" type="number" value={horas} onChange={e => setHoras(e.target.value)} min={0} step={0.5} placeholder="0" style={{ width: '100%' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Duración (días)</label>
+                <label style={labelStyle}>Duración (días)</label>
                 <input className="form-control" type="number" value={duracionDias} onChange={e => setDuracionDias(e.target.value)} min={1} placeholder="1" style={{ width: '100%' }} />
               </div>
             </div>
+
+            {/* Modalidad de solicitud */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Justificación</label>
+              <label style={labelStyle}>Modalidad de solicitud *</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ key: 'busqueda_proveedor', label: 'Búsqueda de proveedor' }, { key: 'desarrollo_contenido', label: 'Desarrollo de contenido' }].map(op => (
+                  <button key={op.key} type="button"
+                    onClick={() => setModalidad(op.key)}
+                    style={{
+                      flex: 1, padding: '10px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      border: modalidad === op.key ? '2px solid #2563eb' : '1px solid #d1d5db',
+                      background: modalidad === op.key ? '#eff6ff' : '#fff',
+                      color: modalidad === op.key ? '#1d4ed8' : '#374151',
+                    }}>
+                    {op.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Fecha tentativa */}
+            <div>
+              <label style={labelStyle}>Fecha tentativa</label>
+              <input className="form-control" type="date" value={fechaTentativa} onChange={e => setFechaTentativa(e.target.value)} style={{ width: '100%' }} />
+            </div>
+
+            {/* Campos de proveedor (solo si búsqueda de proveedor) */}
+            {modalidad === 'busqueda_proveedor' && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, display: 'grid', gap: 10 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#475569' }}>Datos del proveedor</p>
+                <div>
+                  <label style={labelStyle}>Nombre comercial</label>
+                  <input className="form-control" value={nombreComercial} onChange={e => setNombreComercial(e.target.value)} placeholder="Nombre comercial del proveedor" style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Razón social</label>
+                  <input className="form-control" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} placeholder="Razón social del proveedor" style={{ width: '100%' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Checkboxes constancia / DC3 */}
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#374151', cursor: 'pointer' }}>
+                <input type="checkbox" checked={requiereConstancia} onChange={e => setRequiereConstancia(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#2563eb' }} />
+                Requiere constancia
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#374151', cursor: 'pointer' }}>
+                <input type="checkbox" checked={requiereDC3} onChange={e => setRequiereDC3(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#2563eb' }} />
+                Requiere DC3
+              </label>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Justificación</label>
               <textarea className="form-control" value={justificacion} onChange={e => setJustificacion(e.target.value)} rows={2} placeholder="¿Por qué se necesita este curso?" style={{ width: '100%', resize: 'vertical' }} />
             </div>
           </div>
