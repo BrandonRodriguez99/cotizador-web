@@ -27,6 +27,7 @@ import {
   createSolicitudCatalogo,
   aprobarSolicitudCatalogo,
   rechazarSolicitudCatalogo,
+  eliminarSolicitudCatalogo,
   getAcademiaUbits,
 } from './api'
 import { generarListaAsistenciaPDF } from './generarListaAsistencia'
@@ -2686,20 +2687,28 @@ export default function Academia({ usuario, activeTab }) {
                           {s.Comentario && <> · <em>"{s.Comentario}"</em></>}
                         </div>
                       </div>
-                      {esAprobador && s.Estado === 'Pendiente' && (
-                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <button className="primary-button" style={{ fontSize: 12, padding: '5px 14px', background: '#16a34a', borderColor: '#16a34a' }}
-                            onClick={async () => {
-                              if (!window.confirm(`¿Aprobar "${s.Nombre}" y agregarlo al catálogo?`)) return
-                              try { await aprobarSolicitudCatalogo(s.SolicitudId); loadSolicitudes() }
-                              catch (err) { window.alert('Error: ' + err.message) }
-                            }}>✓ Aprobar</button>
-                          <button className="secondary-button" style={{ fontSize: 12, padding: '5px 14px', color: '#dc2626', borderColor: '#fca5a5' }}
-                            onClick={() => { setRechazandoId(s.SolicitudId); setComentarioRechazo('') }}>
-                            ✕ Rechazar
-                          </button>
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        {esAprobador && s.Estado === 'Pendiente' && (
+                          <>
+                            <button className="primary-button" style={{ fontSize: 12, padding: '5px 14px', background: '#16a34a', borderColor: '#16a34a' }}
+                              onClick={async () => {
+                                if (!window.confirm(`¿Aprobar "${s.Nombre}" y agregarlo al catálogo?`)) return
+                                try { await aprobarSolicitudCatalogo(s.SolicitudId); loadSolicitudes() }
+                                catch (err) { window.alert('Error: ' + err.message) }
+                              }}>✓ Aprobar</button>
+                            <button className="secondary-button" style={{ fontSize: 12, padding: '5px 14px', color: '#dc2626', borderColor: '#fca5a5' }}
+                              onClick={() => { setRechazandoId(s.SolicitudId); setComentarioRechazo('') }}>
+                              ✕ Rechazar
+                            </button>
+                          </>
+                        )}
+                        <button className="secondary-button" style={{ fontSize: 12, padding: '5px 14px', color: '#6b7280', borderColor: '#d1d5db' }}
+                          onClick={async () => {
+                            if (!window.confirm(`¿Eliminar la solicitud "${s.Nombre}"?`)) return
+                            try { await eliminarSolicitudCatalogo(s.SolicitudId); loadSolicitudes() }
+                            catch (err) { window.alert('Error: ' + err.message) }
+                          }}>🗑</button>
+                      </div>
                     </div>
                     {rechazandoId === s.SolicitudId && (
                       <div style={{ marginTop: 12, padding: '12px', background: '#fff7f7', border: '1px solid #fecaca', borderRadius: 8 }}>

@@ -818,6 +818,7 @@ export function getSolicitudesCatalogo() { return fetchJson('academia/solicitude
 export function createSolicitudCatalogo(data) { return fetchJson('academia/solicitudes-catalogo', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function aprobarSolicitudCatalogo(id, data) { return fetchJson(`academia/solicitudes-catalogo/${id}/aprobar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data || {}) }) }
 export function rechazarSolicitudCatalogo(id, data) { return fetchJson(`academia/solicitudes-catalogo/${id}/rechazar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data || {}) }) }
+export function eliminarSolicitudCatalogo(id) { return fetchJson(`academia/solicitudes-catalogo/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function convocarCursoAcademia(cursoId) { return fetchJson(`academia/cursos/${cursoId}/convocar`, { method: 'POST', headers: authHeaders() }) }
 
 export function getFormularios() { return fetchJson('formularios', { headers: authHeaders() }) }
