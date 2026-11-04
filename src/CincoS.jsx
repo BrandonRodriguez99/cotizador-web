@@ -413,6 +413,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                         { key: 'eliminar', label: 'Eliminar', color: '#16a34a', bg: '#dcfce7', icon: ICON_PATHS.eliminar },
                         { key: 'reparar', label: 'Reparar', color: '#d97706', bg: '#fef3c7', icon: ICON_PATHS.reparar },
                         { key: 'red_tag', label: 'Red Tag', color: '#dc2626', bg: '#fee2e2', icon: ICON_PATHS.red_tag },
+                        { key: 'mantener', label: 'Mantener', color: '#059669', bg: '#d1fae5', icon: ICON_PATHS.mantener },
                       ].map(opt => (
                         <button key={opt.key} type="button"
                           onClick={() => setForm(f => ({ ...f, accionManual: opt.key, fechaCompromiso: opt.key !== 'red_tag' ? '' : f.fechaCompromiso }))}
