@@ -1,7 +1,7 @@
 # Cotizador Servicios UDAT — Documentación del Proyecto
 
-**Versión:** 3.0  
-**Fecha:** Julio 2026  
+**Versión:** 4.0  
+**Fecha:** Noviembre 2026  
 **Autor:** Brandon Rodriguez
 
 ---
@@ -22,7 +22,8 @@
 12. [Configuración y Variables de Entorno](#12-configuración-y-variables-de-entorno)
 13. [Instalación y Ejecución](#13-instalación-y-ejecución)
 14. [Dependencias](#14-dependencias)
-15. [Historial de Cambios](#15-historial-de-cambios)
+15. [Módulo Lean 5S](#15-módulo-lean-5s)
+16. [Historial de Cambios](#16-historial-de-cambios)
 
 ---
 
@@ -37,6 +38,7 @@
 - Gestionar un **módulo de seguridad** completo: rondines por área, extintores, visitas y vehículos
 - Emitir **órdenes de salida de vehículos** con evidencia fotográfica (4 ángulos salida + 4 llegada)
 - Recibir **solicitudes de vehículo públicas** sin requerir login (`/solicitud-vehiculo`)
+- Implementar la metodología **Lean 5S** en talleres con inventario, clasificación, acciones del Champion y dashboard de progreso (web + app Android)
 - Gestionar catálogos de clientes, cursos, coaches, proveedores y más
 - Visualizar KPIs y estadísticas en un dashboard
 - Administrar usuarios con distintos roles y permisos
@@ -77,6 +79,7 @@
 │  /api/usuarios            /api/ordenes-mantenimiento │
 │  /api/inventario          /api/seguridad             │
 │  /api/vehiculos           /api/solicitud-vehiculo    │
+│  /api/cincos                                         │
 │                                                      │
 │  Nodemailer → Gmail SMTP (notificaciones)            │
 └────────────────────────┬─────────────────────────────┘
@@ -1183,6 +1186,7 @@ El preset de upload sin firma (`douxyql6`) permite subir imágenes directamente 
 | Rondines | `FotoUrl` (1 foto por área) | `rondines/` |
 | Órdenes vehículo — salida | `FotoSalidaFrontal`, `FotoSalidaTrasero`, `FotoSalidaLateralIzq`, `FotoSalidaLateralDer` | `vehiculos/` |
 | Órdenes vehículo — llegada | `FotoLlegadaFrontal`, `FotoLlegadaTrasero`, `FotoLlegadaLateralIzq`, `FotoLlegadaLateralDer` | `vehiculos/` |
+| Lean 5S — Elementos | `Foto` (1 foto por elemento) | `5s/` |
 
 ---
 
@@ -1362,7 +1366,189 @@ npm run build
 
 ---
 
-## 15. Historial de Cambios
+## 15. Módulo Lean 5S
+
+### 15.1 Descripción
+
+Sistema de implementación de la metodología **5S Lean Manufacturing** para talleres UDAT. Disponible en 3 plataformas:
+
+| Plataforma | Tecnología | Despliegue |
+|-----------|-----------|-----------|
+| Backend | Node.js + Express + MSSQL | Render (auto-deploy) |
+| Web Dashboard | React/Vite (`CincoS.jsx`) | Vercel (auto-deploy) |
+| App Android | Kotlin (proyecto LEAN) | Android Studio (local) |
+
+**Vista en permisos:** `cincos` (sección Herramientas)
+
+### 15.2 Flujo de Trabajo
+
+#### Paso 1 — Configuración del Proyecto (Setup)
+- Crear proyecto 5S con empresa, gerente y encargado
+- Definir terminales (sucursales/plantas)
+- Definir áreas por terminal (Baños, Oficinas, Talleres, etc.)
+- Asignar un **Champion** (usuario del sistema) a cada área
+
+#### Paso 2 — Implementar 1S: Inventario y Clasificación
+- Registrar elementos/equipos/herramientas por área
+- Capturar foto del elemento (Cloudinary)
+- Clasificar: **Necesario**, **Innecesario** o **Dudoso**
+- Registrar frecuencia de uso: Diario, Semanal, Ocasional
+- Registrar estado: Funciona, No funciona, Necesita reparación, Evaluar
+- El sistema calcula automáticamente la **acción recomendada**
+
+#### Paso 3 — Acciones del Champion: Ejecución
+- Acciones generadas automáticamente según clasificación
+- El Champion marca acciones como completadas
+- Dashboard con progreso por tipo y por área
+
+### 15.3 Lógica de Acción Recomendada
+
+```
+Si clasificación = "innecesario"         → Eliminar
+Si clasificación = "dudoso"              → Red Tag
+Si estado = "no_funciona"               → Eliminar
+Si estado = "necesita_reparacion"       → Reparar
+Si estado = "evaluar"                   → Red Tag
+Si frecuencia = "ocasional"             → Reubicar
+Default                                 → Mantener
+```
+
+| Acción | Descripción | Color |
+|--------|------------|-------|
+| Eliminar | Elemento innecesario o no funciona | Rojo `#dc2626` |
+| Reparar | Necesita reparación antes de seguir en uso | Naranja `#d97706` |
+| Red Tag | Requiere evaluación, etiqueta roja | Azul `#2563eb` |
+| Reubicar | Necesario pero de uso ocasional, mover a zona secundaria | Morado `#7c3aed` |
+| Mantener | Buen estado y uso frecuente | Verde `#16a34a` |
+
+### 15.4 Filtro de Áreas por Champion
+
+Los Champions **solo ven las áreas que tienen asignadas** en los dropdowns. Controlado por:
+
+- **Backend:** Campo `ChampionId` en `CincoS_Areas` vincula al `UsuarioId` de `Usuarios`
+- **Android:** `RegistroFragment` filtra `areas.filter { it.ChampionId == userId }`
+- **Web:** El filtro aplica al crear/registrar elementos
+- **Fallback:** Si un usuario no tiene áreas asignadas (admin/facilitador), ve todas
+
+**Requisito de sesión (Android):** El `UsuarioId` se guarda en `SessionManager`. Si la sesión es antigua (sin UsuarioId), el `LoginFragment` fuerza un re-login automático.
+
+### 15.5 Endpoints API
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/cincos/proyectos` | Listar proyectos |
+| GET | `/api/cincos/proyectos/:id` | Detalle con terminales y áreas |
+| POST | `/api/cincos/proyectos` | Crear proyecto |
+| PUT | `/api/cincos/proyectos/:id` | Editar proyecto |
+| GET | `/api/cincos/areas?proyectoId=` | Áreas (incluye ChampionId, Terminal) |
+| GET | `/api/cincos/elementos` | Elementos filtrados por proyecto/área |
+| POST | `/api/cincos/elementos` | Crear elemento |
+| PUT | `/api/cincos/elementos/:id` | Editar elemento |
+| DELETE | `/api/cincos/elementos/:id` | Eliminar elemento |
+| GET | `/api/cincos/acciones` | Acciones filtradas por proyecto/tipo |
+| PUT | `/api/cincos/acciones/:id` | Actualizar estatus de acción |
+| GET | `/api/cincos/dashboard/:proyectoId` | Resumen KPI y avance por área |
+| POST | `/api/cincos/upload` | Subir foto (base64 → Cloudinary) |
+| GET | `/api/cincos/usuarios` | Usuarios para selector de Champion |
+
+### 15.6 Tablas de Base de Datos
+
+| Tabla | Descripción |
+|-------|-------------|
+| `CincoS_Proyectos` | Proyectos 5S (empresa, gerente, encargado) |
+| `CincoS_Terminales` | Terminales/sucursales por proyecto |
+| `CincoS_Areas` | Áreas por terminal con ChampionId |
+| `CincoS_Elementos` | Elementos registrados (nombre, foto, clasificación, frecuencia, estado) |
+| `CincoS_Acciones` | Acciones generadas (tipo, descripción, estatus, responsable) |
+
+### 15.7 Componentes Web
+
+| Componente | Archivo | Descripción |
+|-----------|---------|-------------|
+| `CincoS` | `CincoS.jsx` | Componente principal con todas las vistas |
+| `SetupProyecto` | `CincoS.jsx` | Crear/editar proyecto, terminales y áreas |
+| `RegistroElementos` | `CincoS.jsx` | Inventario con tabla, filtro, modal de registro |
+| `AccionesChampion` | `CincoS.jsx` | Tabs de acciones, dashboard KPI, avance por área |
+| `DetalleElementoModal` | `CincoS.jsx` | Modal con foto grande y todos los datos del elemento |
+| `FotoLightbox` | `CincoS.jsx` | Visor de fotos a pantalla completa |
+| `AccionCard` | `CincoS.jsx` | Card de acción con toggle de completado y foto |
+| `KPICard` | `CincoS.jsx` | Tarjeta de indicador con barra de progreso |
+
+### 15.8 Archivos Android (Proyecto LEAN)
+
+| Archivo | Descripción |
+|---------|-------------|
+| `ui/auth/LoginFragment.kt` | Login con UsuarioId, re-login forzado |
+| `ui/auth/HomeFragment.kt` | Pantalla principal con cards de módulos |
+| `ui/registro/RegistroFragment.kt` | Inventario, filtro por Champion, nuevo elemento con cámara |
+| `ui/registro/ElementosAdapter.kt` | Lista de elementos con click → detalle |
+| `ui/acciones/AccionesFragment.kt` | Tabs de acciones (Eliminar/Reparar/Red Tags) |
+| `ui/acciones/AccionesAdapter.kt` | Lista de acciones con click → detalle |
+| `utils/DetalleHelper.kt` | Dialogs de detalle (elemento y acción con foto grande) |
+| `utils/AccionHelper.kt` | Lógica de acción recomendada |
+| `utils/SessionManager.kt` | Manejo de sesión con UsuarioId |
+
+### 15.9 Diseño — Tema Oscuro (Android)
+
+La app Android usa un tema oscuro consistente con la app UDAT DVIR:
+
+| Token | Color | Uso |
+|-------|-------|-----|
+| Background | `#0F172A` | Fondo principal |
+| Surface/Cards | `#1E293B` | Cards, toolbars, dialogs |
+| Borders | `#334155` | Bordes de inputs/spinners |
+| Title text | `#F1F5F9` | Texto principal |
+| Subtitle text | `#64748B` | Texto secundario |
+| Label text | `#94A3B8` | Labels y texto muted |
+| Primary blue | `#2563EB` | Acciones primarias |
+| Accent blue | `#3B82F6` | Tab indicators, checkboxes |
+| Error red | `#F87171` | Errores, eliminar |
+
+**Estilos:** `Base.Theme.LEAN` (Material3 DayNight NoActionBar) + `Theme.LEAN.Dialog` (overlay para MaterialAlertDialogBuilder)
+
+### 15.10 Iconos SVG
+
+Todos los iconos del módulo usan **SVG vectoriales** tanto en web como en Android:
+
+- **Web:** Componente `SvgIcon` con paths inline para cada tipo de acción (trash, wrench, tag, box, check), más iconos de editar (pen-square) y eliminar (trash)
+- **Android:** Vector drawables en `res/drawable/`: `ic_camera.xml`, `ic_back.xml`, `ic_clipboard.xml`, `ic_dashboard.xml`, `ic_5s.xml`
+
+---
+
+## 16. Historial de Cambios
+
+### v4.0 — Noviembre 2026
+
+#### Nuevo: Módulo Lean 5S completo (Web + Android)
+- Nuevo componente `CincoS.jsx` con flujo completo: Setup → Inventario → Acciones → Dashboard
+- CRUD de proyectos 5S con terminales, áreas y asignación de Champions
+- Registro de elementos con foto (Cloudinary), clasificación, frecuencia y estado
+- Cálculo automático de acción recomendada (Eliminar, Reparar, Red Tag, Reubicar, Mantener)
+- Vista de Acciones del Champion con tabs por tipo y toggle de completado
+- Dashboard KPI con progreso por tipo de acción y avance por área
+- Modal de detalle de elemento con foto ampliable (lightbox)
+- Lightbox de fotos en vista de acciones
+- Filtro de áreas por Champion: los usuarios solo ven las áreas que tienen asignadas
+- Vista `cincos` agregada al panel de permisos (sección Herramientas)
+- Iconos SVG vectoriales en tabs, badges, botones y cards (reemplazo de emojis)
+- Cards de módulo con gradientes azules e iconos SVG (clipboard, bar-chart, pen-square)
+
+#### Nuevo: App Android LEAN
+- Proyecto Kotlin con Navigation Component, ViewBinding, Retrofit y Coroutines
+- Tema oscuro completo copiado de UDAT DVIR (`#0F172A` background, `#1E293B` cards)
+- Login con guardado de UsuarioId y re-login forzado si sesión antigua
+- Registro de elementos con cámara (permisos runtime) y upload a Cloudinary
+- Clasificación con Material Chips, acción recomendada automática
+- Vista de acciones con TabLayout (Eliminar/Reparar/Red Tags)
+- Dialogs de detalle con foto grande (MaterialAlertDialogBuilder + tema oscuro)
+- Filtro de áreas por Champion con fallback a todas las áreas
+- Vector drawables para todos los iconos (camera, back, clipboard, dashboard, 5s)
+
+#### Nuevo: Endpoints API 5S
+- 14 endpoints bajo `/api/cincos/*` para proyectos, áreas, elementos, acciones, dashboard y upload
+- Tablas: `CincoS_Proyectos`, `CincoS_Terminales`, `CincoS_Areas`, `CincoS_Elementos`, `CincoS_Acciones`
+
+---
 
 ### v3.0 — Julio 2026
 
@@ -1415,4 +1601,4 @@ npm run build
 
 ---
 
-*Documentación actualizada el 9 de julio de 2026. Versión 3.0.*
+*Documentación actualizada el 4 de noviembre de 2026. Versión 4.0.*
