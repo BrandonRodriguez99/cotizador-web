@@ -842,4 +842,7 @@ export function deleteCincoSElemento(id) { return fetchJson(`cincos/elementos/${
 export function getCincoSAcciones(params) { const qs = new URLSearchParams(params).toString(); return fetchJson(`cincos/acciones?${qs}`, { headers: authHeaders() }) }
 export function updateCincoSAccion(id, data) { return fetchJson(`cincos/acciones/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function getCincoSDashboard(proyectoId) { return fetchJson(`cincos/dashboard/${proyectoId}`, { headers: authHeaders() }) }
+export function getCincoSNotificaciones() { return fetchJson('cincos/notificaciones', { headers: authHeaders() }) }
+export function marcarNotificacionLeida(id) { return fetchJson(`cincos/notificaciones/${id}/leer`, { method: 'PUT', headers: authHeaders() }) }
+export function marcarTodasNotificacionesLeidas() { return fetchJson('cincos/notificaciones/leer-todas', { method: 'PUT', headers: authHeaders() }) }
 export function uploadFoto5S(base64) { return fetchJson('upload/foto-5s', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) }) }

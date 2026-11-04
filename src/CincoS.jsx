@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import {
   getCincoSProyectos, getCincoSProyecto, createCincoSProyecto, updateCincoSProyecto,
   getCincoSAreas, getCincoSElementos, createCincoSElemento, updateCincoSElemento, deleteCincoSElemento,
-  getCincoSAcciones, updateCincoSAccion, getCincoSDashboard, uploadFoto5S, getCincoSUsuarios
+  getCincoSAcciones, updateCincoSAccion, getCincoSDashboard, uploadFoto5S, getCincoSUsuarios,
+  getCincoSNotificaciones, marcarNotificacionLeida, marcarTodasNotificacionesLeidas
 } from './api'
 
 const CLASIFICACIONES = [
@@ -224,7 +225,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
   const [loading, setLoading] = useState(true)
   const [areaFiltro, setAreaFiltro] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '', areaId: '' })
+  const [form, setForm] = useState({ nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '', areaId: '', accionManual: '', fechaCompromiso: '' })
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editId, setEditId] = useState(null)
@@ -262,18 +263,23 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.areaId || !form.nombre || !form.clasificacion || !form.frecuenciaUso || !form.estado) {
-      return alert('Complete todos los campos requeridos')
+    if (!form.areaId || !form.nombre || !form.clasificacion || !form.frecuenciaUso || !form.estado || !form.accionManual) {
+      return alert('Complete todos los campos requeridos (incluyendo la acción)')
+    }
+    if (form.accionManual === 'red_tag' && !form.fechaCompromiso) {
+      return alert('Para Red Tag debe seleccionar una fecha compromiso')
     }
     setSaving(true)
     try {
+      const payload = { ...form }
+      if (payload.accionManual !== 'red_tag') payload.fechaCompromiso = ''
       if (editId) {
-        await updateCincoSElemento(editId, form)
+        await updateCincoSElemento(editId, payload)
       } else {
-        await createCincoSElemento(form)
+        await createCincoSElemento(payload)
       }
       setShowForm(false)
-      setForm({ nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '', areaId: form.areaId })
+      setForm({ nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '', areaId: form.areaId, accionManual: '', fechaCompromiso: '' })
       setEditId(null)
       loadElementos()
     } catch (err) {
@@ -286,7 +292,9 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
     setForm({
       nombre: el.Nombre, foto: el.Foto || '', cantidad: el.Cantidad,
       clasificacion: el.Clasificacion, frecuenciaUso: el.FrecuenciaUso,
-      estado: el.Estado, areaId: el.AreaId
+      estado: el.Estado, areaId: el.AreaId,
+      accionManual: el.AccionManual || el.AccionRecomendada || '',
+      fechaCompromiso: el.FechaCompromiso ? el.FechaCompromiso.split('T')[0] : ''
     })
     setEditId(el.ElementoId)
     setShowForm(true)
@@ -315,7 +323,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
             <option value="">Todas las áreas</option>
             {areas.map(a => <option key={a.AreaId} value={a.AreaId}>{a.Terminal} — {a.Area}</option>)}
           </select>
-          <button onClick={() => { setShowForm(true); setEditId(null); setForm(f => ({ ...f, nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '' })) }}
+          <button onClick={() => { setShowForm(true); setEditId(null); setForm(f => ({ ...f, nombre: '', foto: '', cantidad: 1, clasificacion: '', frecuenciaUso: '', estado: '', accionManual: '', fechaCompromiso: '' })) }}
             style={btnPrimary}>+ Registrar Elemento</button>
         </div>
       </div>
@@ -399,13 +407,54 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                   </select>
                 </div>
 
-                {/* Acción recomendada */}
+                {/* Acción recomendada (informativa) */}
                 {accion && (
-                  <div style={{ background: ACCIONES_MAP[accion]?.bg || '#f1f5f9', border: `1px solid ${ACCIONES_MAP[accion]?.color || '#94a3b8'}`, borderRadius: 8, padding: 12 }}>
-                    <div style={{ fontWeight: 600, color: ACCIONES_MAP[accion]?.color, marginBottom: 4, fontSize: 14 }}>
-                      {ACCIONES_MAP[accion]?.icon} Acción recomendada: {ACCIONES_MAP[accion]?.label}
+                  <div style={{ background: ACCIONES_MAP[accion]?.bg || '#f1f5f9', border: `1px solid ${ACCIONES_MAP[accion]?.color || '#94a3b8'}20`, borderRadius: 8, padding: 12 }}>
+                    <div style={{ fontWeight: 600, color: ACCIONES_MAP[accion]?.color, marginBottom: 4, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <SvgIcon d={ACCIONES_MAP[accion]?.icon} color={ACCIONES_MAP[accion]?.color} size={14} />
+                      Recomendación: {ACCIONES_MAP[accion]?.label}
                     </div>
-                    <div style={{ fontSize: 13, color: '#374151' }}>{instruccion}</div>
+                    <div style={{ fontSize: 12, color: '#6b7280' }}>{instruccion}</div>
+                  </div>
+                )}
+
+                {/* Acción del Champion (obligatoria) */}
+                {form.clasificacion && form.frecuenciaUso && form.estado && (
+                  <div>
+                    <label style={labelStyle}>Acción del Champion *</label>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Seleccione a dónde destinar este elemento:</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { key: 'eliminar', label: 'Eliminar', color: '#dc2626', bg: '#fee2e2', icon: ICON_PATHS.eliminar },
+                        { key: 'reparar', label: 'Reparar', color: '#d97706', bg: '#fef3c7', icon: ICON_PATHS.reparar },
+                        { key: 'red_tag', label: 'Red Tag', color: '#2563eb', bg: '#dbeafe', icon: ICON_PATHS.red_tag },
+                      ].map(opt => (
+                        <button key={opt.key} type="button"
+                          onClick={() => setForm(f => ({ ...f, accionManual: opt.key, fechaCompromiso: opt.key !== 'red_tag' ? '' : f.fechaCompromiso }))}
+                          style={{
+                            flex: 1, padding: '12px 8px', borderRadius: 8,
+                            border: `2px solid ${form.accionManual === opt.key ? opt.color : '#e2e8f0'}`,
+                            background: form.accionManual === opt.key ? opt.bg : '#fff',
+                            color: opt.color, fontWeight: 600, cursor: 'pointer', fontSize: 13,
+                            transition: 'all .15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                          }}>
+                          <SvgIcon d={opt.icon} color={opt.color} size={20} />
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fecha compromiso para Red Tag */}
+                {form.accionManual === 'red_tag' && (
+                  <div style={{ background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 8, padding: 12 }}>
+                    <label style={{ ...labelStyle, color: '#1d4ed8' }}>Fecha Compromiso *</label>
+                    <div style={{ fontSize: 12, color: '#3b82f6', marginBottom: 8 }}>Se generarán recordatorios conforme se acerque esta fecha.</div>
+                    <input type="date" style={{ ...inputStyle, borderColor: '#93c5fd' }} value={form.fechaCompromiso}
+                      onChange={e => setForm(f => ({ ...f, fechaCompromiso: e.target.value }))}
+                      min={new Date().toISOString().split('T')[0]}
+                      required />
                   </div>
                 )}
               </div>
@@ -447,7 +496,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                 </thead>
                 <tbody>
                   {filtered.map(el => {
-                    const acc = ACCIONES_MAP[el.AccionRecomendada] || {}
+                    const acc = ACCIONES_MAP[el.AccionManual || el.AccionRecomendada] || {}
                     const clas = CLASIFICACIONES.find(c => c.value === el.Clasificacion) || {}
                     const est = ESTADOS.find(e => e.value === el.Estado) || {}
                     return (
@@ -490,7 +539,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
           {filtered.length > 0 && (
             <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
               {['eliminar', 'reparar', 'red_tag', 'reubicar', 'mantener'].map(tipo => {
-                const count = filtered.filter(e => e.AccionRecomendada === tipo).length
+                const count = filtered.filter(e => (e.AccionManual || e.AccionRecomendada) === tipo).length
                 if (!count) return null
                 const m = ACCIONES_MAP[tipo]
                 return (
@@ -692,7 +741,7 @@ function FotoLightbox({ src, onClose }) {
 function DetalleElementoModal({ elemento: el, areas, onClose }) {
   const [lightboxSrc, setLightboxSrc] = useState(null)
   if (!el) return null
-  const acc = ACCIONES_MAP[el.AccionRecomendada] || {}
+  const acc = ACCIONES_MAP[el.AccionManual || el.AccionRecomendada] || {}
   const clas = CLASIFICACIONES.find(c => c.value === el.Clasificacion) || {}
   const est = ESTADOS.find(e => e.value === el.Estado) || {}
   const freq = FRECUENCIAS.find(f => f.value === el.FrecuenciaUso)
@@ -730,6 +779,13 @@ function DetalleElementoModal({ elemento: el, areas, onClose }) {
           <div style={{ background: acc.bg, border: `1px solid ${acc.color}20`, borderRadius: 8, padding: 12, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
             <SvgIcon d={acc.icon} color={acc.color} size={18} />
             <span style={{ fontWeight: 600, color: acc.color, fontSize: 14 }}>Acción: {acc.label}</span>
+          </div>
+        )}
+
+        {el.FechaCompromiso && (
+          <div style={{ background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 8, padding: 10, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span style={{ fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}>Fecha compromiso: {new Date(el.FechaCompromiso).toLocaleDateString('es-MX')}</span>
           </div>
         )}
 
@@ -802,6 +858,96 @@ function ProgressMini({ done, total, color }) {
         <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3 }} />
       </div>
       <span style={{ fontSize: 12, fontWeight: 600, color }}>{done}/{total}</span>
+    </div>
+  )
+}
+
+// ─── Notificaciones Bell ────────────────────────────────────────────────────
+function NotificacionesBell() {
+  const [notifs, setNotifs] = useState([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const loadNotifs = async () => {
+    try {
+      const data = await getCincoSNotificaciones()
+      setNotifs(data)
+    } catch (e) { console.error(e) }
+  }
+
+  useEffect(() => {
+    loadNotifs()
+    const interval = setInterval(loadNotifs, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const unread = notifs.filter(n => !n.Leida).length
+
+  const handleMarkRead = async (id) => {
+    try {
+      await marcarNotificacionLeida(id)
+      setNotifs(prev => prev.map(n => n.NotificacionId === id ? { ...n, Leida: true } : n))
+    } catch (e) { console.error(e) }
+  }
+
+  const handleMarkAllRead = async () => {
+    setLoading(true)
+    try {
+      await marcarTodasNotificacionesLeidas()
+      setNotifs(prev => prev.map(n => ({ ...n, Leida: true })))
+    } catch (e) { console.error(e) }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(!open)} style={{
+        background: 'none', border: 'none', cursor: 'pointer', padding: 6, position: 'relative',
+      }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        {unread > 0 && (
+          <span style={{
+            position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
+            background: '#dc2626', color: '#fff', fontSize: 10, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>{unread > 9 ? '9+' : unread}</span>
+        )}
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 40, right: 0, width: 340, maxHeight: 400, overflowY: 'auto',
+          background: '#fff', borderRadius: 10, boxShadow: '0 8px 30px rgba(0,0,0,.15)',
+          border: '1px solid #e2e8f0', zIndex: 100,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>Notificaciones</span>
+            {unread > 0 && (
+              <button onClick={handleMarkAllRead} disabled={loading}
+                style={{ ...btnSmall, fontSize: 11, color: '#2563eb', background: '#dbeafe' }}>
+                Marcar todas leídas
+              </button>
+            )}
+          </div>
+          {notifs.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>Sin notificaciones</div>
+          ) : notifs.map(n => (
+            <div key={n.NotificacionId}
+              onClick={() => !n.Leida && handleMarkRead(n.NotificacionId)}
+              style={{
+                padding: '10px 16px', borderBottom: '1px solid #f8fafc', cursor: n.Leida ? 'default' : 'pointer',
+                background: n.Leida ? '#fff' : '#eff6ff',
+              }}>
+              <div style={{ fontWeight: n.Leida ? 400 : 600, fontSize: 13, color: '#1e293b' }}>{n.Titulo}</div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{n.Mensaje}</div>
+              <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{new Date(n.FechaCreacion).toLocaleString('es-MX')}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -890,7 +1036,7 @@ export default function CincoS({ usuario }) {
   if (vista === 'menu' && proyectoActivo) {
     return (
       <div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
           <button onClick={() => { setProyectoActivo(null); setVista('inicio') }}
             style={{ ...btnSmall, background: '#f1f5f9' }}>← Proyectos</button>
           <button onClick={() => setVista('edit')}
@@ -898,6 +1044,7 @@ export default function CincoS({ usuario }) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar Proyecto
           </button>
+          <div style={{ marginLeft: 'auto' }}><NotificacionesBell /></div>
         </div>
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ margin: '0 0 4px', fontSize: 20 }}>Proyecto 5S — {proyectoActivo.Empresa}</h2>
@@ -966,7 +1113,10 @@ export default function CincoS({ usuario }) {
           <h2 style={{ margin: 0, fontSize: 20 }}>Programa 5S en Talleres</h2>
           <p style={{ color: '#6b7280', margin: '4px 0 0', fontSize: 13 }}>Seleccione un proyecto existente o cree uno nuevo</p>
         </div>
-        <button onClick={() => setVista('setup')} style={btnPrimary}>+ Nuevo Proyecto</button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <NotificacionesBell />
+          <button onClick={() => setVista('setup')} style={btnPrimary}>+ Nuevo Proyecto</button>
+        </div>
       </div>
 
       {proyectos.length === 0 ? (
