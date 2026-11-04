@@ -3032,7 +3032,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                   </select>
                 </div>
                 {(() => {
-                  const cursoPasadoEdit = editandoCurso?.FechaFin && new Date(editandoCurso.FechaFin) < new Date(new Date().toDateString())
+                  const cursoPasadoEdit = cursoInicial?.FechaFin && new Date(cursoInicial.FechaFin) < new Date(new Date().toDateString())
                   return cursoPasadoEdit ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fca5a5' }}>
                       <div style={{ width: 40, height: 22, borderRadius: 11, background: '#d1d5db', position: 'relative', flexShrink: 0, opacity: 0.6 }}>
