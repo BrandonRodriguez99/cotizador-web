@@ -592,7 +592,27 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
   const completados = filtered.filter(a => a.Estatus === 'completado')
   const pctTab = acciones.length ? Math.round(completados.length / acciones.length * 100) : 0
 
-  const r = dashboard?.resumen || {}
+  const rGlobal = dashboard?.resumen || {}
+  const hayFiltro = Boolean(terminalFiltro || areaFiltro || championFiltro)
+
+  const r = (() => {
+    if (!hayFiltro) return rGlobal
+    const filas = (dashboard?.porArea || []).filter(a => {
+      if (terminalFiltro && a.Terminal !== terminalFiltro) return false
+      if (areaFiltro && String(a.AreaId) !== areaFiltro) return false
+      if (championFiltro && a.Champion !== championFiltro) return false
+      return true
+    })
+    return {
+      totalEliminar: filas.reduce((s, a) => s + (a.eliminar || 0), 0),
+      completadosEliminar: filas.reduce((s, a) => s + (a.eliminarOk || 0), 0),
+      totalReparar: filas.reduce((s, a) => s + (a.reparar || 0), 0),
+      completadosReparar: filas.reduce((s, a) => s + (a.repararOk || 0), 0),
+      totalRedTag: filas.reduce((s, a) => s + (a.redTag || 0), 0),
+      completadosRedTag: filas.reduce((s, a) => s + (a.redTagOk || 0), 0),
+    }
+  })()
+
   const tabCounts = {
     eliminar: r.totalEliminar || 0,
     reparar: r.totalReparar || 0,
