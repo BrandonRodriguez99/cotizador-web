@@ -641,6 +641,22 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
         <h3 style={{ margin: 0, fontSize: 16 }}>1S — Ejecución de Acciones</h3>
       </div>
 
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+        <select style={{ ...inputStyle, maxWidth: 200 }} value={terminalFiltro} onChange={e => { setTerminalFiltro(e.target.value); setAreaFiltro('') }}>
+          <option value="">Todas las terminales</option>
+          {terminales.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select style={{ ...inputStyle, maxWidth: 200 }} value={areaFiltro} onChange={e => setAreaFiltro(e.target.value)}>
+          <option value="">Todas las áreas</option>
+          {areas.filter(a => !terminalFiltro || a.Terminal === terminalFiltro).map(a => <option key={a.AreaId} value={a.AreaId}>{a.Terminal} — {a.Area}</option>)}
+        </select>
+        <select style={{ ...inputStyle, maxWidth: 200 }} value={championFiltro} onChange={e => setChampionFiltro(e.target.value)}>
+          <option value="">Todos los Champions</option>
+          {champions.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
       {/* KPI Cards */}
       {dashboard && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
@@ -670,28 +686,12 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
         ))}
       </div>
 
-      {/* Filtros + progress */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: 1 }}>
-          <select style={{ ...inputStyle, maxWidth: 200 }} value={terminalFiltro} onChange={e => { setTerminalFiltro(e.target.value); setAreaFiltro('') }}>
-            <option value="">Todas las terminales</option>
-            {terminales.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <select style={{ ...inputStyle, maxWidth: 200 }} value={areaFiltro} onChange={e => setAreaFiltro(e.target.value)}>
-            <option value="">Todas las áreas</option>
-            {areas.filter(a => !terminalFiltro || a.Terminal === terminalFiltro).map(a => <option key={a.AreaId} value={a.AreaId}>{a.Terminal} — {a.Area}</option>)}
-          </select>
-          <select style={{ ...inputStyle, maxWidth: 200 }} value={championFiltro} onChange={e => setChampionFiltro(e.target.value)}>
-            <option value="">Todos los Champions</option>
-            {champions.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+      {/* Progress bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+        <div style={{ width: 120, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ width: `${pctTab}%`, height: '100%', background: tabs.find(t => t.key === tab)?.color, transition: 'width .3s' }} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 120, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{ width: `${pctTab}%`, height: '100%', background: tabs.find(t => t.key === tab)?.color, transition: 'width .3s' }} />
-          </div>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>{pctTab}%</span>
-        </div>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{pctTab}%</span>
       </div>
 
       {loading ? <p>Cargando...</p> : (
