@@ -14,6 +14,7 @@ const TIPOS = [
   { value: 'media',          label: 'Media (foto)' },
   { value: 'firma',          label: 'Firma' },
   { value: 'lista',           label: 'Lista desplegable' },
+  { value: 'escala',          label: 'Escala numérica' },
   { value: 'alumno',         label: 'Alumno (búsqueda)' },
   { value: 'opt',            label: 'OPT (operadores)' },
 ]
@@ -23,7 +24,7 @@ const TIPO_LABEL = Object.fromEntries(TIPOS.map(t => [t.value, t.label]))
 function uid() { return Math.random().toString(36).slice(2) }
 
 function emptySeccion() {
-  return { _id: uid(), titulo: 'Sección nueva', preguntas: [] }
+  return { _id: uid(), titulo: 'Sección nueva', instrucciones: '', preguntas: [] }
 }
 
 function emptyPregunta() {
@@ -70,6 +71,11 @@ function MobilePreview({ form }) {
             }}>
               {sec.titulo || `Sección ${si + 1}`}
             </div>
+            {sec.instrucciones && (
+              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, fontStyle: 'italic', lineHeight: 1.4 }}>
+                {sec.instrucciones}
+              </div>
+            )}
             {(sec.preguntas || []).map((preg, pi) => (
               <div key={preg._id || pi} style={{
                 background: '#fff', borderRadius: 8, padding: '10px 12px',
@@ -140,6 +146,19 @@ function PreviewRespuesta({ tipo, opciones }) {
       }}>
         <span>{opts[0]?.texto || 'Seleccionar...'}</span>
         <span style={{ fontSize: 8 }}>▼</span>
+      </div>
+    )
+  }
+  if (tipo === 'escala') {
+    const vals = opciones?.length ? opciones.map(o => o.texto || o) : ['2', '5', '10']
+    return (
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+        {vals.map((v, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>{typeof v === 'object' ? v.texto : v}</span>
+            <div style={{ width: 13, height: 13, borderRadius: '50%', border: '1.5px solid #94a3b8' }} />
+          </div>
+        ))}
       </div>
     )
   }
@@ -251,7 +270,7 @@ function PreguntaEditor({ preg, onChange, onDelete }) {
         </label>
       </div>
 
-      {(preg.tipoRespuesta === 'opcion_multiple' || preg.tipoRespuesta === 'lista') && (
+      {(preg.tipoRespuesta === 'opcion_multiple' || preg.tipoRespuesta === 'lista' || preg.tipoRespuesta === 'escala') && (
         <div style={{ marginTop: 8, paddingLeft: 4 }}>
           {(preg.opciones || []).map((o, i) => (
             <div key={o._id || i} style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
@@ -276,6 +295,7 @@ function PreguntaEditor({ preg, onChange, onDelete }) {
 // ── Sección editor ────────────────────────────────────────────────────────────
 function SeccionEditor({ sec, onChange, onDelete, canDelete }) {
   function setTitulo(t) { onChange({ ...sec, titulo: t }) }
+  function setInstrucciones(v) { onChange({ ...sec, instrucciones: v }) }
   function addPregunta() { onChange({ ...sec, preguntas: [...sec.preguntas, emptyPregunta()] }) }
   function updatePregunta(i, preg) {
     const ps = [...sec.preguntas]; ps[i] = preg; onChange({ ...sec, preguntas: ps })
@@ -299,6 +319,19 @@ function SeccionEditor({ sec, onChange, onDelete, canDelete }) {
             Eliminar sección
           </button>
         )}
+      </div>
+      <div style={{ padding: '0 14px 6px' }}>
+        <textarea
+          value={sec.instrucciones || ''}
+          onChange={e => setInstrucciones(e.target.value)}
+          placeholder="Instrucciones de la sección (opcional)..."
+          rows={2}
+          style={{
+            width: '100%', border: '1px solid #e2e8f0', borderRadius: 6,
+            padding: '8px 10px', fontSize: 12, color: '#475569', resize: 'vertical',
+            background: '#f8fafc', boxSizing: 'border-box', outline: 'none',
+          }}
+        />
       </div>
       <div style={{ padding: '12px 14px' }}>
         {sec.preguntas.map((preg, i) => (
@@ -511,6 +544,7 @@ export default function Formularios({ usuario }) {
       f.secciones = (f.secciones || []).map(s => ({
         ...s, _id: uid(),
         titulo: s.Titulo || s.titulo || '',
+        instrucciones: s.Instrucciones || s.instrucciones || '',
         preguntas: (s.preguntas || []).map(p => ({
           ...p, _id: uid(),
           texto: p.Texto || p.texto || '',

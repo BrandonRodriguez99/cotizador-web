@@ -34,6 +34,7 @@ export default function FormularioPublico() {
         d.secciones = (d.secciones || []).map(s => ({
           ...s,
           titulo: s.Titulo || s.titulo || '',
+          instrucciones: s.Instrucciones || s.instrucciones || '',
           preguntas: (s.preguntas || []).map(p => ({
             ...p,
             texto: p.Texto || p.texto || '',
@@ -167,6 +168,11 @@ export default function FormularioPublico() {
               }}>
                 {sec.titulo}
               </div>
+              {(sec.Instrucciones || sec.instrucciones) && (
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 14, fontStyle: 'italic', lineHeight: 1.5 }}>
+                  {sec.Instrucciones || sec.instrucciones}
+                </div>
+              )}
 
               {(sec.preguntas || []).map((preg) => (
                 <div key={preg.PreguntaId} style={{ marginBottom: 18 }}>
@@ -254,6 +260,26 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
           <option key={i} value={opt}>{opt}</option>
         ))}
       </select>
+    )
+  }
+
+  if (tipo === 'escala') {
+    return (
+      <div style={{ display: 'flex', gap: 0, justifyContent: 'center' }}>
+        {opciones.map((opt, i) => (
+          <button type="button" key={i} onClick={() => onChange(opt)} style={{
+            flex: 1, padding: '12px 4px', cursor: 'pointer',
+            fontSize: 14, fontWeight: 600, textAlign: 'center',
+            border: value === opt ? '2px solid #f59e0b' : '1px solid #d1d5db',
+            background: value === opt ? '#fffbeb' : '#f9fafb',
+            color: value === opt ? '#92400e' : '#374151',
+            borderRadius: i === 0 ? '8px 0 0 8px' : i === opciones.length - 1 ? '0 8px 8px 0' : 0,
+            marginLeft: i > 0 ? -1 : 0,
+          }}>
+            {opt}
+          </button>
+        ))}
+      </div>
     )
   }
 
