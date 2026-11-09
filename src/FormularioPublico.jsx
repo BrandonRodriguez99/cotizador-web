@@ -310,7 +310,7 @@ function OPTSelector({ value, onChange }) {
     setCargando(true)
     fetch(`${API}/public/operadores-opt?empresaId=${empresaId}`)
       .then(r => r.json())
-      .then(d => { setOperadores(d); setCargando(false) })
+      .then(d => { setOperadores(Array.isArray(d) ? d : []); setCargando(false) })
       .catch(() => setCargando(false))
   }, [empresaId])
 
