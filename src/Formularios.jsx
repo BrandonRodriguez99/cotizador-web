@@ -13,6 +13,7 @@ const TIPOS = [
   { value: 'fecha',          label: 'Fecha y hora' },
   { value: 'media',          label: 'Media (foto)' },
   { value: 'firma',          label: 'Firma' },
+  { value: 'alumno',         label: 'Alumno (búsqueda)' },
 ]
 
 const TIPO_LABEL = Object.fromEntries(TIPOS.map(t => [t.value, t.label]))
@@ -154,6 +155,22 @@ function PreviewRespuesta({ tipo, opciones }) {
         border: '1.5px dashed #94a3b8', borderRadius: 6, padding: '8px',
         textAlign: 'center', color: '#94a3b8', fontSize: 10,
       }}>✍️ Firma</div>
+    )
+  }
+  if (tipo === 'alumno') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{
+          width: '100%', padding: '5px 8px', borderRadius: 6,
+          border: '1px solid #cbd5e1', fontSize: 10, color: '#94a3b8',
+          background: '#f8fafc', boxSizing: 'border-box',
+        }}>▼ Seleccionar generación</div>
+        <div style={{
+          width: '100%', padding: '5px 8px', borderRadius: 6,
+          border: '1px solid #cbd5e1', fontSize: 10, color: '#94a3b8',
+          background: '#f8fafc', boxSizing: 'border-box',
+        }}>🔍 Buscar alumno...</div>
+      </div>
     )
   }
   return null

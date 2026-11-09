@@ -285,8 +285,140 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
     return <SignaturePad value={value} onChange={onChange} />
   }
 
+  if (tipo === 'alumno') {
+    return <AlumnoSelector value={value} onChange={onChange} />
+  }
+
   // texto (default)
   return <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} value={value} onChange={e => onChange(e.target.value)} placeholder="Escribe tu respuesta..." />
+}
+
+function AlumnoSelector({ value, onChange }) {
+  const [generaciones, setGeneraciones] = useState([])
+  const [genId, setGenId] = useState('')
+  const [alumnos, setAlumnos] = useState([])
+  const [busqueda, setBusqueda] = useState('')
+  const [cargando, setCargando] = useState(false)
+  const [abierto, setAbierto] = useState(false)
+
+  useEffect(() => {
+    fetch(`${API}/public/generaciones`)
+      .then(r => r.json())
+      .then(d => setGeneraciones(d))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!genId) { setAlumnos([]); return }
+    setCargando(true)
+    fetch(`${API}/public/alumnos-por-generacion?genId=${genId}`)
+      .then(r => r.json())
+      .then(d => { setAlumnos(d); setCargando(false) })
+      .catch(() => setCargando(false))
+  }, [genId])
+
+  const filtrados = alumnos.filter(a => {
+    if (!busqueda.trim()) return true
+    const q = busqueda.toLowerCase()
+    return (a.Matricula || '').toLowerCase().includes(q) || (a.Nombre || '').toLowerCase().includes(q)
+  })
+
+  const selected = value ? (() => {
+    try { return JSON.parse(value) } catch { return null }
+  })() : null
+
+  function seleccionar(alumno) {
+    onChange(JSON.stringify({ id: alumno.OperadorId, matricula: alumno.Matricula, nombre: alumno.Nombre }))
+    setAbierto(false)
+    setBusqueda('')
+  }
+
+  const stBase = {
+    width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14,
+    boxSizing: 'border-box', border: '1px solid #d1d5db', background: '#f9fafb',
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <select
+        value={genId}
+        onChange={e => { setGenId(e.target.value); onChange(''); setAbierto(true) }}
+        style={{ ...stBase, color: genId ? '#1e293b' : '#9ca3af', cursor: 'pointer' }}
+      >
+        <option value="">Seleccionar generación...</option>
+        {generaciones.map(g => (
+          <option key={g.GeneracionId} value={g.GeneracionId}>{g.Nombre}</option>
+        ))}
+      </select>
+
+      {genId && (
+        <div style={{ position: 'relative' }}>
+          {selected && !abierto ? (
+            <div
+              onClick={() => setAbierto(true)}
+              style={{
+                ...stBase, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center', background: '#fffbeb', border: '2px solid #f59e0b',
+              }}
+            >
+              <span>
+                <strong style={{ color: '#92400e' }}>{selected.matricula}</strong>
+                <span style={{ color: '#1e293b', marginLeft: 8 }}>{selected.nombre}</span>
+              </span>
+              <span style={{ color: '#9ca3af', fontSize: 12 }}>Cambiar</span>
+            </div>
+          ) : (
+            <>
+              <input
+                type="text"
+                placeholder={cargando ? 'Cargando alumnos...' : 'Buscar por matrícula o nombre...'}
+                value={busqueda}
+                onChange={e => { setBusqueda(e.target.value); setAbierto(true) }}
+                onFocus={() => setAbierto(true)}
+                style={stBase}
+                disabled={cargando}
+              />
+              {abierto && !cargando && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                  background: '#fff', border: '1px solid #d1d5db', borderRadius: 8,
+                  maxHeight: 200, overflowY: 'auto', marginTop: 4,
+                  boxShadow: '0 4px 12px rgba(0,0,0,.12)',
+                }}>
+                  {filtrados.length === 0 && (
+                    <div style={{ padding: '12px', color: '#9ca3af', fontSize: 13, textAlign: 'center' }}>
+                      Sin resultados
+                    </div>
+                  )}
+                  {filtrados.map(a => (
+                    <div
+                      key={a.OperadorId}
+                      onClick={() => seleccionar(a)}
+                      style={{
+                        padding: '10px 12px', cursor: 'pointer', fontSize: 14,
+                        borderBottom: '1px solid #f3f4f6',
+                        display: 'flex', gap: 10, alignItems: 'center',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                    >
+                      <span style={{
+                        background: '#f59e0b', color: '#fff', borderRadius: 4,
+                        padding: '2px 6px', fontSize: 11, fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {a.Matricula}
+                      </span>
+                      <span style={{ color: '#1e293b' }}>{a.Nombre}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function SignaturePad({ value, onChange }) {
