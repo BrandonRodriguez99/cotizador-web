@@ -297,22 +297,48 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
   return <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} value={value} onChange={e => onChange(e.target.value)} placeholder="Escribe tu respuesta..." />
 }
 
+const OPT_ESTRUCTURA = {
+  ALA: {
+    id: 1,
+    unidades: {
+      'INTERNACIONAL': ['Cruces', 'Ruta Corta', 'Import Export'],
+      'INTERMODAL': ['IM Nuevo Laredo', 'IM Derramadero', 'IM Monterrey', 'IM SLP', 'IM Toluca', 'IM Querétaro', 'IM Celaya'],
+      'AUTOMOTRIZ': ['Toyota Tijuana', 'Toyota Celaya', 'Toyota SLP', 'Operaciones Celaya', 'Cuentas Nacionales'],
+    },
+  },
+  LARMEX: {
+    id: 10,
+    unidades: {
+      'NACIONAL': ['NAC 5', 'NAC 6', 'NAC 7', 'NAC RL', 'NAC SWI', 'ACEROS SWI', 'NAC RC', 'NAC SWI (QRO)'],
+      'IMPORT-EXPORT': ['I/E RC', 'I/E RL', 'I/E BAJIO'],
+      'INTERMODAL': ['IM RC', 'IM SWI', 'IM 6'],
+      'GM': ['GM SLP FORÁNEO', 'GM SLP LOCAL', 'GM SALTILLO'],
+      'FORD': ['FORD INT NTE', 'FORD SUR', 'HERMOSILLO', 'CHIHUAHUA'],
+    },
+  },
+}
+
 function OPTSelector({ value, onChange }) {
-  const EMPRESAS = [{ id: 1, nombre: 'ALA' }, { id: 10, nombre: 'LARMEX' }]
-  const [empresaId, setEmpresaId] = useState('')
+  const [empresa, setEmpresa] = useState('')
+  const [unidadNegocio, setUnidadNegocio] = useState('')
+  const [unidadOperativa, setUnidadOperativa] = useState('')
   const [operadores, setOperadores] = useState([])
   const [busqueda, setBusqueda] = useState('')
   const [cargando, setCargando] = useState(false)
   const [abierto, setAbierto] = useState(false)
 
+  const empData = empresa ? OPT_ESTRUCTURA[empresa] : null
+  const unidadesNegocio = empData ? Object.keys(empData.unidades) : []
+  const unidadesOperativas = empData && unidadNegocio ? (empData.unidades[unidadNegocio] || []) : []
+
   useEffect(() => {
-    if (!empresaId) { setOperadores([]); return }
+    if (!empresa || !empData) { setOperadores([]); return }
     setCargando(true)
-    fetch(`${API}/public/operadores-opt?empresaId=${empresaId}`)
+    fetch(`${API}/public/operadores-opt?empresaId=${empData.id}`)
       .then(r => r.json())
       .then(d => { setOperadores(Array.isArray(d) ? d : []); setCargando(false) })
       .catch(() => setCargando(false))
-  }, [empresaId])
+  }, [empresa])
 
   const filtrados = operadores.filter(o => {
     if (!busqueda.trim()) return true
@@ -324,8 +350,17 @@ function OPTSelector({ value, onChange }) {
   })() : null
 
   function seleccionar(op) {
-    const emp = EMPRESAS.find(e => e.id === Number(empresaId))
-    onChange(JSON.stringify({ empresa: emp?.nombre || '', operador: op.OperadorNombre }))
+    onChange(JSON.stringify({
+      empresa, unidadNegocio, unidadOperativa, operador: op.OperadorNombre,
+    }))
+    setAbierto(false)
+    setBusqueda('')
+  }
+
+  function resetFrom(level) {
+    onChange('')
+    if (level <= 1) { setUnidadNegocio(''); setUnidadOperativa('') }
+    if (level <= 2) { setUnidadOperativa('') }
     setAbierto(false)
     setBusqueda('')
   }
@@ -334,22 +369,59 @@ function OPTSelector({ value, onChange }) {
     width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14,
     boxSizing: 'border-box', border: '1px solid #d1d5db', background: '#f9fafb',
   }
+  const lblStyle = { fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 4, display: 'block' }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <select
-        value={empresaId}
-        onChange={e => { setEmpresaId(e.target.value); onChange(''); setAbierto(true) }}
-        style={{ ...stBase, color: empresaId ? '#1e293b' : '#9ca3af', cursor: 'pointer' }}
-      >
-        <option value="">Seleccionar empresa...</option>
-        {EMPRESAS.map(emp => (
-          <option key={emp.id} value={emp.id}>{emp.nombre}</option>
-        ))}
-      </select>
+      <div>
+        <span style={lblStyle}>Empresa</span>
+        <select
+          value={empresa}
+          onChange={e => { setEmpresa(e.target.value); resetFrom(1) }}
+          style={{ ...stBase, color: empresa ? '#1e293b' : '#9ca3af', cursor: 'pointer' }}
+        >
+          <option value="">Seleccionar empresa...</option>
+          {Object.keys(OPT_ESTRUCTURA).map(emp => (
+            <option key={emp} value={emp}>{emp}</option>
+          ))}
+        </select>
+      </div>
 
-      {empresaId && (
+      {empresa && (
+        <div>
+          <span style={lblStyle}>Unidad de Negocio</span>
+          <select
+            value={unidadNegocio}
+            onChange={e => { setUnidadNegocio(e.target.value); resetFrom(2) }}
+            style={{ ...stBase, color: unidadNegocio ? '#1e293b' : '#9ca3af', cursor: 'pointer' }}
+          >
+            <option value="">Seleccionar unidad de negocio...</option>
+            {unidadesNegocio.map(un => (
+              <option key={un} value={un}>{un}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {unidadNegocio && (
+        <div>
+          <span style={lblStyle}>Unidad Operativa</span>
+          <select
+            value={unidadOperativa}
+            onChange={e => { setUnidadOperativa(e.target.value); onChange(''); setAbierto(true) }}
+            style={{ ...stBase, color: unidadOperativa ? '#1e293b' : '#9ca3af', cursor: 'pointer' }}
+          >
+            <option value="">Seleccionar unidad operativa...</option>
+            {unidadesOperativas.map(uo => (
+              <option key={uo} value={uo}>{uo}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {unidadOperativa && (
         <div style={{ position: 'relative' }}>
+          <span style={lblStyle}>Operador</span>
           {selected && !abierto ? (
             <div
               onClick={() => setAbierto(true)}
@@ -358,10 +430,7 @@ function OPTSelector({ value, onChange }) {
                 alignItems: 'center', background: '#fffbeb', border: '2px solid #f59e0b',
               }}
             >
-              <span>
-                <strong style={{ color: '#92400e' }}>{selected.empresa}</strong>
-                <span style={{ color: '#1e293b', marginLeft: 8 }}>{selected.operador}</span>
-              </span>
+              <span style={{ color: '#1e293b' }}>{selected.operador}</span>
               <span style={{ color: '#9ca3af', fontSize: 12 }}>Cambiar</span>
             </div>
           ) : (

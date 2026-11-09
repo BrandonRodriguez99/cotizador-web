@@ -175,18 +175,13 @@ function PreviewRespuesta({ tipo, opciones }) {
     )
   }
   if (tipo === 'opt') {
+    const pv = { width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 10, color: '#94a3b8', background: '#f8fafc', boxSizing: 'border-box' }
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{
-          width: '100%', padding: '5px 8px', borderRadius: 6,
-          border: '1px solid #cbd5e1', fontSize: 10, color: '#94a3b8',
-          background: '#f8fafc', boxSizing: 'border-box',
-        }}>▼ ALA / LARMEX</div>
-        <div style={{
-          width: '100%', padding: '5px 8px', borderRadius: 6,
-          border: '1px solid #cbd5e1', fontSize: 10, color: '#94a3b8',
-          background: '#f8fafc', boxSizing: 'border-box',
-        }}>🔍 Buscar operador...</div>
+        <div style={pv}>▼ Empresa</div>
+        <div style={pv}>▼ Unidad de Negocio</div>
+        <div style={pv}>▼ Unidad Operativa</div>
+        <div style={pv}>🔍 Buscar operador...</div>
       </div>
     )
   }
