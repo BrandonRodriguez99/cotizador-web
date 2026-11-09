@@ -16,6 +16,11 @@ async function uploadImage(file) {
 
 export default function FormularioPublico() {
   const slug = window.location.pathname.split('/formulario/')[1]
+  const [backUrl] = useState(() => {
+    const ref = document.referrer
+    try { const u = new URL(ref); if (u.pathname.startsWith('/p/')) return u.pathname } catch {}
+    return '/portal'
+  })
   const [form, setForm] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -120,7 +125,7 @@ export default function FormularioPublico() {
           <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
         </svg>
         <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>{error}</div>
-        <a href="/portal" style={{ color: '#f59e0b', fontSize: 14 }}>← Volver al portal</a>
+        <a href={backUrl} style={{ color: '#f59e0b', fontSize: 14 }}>← Volver al portal</a>
       </div>
     </div>
   )
@@ -132,7 +137,7 @@ export default function FormularioPublico() {
         </svg>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>¡Respuesta enviada!</div>
         <p style={{ color: '#6b7280', fontSize: 14 }}>Tu respuesta ha sido registrada exitosamente.</p>
-        <a href="/portal" style={{ color: '#f59e0b', fontSize: 14 }}>← Volver al portal</a>
+        <a href={backUrl} style={{ color: '#f59e0b', fontSize: 14 }}>← Volver al portal</a>
       </div>
     </div>
   )
@@ -142,7 +147,7 @@ export default function FormularioPublico() {
       <div style={card}>
         {/* Header */}
         <div style={{ background: '#1e293b', padding: '24px 24px 20px' }}>
-          <a href="/portal" style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'none', display: 'inline-block', marginBottom: 12 }}>← Portal</a>
+          <a href={backUrl} style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'none', display: 'inline-block', marginBottom: 12 }}>← Portal</a>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: 4 }}>
             Formulario
           </div>
