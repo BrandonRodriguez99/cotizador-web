@@ -242,6 +242,21 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
     )
   }
 
+  if (tipo === 'lista') {
+    return (
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{ ...inp, color: value ? '#1e293b' : '#9ca3af', cursor: 'pointer' }}
+      >
+        <option value="">Seleccionar...</option>
+        {opciones.map((opt, i) => (
+          <option key={i} value={opt}>{opt}</option>
+        ))}
+      </select>
+    )
+  }
+
   if (tipo === 'casilla') {
     return (
       <label style={{

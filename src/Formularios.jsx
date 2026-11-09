@@ -13,6 +13,7 @@ const TIPOS = [
   { value: 'fecha',          label: 'Fecha y hora' },
   { value: 'media',          label: 'Media (foto)' },
   { value: 'firma',          label: 'Firma' },
+  { value: 'lista',           label: 'Lista desplegable' },
   { value: 'alumno',         label: 'Alumno (búsqueda)' },
   { value: 'opt',            label: 'OPT (operadores)' },
 ]
@@ -131,6 +132,17 @@ function PreviewRespuesta({ tipo, opciones }) {
       </div>
     )
   }
+  if (tipo === 'lista') {
+    const opts = opciones?.length ? opciones : [{ texto: 'Opción 1' }, { texto: 'Opción 2' }]
+    return (
+      <div style={{
+        ...inputStyle, color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <span>{opts[0]?.texto || 'Seleccionar...'}</span>
+        <span style={{ fontSize: 8 }}>▼</span>
+      </div>
+    )
+  }
   if (tipo === 'casilla') {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#374151' }}>
@@ -239,7 +251,7 @@ function PreguntaEditor({ preg, onChange, onDelete }) {
         </label>
       </div>
 
-      {preg.tipoRespuesta === 'opcion_multiple' && (
+      {(preg.tipoRespuesta === 'opcion_multiple' || preg.tipoRespuesta === 'lista') && (
         <div style={{ marginTop: 8, paddingLeft: 4 }}>
           {(preg.opciones || []).map((o, i) => (
             <div key={o._id || i} style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
