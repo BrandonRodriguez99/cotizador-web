@@ -14,6 +14,7 @@ const TIPOS = [
   { value: 'media',          label: 'Media (foto)' },
   { value: 'firma',          label: 'Firma' },
   { value: 'alumno',         label: 'Alumno (búsqueda)' },
+  { value: 'opt',            label: 'OPT (operadores)' },
 ]
 
 const TIPO_LABEL = Object.fromEntries(TIPOS.map(t => [t.value, t.label]))
@@ -170,6 +171,22 @@ function PreviewRespuesta({ tipo, opciones }) {
           border: '1px solid #cbd5e1', fontSize: 10, color: '#94a3b8',
           background: '#f8fafc', boxSizing: 'border-box',
         }}>🔍 Buscar alumno...</div>
+      </div>
+    )
+  }
+  if (tipo === 'opt') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{
+          width: '100%', padding: '5px 8px', borderRadius: 6,
+          border: '1px solid #cbd5e1', fontSize: 10, color: '#94a3b8',
+          background: '#f8fafc', boxSizing: 'border-box',
+        }}>▼ ALA / LARMEX</div>
+        <div style={{
+          width: '100%', padding: '5px 8px', borderRadius: 6,
+          border: '1px solid #cbd5e1', fontSize: 10, color: '#94a3b8',
+          background: '#f8fafc', boxSizing: 'border-box',
+        }}>🔍 Buscar operador...</div>
       </div>
     )
   }

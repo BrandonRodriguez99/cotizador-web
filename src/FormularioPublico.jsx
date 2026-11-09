@@ -289,8 +289,126 @@ function RespuestaInput({ tipo, opciones, value, onChange, onFileSelect, uploadi
     return <AlumnoSelector value={value} onChange={onChange} />
   }
 
+  if (tipo === 'opt') {
+    return <OPTSelector value={value} onChange={onChange} />
+  }
+
   // texto (default)
   return <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} value={value} onChange={e => onChange(e.target.value)} placeholder="Escribe tu respuesta..." />
+}
+
+function OPTSelector({ value, onChange }) {
+  const EMPRESAS = [{ id: 1, nombre: 'ALA' }, { id: 10, nombre: 'LARMEX' }]
+  const [empresaId, setEmpresaId] = useState('')
+  const [operadores, setOperadores] = useState([])
+  const [busqueda, setBusqueda] = useState('')
+  const [cargando, setCargando] = useState(false)
+  const [abierto, setAbierto] = useState(false)
+
+  useEffect(() => {
+    if (!empresaId) { setOperadores([]); return }
+    setCargando(true)
+    fetch(`${API}/public/operadores-opt?empresaId=${empresaId}`)
+      .then(r => r.json())
+      .then(d => { setOperadores(d); setCargando(false) })
+      .catch(() => setCargando(false))
+  }, [empresaId])
+
+  const filtrados = operadores.filter(o => {
+    if (!busqueda.trim()) return true
+    return (o.OperadorNombre || '').toLowerCase().includes(busqueda.toLowerCase())
+  })
+
+  const selected = value ? (() => {
+    try { return JSON.parse(value) } catch { return null }
+  })() : null
+
+  function seleccionar(op) {
+    const emp = EMPRESAS.find(e => e.id === Number(empresaId))
+    onChange(JSON.stringify({ empresa: emp?.nombre || '', operador: op.OperadorNombre }))
+    setAbierto(false)
+    setBusqueda('')
+  }
+
+  const stBase = {
+    width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14,
+    boxSizing: 'border-box', border: '1px solid #d1d5db', background: '#f9fafb',
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <select
+        value={empresaId}
+        onChange={e => { setEmpresaId(e.target.value); onChange(''); setAbierto(true) }}
+        style={{ ...stBase, color: empresaId ? '#1e293b' : '#9ca3af', cursor: 'pointer' }}
+      >
+        <option value="">Seleccionar empresa...</option>
+        {EMPRESAS.map(emp => (
+          <option key={emp.id} value={emp.id}>{emp.nombre}</option>
+        ))}
+      </select>
+
+      {empresaId && (
+        <div style={{ position: 'relative' }}>
+          {selected && !abierto ? (
+            <div
+              onClick={() => setAbierto(true)}
+              style={{
+                ...stBase, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center', background: '#fffbeb', border: '2px solid #f59e0b',
+              }}
+            >
+              <span>
+                <strong style={{ color: '#92400e' }}>{selected.empresa}</strong>
+                <span style={{ color: '#1e293b', marginLeft: 8 }}>{selected.operador}</span>
+              </span>
+              <span style={{ color: '#9ca3af', fontSize: 12 }}>Cambiar</span>
+            </div>
+          ) : (
+            <>
+              <input
+                type="text"
+                placeholder={cargando ? 'Cargando operadores...' : 'Buscar operador...'}
+                value={busqueda}
+                onChange={e => { setBusqueda(e.target.value); setAbierto(true) }}
+                onFocus={() => setAbierto(true)}
+                style={stBase}
+                disabled={cargando}
+              />
+              {abierto && !cargando && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                  background: '#fff', border: '1px solid #d1d5db', borderRadius: 8,
+                  maxHeight: 200, overflowY: 'auto', marginTop: 4,
+                  boxShadow: '0 4px 12px rgba(0,0,0,.12)',
+                }}>
+                  {filtrados.length === 0 && (
+                    <div style={{ padding: '12px', color: '#9ca3af', fontSize: 13, textAlign: 'center' }}>
+                      Sin resultados
+                    </div>
+                  )}
+                  {filtrados.map((op, i) => (
+                    <div
+                      key={i}
+                      onClick={() => seleccionar(op)}
+                      style={{
+                        padding: '10px 12px', cursor: 'pointer', fontSize: 14,
+                        borderBottom: '1px solid #f3f4f6', color: '#1e293b',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                    >
+                      {op.OperadorNombre}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function AlumnoSelector({ value, onChange }) {
