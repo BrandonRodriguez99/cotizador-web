@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   getFormularios, getFormulario, createFormulario, updateFormulario,
   toggleFormularioActivo, deleteFormulario, getFormularioRespuestas,
+  getPortales, createPortal, updatePortal, deletePortal,
 } from './api'
 
 const TIPOS = [
@@ -513,6 +514,9 @@ export default function Formularios({ usuario }) {
   const [showPreview, setShowPreview] = useState(true)
   const [viewRespuestas, setViewRespuestas] = useState(false)
   const [isNew, setIsNew] = useState(false)
+  const [portales, setPortales] = useState([])
+  const [showPortales, setShowPortales] = useState(false)
+  const [editPortal, setEditPortal] = useState(null)
 
   const isAdmin = usuario?.rol === 'admin'
 
@@ -521,7 +525,11 @@ export default function Formularios({ usuario }) {
     getFormularios().then(setLista).catch(e => setError(e.message)).finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { cargarLista() }, [cargarLista])
+  const cargarPortales = useCallback(() => {
+    getPortales().then(setPortales).catch(() => {})
+  }, [])
+
+  useEffect(() => { cargarLista(); cargarPortales() }, [cargarLista, cargarPortales])
 
   function nuevoFormulario() {
     setSelected({
@@ -609,6 +617,31 @@ export default function Formularios({ usuario }) {
     setSelected(s => { const ss = [...s.secciones]; ss.splice(i, 1); return { ...s, secciones: ss } })
   }
 
+  async function guardarPortal() {
+    if (!editPortal) return
+    if (!editPortal.nombre?.trim() || !editPortal.slug?.trim()) { setError('Nombre y slug son requeridos'); return }
+    try {
+      if (editPortal.PortalId) {
+        await updatePortal(editPortal.PortalId, editPortal)
+      } else {
+        await createPortal(editPortal)
+      }
+      cargarPortales()
+      setEditPortal(null)
+    } catch (e) { setError(e.message) }
+  }
+
+  async function eliminarPortal(id, e) {
+    e.stopPropagation()
+    if (!confirm('¿Eliminar este portal?')) return
+    try { await deletePortal(id); cargarPortales() } catch (e) { setError(e.message) }
+  }
+
+  async function togglePortalActivo(p, e) {
+    e.stopPropagation()
+    try { await updatePortal(p.PortalId, { activo: !p.Activo }); cargarPortales() } catch (e) { setError(e.message) }
+  }
+
   const btnStyle = (color = '#3B82F6') => ({
     background: color, color: '#fff', border: 'none', borderRadius: 7,
     padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -684,6 +717,64 @@ export default function Formularios({ usuario }) {
         {!loading && lista.length === 0 && (
           <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', paddingTop: 20 }}>
             Sin formularios aún
+          </div>
+        )}
+
+        {/* ── Portales ── */}
+        {isAdmin && (
+          <div style={{ marginTop: 16, borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+            <div
+              onClick={() => setShowPortales(p => !p)}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: 8 }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Portales
+              </span>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>{showPortales ? '▲' : '▼'}</span>
+            </div>
+
+            {showPortales && (
+              <>
+                <button type="button" style={{ ...btnStyle('#8b5cf6'), width: '100%', padding: '7px', fontSize: 12, marginBottom: 8 }}
+                  onClick={() => setEditPortal({ nombre: '', slug: '', descripcion: '', formularioIds: [] })}>
+                  + Nuevo portal
+                </button>
+
+                {portales.map(p => (
+                  <div key={p.PortalId}
+                    onClick={() => setEditPortal({ ...p, nombre: p.Nombre, slug: p.Slug, descripcion: p.Descripcion || '', formularioIds: p.formularioIds || [] })}
+                    style={{
+                      background: editPortal?.PortalId === p.PortalId ? '#f5f3ff' : '#fff',
+                      border: `1.5px solid ${editPortal?.PortalId === p.PortalId ? '#8b5cf6' : '#e2e8f0'}`,
+                      borderRadius: 8, padding: '8px 10px', cursor: 'pointer', marginBottom: 6,
+                    }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600, fontSize: 12, color: '#1e293b' }}>{p.Nombre}</span>
+                      <span style={{
+                        fontSize: 9, fontWeight: 600, padding: '2px 5px', borderRadius: 8,
+                        background: p.Activo ? '#dcfce7' : '#f1f5f9',
+                        color: p.Activo ? '#15803d' : '#64748b',
+                      }}>{p.Activo ? 'Activo' : 'Inactivo'}</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: '#8b5cf6', marginTop: 2 }}>/p/{p.Slug}</div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                      <button type="button" onClick={e => togglePortalActivo(p, e)}
+                        style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: p.Activo ? '#dc2626' : '#16a34a' }}>
+                        {p.Activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                      <button type="button" onClick={e => { e.stopPropagation(); const url = `${window.location.origin}/p/${p.Slug}`; navigator.clipboard.writeText(url).then(() => alert('Enlace copiado: ' + url)).catch(() => prompt('Copia:', url)) }}
+                        style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: '1px solid #c4b5fd', background: '#f5f3ff', cursor: 'pointer', color: '#7c3aed' }}>
+                        Copiar enlace
+                      </button>
+                      <button type="button" onClick={e => eliminarPortal(p.PortalId, e)}
+                        style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: '1px solid #fca5a5', background: '#fff', cursor: 'pointer', color: '#dc2626' }}>
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -839,6 +930,70 @@ export default function Formularios({ usuario }) {
           {lista.length === 0
             ? (isAdmin ? 'Crea tu primer formulario con el botón de arriba.' : 'No hay formularios disponibles.')
             : 'Selecciona un formulario de la lista o crea uno nuevo.'}
+        </div>
+      )}
+
+      {/* ── Modal editor de portal ── */}
+      {editPortal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        }} onClick={() => setEditPortal(null)}>
+          <div style={{
+            background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 500,
+            maxHeight: '90vh', overflow: 'auto',
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 16, color: '#1e293b' }}>
+              {editPortal.PortalId ? 'Editar portal' : 'Nuevo portal'}
+            </h3>
+
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Nombre *</label>
+            <input value={editPortal.nombre || ''} onChange={e => setEditPortal(p => ({ ...p, nombre: e.target.value }))}
+              placeholder="Mi portal" style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 7, padding: '8px 12px', fontSize: 13, boxSizing: 'border-box', marginBottom: 12 }} />
+
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Slug (URL) *</label>
+            <input value={editPortal.slug || ''} onChange={e => setEditPortal(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+              placeholder="mi-portal" style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 7, padding: '8px 12px', fontSize: 13, boxSizing: 'border-box', marginBottom: 4 }} />
+            <div style={{ fontSize: 11, color: '#8b5cf6', marginBottom: 12 }}>
+              URL: {window.location.origin}/p/{editPortal.slug || '...'}
+            </div>
+
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Descripción</label>
+            <textarea value={editPortal.descripcion || ''} onChange={e => setEditPortal(p => ({ ...p, descripcion: e.target.value }))}
+              placeholder="Descripción del portal (opcional)" rows={2}
+              style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 7, padding: '8px 12px', fontSize: 13, boxSizing: 'border-box', marginBottom: 16, resize: 'vertical' }} />
+
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 8 }}>Formularios asignados</label>
+            <div style={{ maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 7, padding: 8, marginBottom: 16 }}>
+              {lista.filter(f => f.Activo).map(f => (
+                <label key={f.FormularioId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13, color: '#334155', cursor: 'pointer' }}>
+                  <input type="checkbox"
+                    checked={(editPortal.formularioIds || []).includes(f.FormularioId)}
+                    onChange={e => {
+                      const ids = editPortal.formularioIds || []
+                      setEditPortal(p => ({
+                        ...p,
+                        formularioIds: e.target.checked ? [...ids, f.FormularioId] : ids.filter(id => id !== f.FormularioId),
+                      }))
+                    }} />
+                  {f.Nombre}
+                </label>
+              ))}
+              {lista.filter(f => f.Activo).length === 0 && (
+                <div style={{ fontSize: 12, color: '#94a3b8', padding: 8 }}>No hay formularios activos</div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" style={{ ...btnStyle('#8b5cf6'), flex: 1, padding: '9px' }} onClick={guardarPortal} disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar portal'}
+              </button>
+              <button type="button" style={{ ...btnStyle('#fff'), color: '#64748b', border: '1px solid #e2e8f0', padding: '9px 16px' }}
+                onClick={() => setEditPortal(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

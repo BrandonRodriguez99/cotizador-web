@@ -847,3 +847,9 @@ export function getCincoSNotificaciones() { return fetchJson('cincos/notificacio
 export function marcarNotificacionLeida(id) { return fetchJson(`cincos/notificaciones/${id}/leer`, { method: 'PUT', headers: authHeaders() }) }
 export function marcarTodasNotificacionesLeidas() { return fetchJson('cincos/notificaciones/leer-todas', { method: 'PUT', headers: authHeaders() }) }
 export function uploadFoto5S(base64) { return fetchJson('upload/foto-5s', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) }) }
+
+// ── Portales ──────────────────────────────────────────────────────────────────
+export function getPortales() { return fetchJson('portales', { headers: authHeaders() }) }
+export function createPortal(data) { return fetchJson('portales', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updatePortal(id, data) { return fetchJson(`portales/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deletePortal(id) { return fetchJson(`portales/${id}`, { method: 'DELETE', headers: authHeaders() }) }

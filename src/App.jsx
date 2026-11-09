@@ -49,6 +49,7 @@ import Formularios from './Formularios'
 import Academia from './Academia'
 import CincoS from './CincoS'
 import PortalPublico from './PortalPublico'
+import PortalCustom from './PortalCustom'
 import FormularioPublico from './FormularioPublico'
 import FormulariosPublico from './FormulariosPublico'
 import CargaDieselPublica from './CargaDieselPublica'
@@ -903,6 +904,7 @@ function App() {
 
   // Rutas públicas (sin autenticación)
   if (window.location.pathname === '/portal') return <PortalPublico />
+  if (window.location.pathname.startsWith('/p/')) return <PortalCustom />
   if (window.location.pathname === '/solicitud-vehiculo') return <SolicitudVehiculoPublica />
   if (window.location.pathname === '/dvir') return <DVIRPublico />
   if (window.location.pathname === '/registrar-visita') return <RegistroVisitaPublica />
