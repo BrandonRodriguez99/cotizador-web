@@ -460,27 +460,44 @@ function RespuestasView({ formId, onBack }) {
 
   function exportarExcel() {
     if (!respuestas.length) return
-    const allKeys = []
-    const seen = new Set()
+
+    const jsonLabels = { id: 'ID', matricula: 'Matrícula', nombre: 'Nombre', empresa: 'Empresa', unidadNegocio: 'Unidad de Negocio', unidadOperativa: 'Unidad Operativa', operador: 'Operador' }
+
+    const tryParse = s => { try { const p = JSON.parse(s); if (p && typeof p === 'object' && !Array.isArray(p)) return p } catch {} return null }
+
+    const colDefs = []
+    const seenKey = new Set()
     respuestas.forEach(r => (r.valores || []).forEach(v => {
-      if (!seen.has(v.Texto)) { seen.add(v.Texto); allKeys.push(v.Texto) }
+      if (seenKey.has(v.Texto)) return
+      seenKey.add(v.Texto)
+      const parsed = tryParse(v.Valor)
+      if (parsed) {
+        const subKeys = Object.keys(parsed).filter(k => k !== 'id')
+        subKeys.forEach(sk => colDefs.push({ key: v.Texto, sub: sk, header: `${v.Texto} - ${jsonLabels[sk] || sk}` }))
+      } else {
+        colDefs.push({ key: v.Texto, sub: null, header: v.Texto })
+      }
     }))
 
     const escape = s => {
       if (s == null) return ''
       const str = String(s)
-      try {
-        const parsed = JSON.parse(str)
-        if (parsed && typeof parsed === 'object') return Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ')
-      } catch {}
       return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str.replace(/"/g, '""')}"` : str
     }
 
-    const headers = ['Enviado por', 'Fecha', ...allKeys]
+    const headers = ['Enviado por', 'Fecha', ...colDefs.map(c => c.header)]
     const rows = respuestas.map(r => {
       const valMap = {}
       ;(r.valores || []).forEach(v => { valMap[v.Texto] = v.Valor })
-      return [escape(r.OperadorNombre), new Date(r.FechaEnvio).toLocaleString('es-MX'), ...allKeys.map(k => escape(valMap[k]))]
+      const cells = colDefs.map(c => {
+        const raw = valMap[c.key]
+        if (c.sub) {
+          const parsed = tryParse(raw)
+          return escape(parsed ? parsed[c.sub] : '')
+        }
+        return escape(raw)
+      })
+      return [escape(r.OperadorNombre), escape(new Date(r.FechaEnvio).toLocaleString('es-MX')), ...cells]
     })
 
     const bom = '﻿'
