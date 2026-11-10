@@ -403,9 +403,25 @@ function RespuestaDetalle({ r, onClose }) {
               <img src={v.Valor} alt={v.Texto}
                 style={{ width: '100%', borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'cover', maxHeight: 200, cursor: 'pointer' }}
                 onClick={() => window.open(v.Valor, '_blank')} />
-            ) : (
-              <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 500 }}>{v.Valor ?? '—'}</div>
-            )}
+            ) : (() => {
+              try {
+                const parsed = JSON.parse(v.Valor)
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                  const labels = { id: 'ID', matricula: 'Matrícula', nombre: 'Nombre', empresa: 'Empresa', unidadNegocio: 'Unidad de Negocio', unidadOperativa: 'Unidad Operativa', operador: 'Operador' }
+                  return (
+                    <div style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 14px', border: '1px solid #e2e8f0' }}>
+                      {Object.entries(parsed).filter(([, val]) => val != null && val !== '').map(([key, val]) => (
+                        <div key={key} style={{ display: 'flex', gap: 8, marginBottom: 4, fontSize: 13 }}>
+                          <span style={{ color: '#64748b', minWidth: 120 }}>{labels[key] || key}:</span>
+                          <span style={{ color: '#0f172a', fontWeight: 500 }}>{val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                }
+              } catch {}
+              return <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 500 }}>{v.Valor ?? '—'}</div>
+            })()}
           </div>
         ))}
       </div>
