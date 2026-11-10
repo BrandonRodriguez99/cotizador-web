@@ -183,7 +183,7 @@ export default function SeguimientoOPT({ usuario }) {
 
   const alumnosFiltrados = useMemo(() => {
     let arr = data.alumnos
-    if (tabEtapa === 'opt') arr = arr.filter(a => (a.etapa || '').toUpperCase() === 'OPT')
+    if (tabEtapa === 'opt') arr = arr.filter(a => (a.etapa || '').toUpperCase().includes('OPT'))
     if (filtroGeneracion) arr = arr.filter(a => a.generacion === filtroGeneracion)
     if (filtroPerfil) arr = arr.filter(a => a.perfil === filtroPerfil)
     if (filtroEstado === 'al_dia') arr = arr.filter(a => a.vencidas === 0 && a.completadas > 0)
@@ -240,7 +240,7 @@ export default function SeguimientoOPT({ usuario }) {
     transition: 'all 0.15s',
   })
 
-  const totalOpt = data.alumnos.filter(a => (a.etapa || '').toUpperCase() === 'OPT').length
+  const totalOpt = data.alumnos.filter(a => (a.etapa || '').toUpperCase().includes('OPT')).length
   const totalTodos = data.alumnos.length
 
   return (
@@ -348,8 +348,8 @@ export default function SeguimientoOPT({ usuario }) {
                     <td style={{ padding: '10px 14px' }}>
                       <span style={{
                         padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
-                        background: (al.etapa || '').toUpperCase() === 'OPT' ? '#dbeafe' : '#f0fdf4',
-                        color: (al.etapa || '').toUpperCase() === 'OPT' ? '#1d4ed8' : '#166534',
+                        background: (al.etapa || '').toUpperCase().includes('OPT') ? '#dbeafe' : '#f0fdf4',
+                        color: (al.etapa || '').toUpperCase().includes('OPT') ? '#1d4ed8' : '#166534',
                       }}>{al.etapa || '—'}</span>
                     </td>
                   )}
