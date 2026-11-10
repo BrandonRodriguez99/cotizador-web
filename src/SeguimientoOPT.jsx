@@ -143,6 +143,69 @@ function EvaluacionCard({ ev, defaultOpen }) {
   )
 }
 
+function TimelineCard({ enc, cfg, evalData }) {
+  const [open, setOpen] = useState(false)
+  const hasData = !!evalData
+  const canExpand = enc.estado === 'completada' && hasData
+
+  return (
+    <div style={{
+      background: '#fff', borderRadius: 10,
+      border: `1px solid ${enc.estado === 'vencida' ? '#fca5a5' : enc.estado === 'completada' ? '#86efac' : '#e2e8f0'}`,
+      overflow: 'hidden',
+    }}>
+      <div
+        onClick={() => canExpand && setOpen(o => !o)}
+        style={{
+          padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
+          cursor: canExpand ? 'pointer' : 'default',
+        }}
+        onMouseEnter={e => canExpand && (e.currentTarget.style.background = '#f8fffe')}
+        onMouseLeave={e => canExpand && (e.currentTarget.style.background = 'transparent')}
+      >
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+          background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, fontWeight: 700, color: cfg.color, border: `2px solid ${cfg.color}20`,
+        }}>
+          {enc.estado === 'completada' ? '✓' : enc.estado === 'vencida' ? '!' : enc.semanaInicio}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{enc.formularioNombre}</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+            Semana {enc.semanaInicio} · {enc.diasActiva} días activa
+            {enc.perfil && <span> · Perfil: {enc.perfil}</span>}
+          </div>
+          {enc.fechaRespuesta && (
+            <div style={{ fontSize: 11, color: '#22c55e', marginTop: 2 }}>
+              Respondida el {new Date(enc.fechaRespuesta).toLocaleDateString('es-MX')}
+            </div>
+          )}
+        </div>
+        <Badge estado={enc.estado} />
+        {canExpand && <span style={{ fontSize: 16, color: '#94a3b8', transform: open ? 'rotate(180deg)' : '', transition: 'transform 0.2s', marginLeft: 4 }}>▾</span>}
+      </div>
+      {open && evalData && (
+        <div style={{ padding: '0 18px 16px', borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ fontSize: 12, color: '#64748b', padding: '10px 0 6px' }}>
+            Respondido por: <strong>{evalData.operador}</strong> · {new Date(evalData.fecha).toLocaleDateString('es-MX')}
+          </div>
+          <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+            <tbody>
+              {evalData.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map((v, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
+                  <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
+                  <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AlumnoDetalle({ alumno, onBack }) {
   const [evaluaciones, setEvaluaciones] = useState([])
   const [loadingEvals, setLoadingEvals] = useState(true)
@@ -226,47 +289,10 @@ function AlumnoDetalle({ alumno, onBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {alumno.encuestas.map((enc, i) => {
               const cfg = ESTADO_CONFIG[enc.estado] || ESTADO_CONFIG.pendiente
-              return (
-                <div key={i} style={{
-                  background: '#fff', borderRadius: 10, border: `1px solid ${enc.estado === 'vencida' ? '#fca5a5' : enc.estado === 'completada' ? '#86efac' : '#e2e8f0'}`,
-                  padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
-                }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                    background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16, fontWeight: 700, color: cfg.color, border: `2px solid ${cfg.color}20`,
-                  }}>
-                    {enc.estado === 'completada' ? '✓' : enc.estado === 'vencida' ? '!' : enc.semanaInicio}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{enc.formularioNombre}</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                      Semana {enc.semanaInicio} · {enc.diasActiva} días activa
-                      {enc.perfil && <span> · Perfil: {enc.perfil}</span>}
-                    </div>
-                    {enc.fechaRespuesta && (
-                      <div style={{ fontSize: 11, color: '#22c55e', marginTop: 2 }}>
-                        Respondida el {new Date(enc.fechaRespuesta).toLocaleDateString('es-MX')}
-                      </div>
-                    )}
-                  </div>
-                  <Badge estado={enc.estado} />
-                </div>
-              )
+              const matchEval = evalsAlumno.find(ev => ev.formularioId === enc.formularioId)
+              return <TimelineCard key={i} enc={enc} cfg={cfg} evalData={matchEval} />
             })}
           </div>
-
-          {/* Show actual responses below timeline */}
-          {evalsAlumno.length > 0 && (
-            <>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 24, marginBottom: 12 }}>
-                Respuestas del Alumno ({evalsAlumno.length})
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {evalsAlumno.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} />)}
-              </div>
-            </>
-          )}
           {loadingEvals && <div style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Cargando respuestas...</div>}
         </>
       )}
