@@ -854,3 +854,9 @@ export function getPortales() { return fetchJson('portales', { headers: authHead
 export function createPortal(data) { return fetchJson('portales', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function updatePortal(id, data) { return fetchJson(`portales/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function deletePortal(id) { return fetchJson(`portales/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export async function getPerfilesOpt() {
+  const r = await fetch(`${API_BASE_URL}/public/perfiles-opt`)
+  if (!r.ok) return []
+  const d = await r.json()
+  return Array.isArray(d) ? d : []
+}

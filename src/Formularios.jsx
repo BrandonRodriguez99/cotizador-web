@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   getFormularios, getFormulario, createFormulario, updateFormulario,
   toggleFormularioActivo, deleteFormulario, getFormularioRespuestas, deleteRespuesta,
-  getPortales, createPortal, updatePortal, deletePortal,
+  getPortales, createPortal, updatePortal, deletePortal, getPerfilesOpt,
 } from './api'
 
 const TIPOS = [
@@ -829,8 +829,7 @@ export default function Formularios({ usuario }) {
 
   useEffect(() => {
     cargarLista(); cargarPortales()
-    fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/public/perfiles-opt`)
-      .then(r => r.json()).then(d => { if (Array.isArray(d)) setPerfilesOpt(d) }).catch(() => {})
+    getPerfilesOpt().then(setPerfilesOpt).catch(() => {})
   }, [cargarLista, cargarPortales])
 
   function nuevoFormulario() {
