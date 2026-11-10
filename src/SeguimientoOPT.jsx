@@ -162,6 +162,8 @@ export default function SeguimientoOPT({ usuario }) {
   const [selectedAlumno, setSelectedAlumno] = useState(null)
   const [sortField, setSortField] = useState('nombre')
   const [sortDir, setSortDir] = useState('asc')
+  const [pagina, setPagina] = useState(1)
+  const [porPagina, setPorPagina] = useState(25)
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('cotizador-token') : null
 
@@ -200,6 +202,12 @@ export default function SeguimientoOPT({ usuario }) {
     return arr
   }, [data.alumnos, filtroGeneracion, filtroPerfil, filtroEstado, busqueda, sortField, sortDir])
 
+  const totalPaginas = Math.max(1, Math.ceil(alumnosFiltrados.length / porPagina))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const alumnosPagina = alumnosFiltrados.slice((paginaActual - 1) * porPagina, paginaActual * porPagina)
+
+  useEffect(() => { setPagina(1) }, [filtroGeneracion, filtroPerfil, filtroEstado, busqueda, portalId, sortField, sortDir])
+
   function toggleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortField(field); setSortDir('asc') }
@@ -210,6 +218,10 @@ export default function SeguimientoOPT({ usuario }) {
   const inp = {
     border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 12px',
     fontSize: 13, background: '#fff', color: '#0f172a',
+  }
+  const paginBtn = {
+    background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6,
+    padding: '5px 10px', cursor: 'pointer', fontSize: 14, color: '#334155', fontWeight: 600,
   }
 
   if (loading) return <div style={{ padding: 20, color: '#64748b' }}>Cargando seguimiento OPT...</div>
@@ -294,7 +306,7 @@ export default function SeguimientoOPT({ usuario }) {
                 </td>
               </tr>
             )}
-            {alumnosFiltrados.map(al => {
+            {alumnosPagina.map(al => {
               const statusColor = al.vencidas > 0 ? '#ef4444' : al.completadas > 0 ? '#22c55e' : '#f59e0b'
               return (
                 <tr key={al.matricula}
@@ -336,8 +348,31 @@ export default function SeguimientoOPT({ usuario }) {
         </table>
       </div>
 
-      <div style={{ marginTop: 12, fontSize: 12, color: '#94a3b8', textAlign: 'right' }}>
-        {alumnosFiltrados.length} alumno{alumnosFiltrados.length !== 1 ? 's' : ''} encontrado{alumnosFiltrados.length !== 1 ? 's' : ''}
+      <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
+          <span>Mostrar</span>
+          <select value={porPagina} onChange={e => { setPorPagina(Number(e.target.value)); setPagina(1) }}
+            style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', fontSize: 13, background: '#fff' }}>
+            {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <span>por página</span>
+          <span style={{ color: '#94a3b8', marginLeft: 8 }}>
+            {alumnosFiltrados.length} alumno{alumnosFiltrados.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button onClick={() => setPagina(1)} disabled={paginaActual <= 1}
+            style={{ ...paginBtn, opacity: paginaActual <= 1 ? 0.4 : 1 }}>«</button>
+          <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={paginaActual <= 1}
+            style={{ ...paginBtn, opacity: paginaActual <= 1 ? 0.4 : 1 }}>‹</button>
+          <span style={{ padding: '0 10px', fontSize: 13, color: '#334155', fontWeight: 600 }}>
+            {paginaActual} / {totalPaginas}
+          </span>
+          <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={paginaActual >= totalPaginas}
+            style={{ ...paginBtn, opacity: paginaActual >= totalPaginas ? 0.4 : 1 }}>›</button>
+          <button onClick={() => setPagina(totalPaginas)} disabled={paginaActual >= totalPaginas}
+            style={{ ...paginBtn, opacity: paginaActual >= totalPaginas ? 0.4 : 1 }}>»</button>
+        </div>
       </div>
     </div>
   )
