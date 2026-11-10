@@ -814,6 +814,7 @@ export default function Formularios({ usuario }) {
   const [portales, setPortales] = useState([])
   const [showPortales, setShowPortales] = useState(false)
   const [editPortal, setEditPortal] = useState(null)
+  const [perfilesOpt, setPerfilesOpt] = useState([])
 
   const isAdmin = usuario?.rol === 'admin'
 
@@ -826,7 +827,11 @@ export default function Formularios({ usuario }) {
     getPortales().then(setPortales).catch(() => {})
   }, [])
 
-  useEffect(() => { cargarLista(); cargarPortales() }, [cargarLista, cargarPortales])
+  useEffect(() => {
+    cargarLista(); cargarPortales()
+    fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/public/perfiles-opt`)
+      .then(r => r.json()).then(d => { if (Array.isArray(d)) setPerfilesOpt(d) }).catch(() => {})
+  }, [cargarLista, cargarPortales])
 
   function nuevoFormulario() {
     setSelected({
@@ -1334,6 +1339,14 @@ export default function Formularios({ usuario }) {
                           setEditPortal(p => ({ ...p, calendario: cal }))
                         }} style={{ width: 50, border: '1px solid #e2e8f0', borderRadius: 5, padding: '5px 6px', fontSize: 12, textAlign: 'center' }} />
                       </div>
+                      <select value={c.perfil || c.Perfil || ''} onChange={e => {
+                        const cal = [...(editPortal.calendario || [])]
+                        cal[ci] = { ...cal[ci], perfil: e.target.value || null }
+                        setEditPortal(p => ({ ...p, calendario: cal }))
+                      }} style={{ flex: '0 1 130px', border: '1px solid #e2e8f0', borderRadius: 5, padding: '5px 8px', fontSize: 12 }}>
+                        <option value="">Todos los perfiles</option>
+                        {perfilesOpt.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
                       <button type="button" onClick={() => {
                         const cal = (editPortal.calendario || []).filter((_, i) => i !== ci)
                         setEditPortal(p => ({ ...p, calendario: cal }))
@@ -1342,7 +1355,7 @@ export default function Formularios({ usuario }) {
                   )
                 })}
                 <button type="button" onClick={() => {
-                  const cal = [...(editPortal.calendario || []), { formularioId: '', semanaInicio: 1, diasActiva: 7 }]
+                  const cal = [...(editPortal.calendario || []), { formularioId: '', semanaInicio: 1, diasActiva: 7, perfil: null }]
                   setEditPortal(p => ({ ...p, calendario: cal }))
                 }} style={{ fontSize: 11, color: '#8b5cf6', background: 'none', border: '1px dashed #c4b5fd', borderRadius: 5, padding: '4px 10px', cursor: 'pointer', marginBottom: 16 }}>
                   + Agregar regla

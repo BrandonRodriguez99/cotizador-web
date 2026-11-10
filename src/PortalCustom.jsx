@@ -179,6 +179,7 @@ export default function PortalCustom() {
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{alumno.Nombre}</div>
               <div style={{ fontSize: 12, color: '#94a3b8' }}>{alumno.Matricula}</div>
+              {portalAlumno?.perfil && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Perfil: {portalAlumno.perfil}</div>}
               {semana && <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 2 }}>Semana {semana} en OPT</div>}
             </div>
             <button onClick={() => { setAlumno(null); setPortalAlumno(null) }}
