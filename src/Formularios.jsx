@@ -1035,13 +1035,13 @@ export default function Formularios({ usuario }) {
             {showPortales && (
               <>
                 <button type="button" style={{ ...btnStyle('#8b5cf6'), width: '100%', padding: '7px', fontSize: 12, marginBottom: 8 }}
-                  onClick={() => setEditPortal({ nombre: '', slug: '', descripcion: '', formularioIds: [] })}>
+                  onClick={() => setEditPortal({ nombre: '', slug: '', descripcion: '', formularioIds: [], calendario: [] })}>
                   + Nuevo portal
                 </button>
 
                 {portales.map(p => (
                   <div key={p.PortalId}
-                    onClick={() => setEditPortal({ ...p, nombre: p.Nombre, slug: p.Slug, descripcion: p.Descripcion || '', formularioIds: p.formularioIds || [] })}
+                    onClick={() => setEditPortal({ ...p, nombre: p.Nombre, slug: p.Slug, descripcion: p.Descripcion || '', formularioIds: p.formularioIds || [], calendario: p.calendario || [] })}
                     style={{
                       background: editPortal?.PortalId === p.PortalId ? '#f5f3ff' : '#fff',
                       border: `1.5px solid ${editPortal?.PortalId === p.PortalId ? '#8b5cf6' : '#e2e8f0'}`,
@@ -1293,6 +1293,62 @@ export default function Formularios({ usuario }) {
                 <div style={{ fontSize: 12, color: '#94a3b8', padding: 8 }}>No hay formularios activos</div>
               )}
             </div>
+
+            {/* Calendarización */}
+            {(editPortal.formularioIds || []).length > 0 && (
+              <>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 8 }}>
+                  Calendarización (opcional)
+                </label>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>
+                  Define en qué semana (desde egreso) aparece cada encuesta y por cuántos días estará activa. Si no configuras reglas, todas las encuestas se muestran siempre.
+                </div>
+                {(editPortal.calendario || []).map((c, ci) => {
+                  const formName = lista.find(f => f.FormularioId === (c.formularioId || c.FormularioId))?.Nombre || '?'
+                  return (
+                    <div key={ci} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                      <select value={c.formularioId || c.FormularioId || ''} onChange={e => {
+                        const cal = [...(editPortal.calendario || [])]
+                        cal[ci] = { ...cal[ci], formularioId: Number(e.target.value) }
+                        setEditPortal(p => ({ ...p, calendario: cal }))
+                      }} style={{ flex: '1 1 120px', border: '1px solid #e2e8f0', borderRadius: 5, padding: '5px 8px', fontSize: 12 }}>
+                        <option value="">Formulario</option>
+                        {(editPortal.formularioIds || []).map(fid => {
+                          const fn = lista.find(f => f.FormularioId === fid)
+                          return fn ? <option key={fid} value={fid}>{fn.Nombre}</option> : null
+                        })}
+                      </select>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 11, color: '#64748b' }}>Sem.</span>
+                        <input type="number" min="1" value={c.semanaInicio || c.SemanaInicio || ''} onChange={e => {
+                          const cal = [...(editPortal.calendario || [])]
+                          cal[ci] = { ...cal[ci], semanaInicio: Number(e.target.value) }
+                          setEditPortal(p => ({ ...p, calendario: cal }))
+                        }} style={{ width: 50, border: '1px solid #e2e8f0', borderRadius: 5, padding: '5px 6px', fontSize: 12, textAlign: 'center' }} />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 11, color: '#64748b' }}>Días</span>
+                        <input type="number" min="1" value={c.diasActiva || c.DiasActiva || 7} onChange={e => {
+                          const cal = [...(editPortal.calendario || [])]
+                          cal[ci] = { ...cal[ci], diasActiva: Number(e.target.value) }
+                          setEditPortal(p => ({ ...p, calendario: cal }))
+                        }} style={{ width: 50, border: '1px solid #e2e8f0', borderRadius: 5, padding: '5px 6px', fontSize: 12, textAlign: 'center' }} />
+                      </div>
+                      <button type="button" onClick={() => {
+                        const cal = (editPortal.calendario || []).filter((_, i) => i !== ci)
+                        setEditPortal(p => ({ ...p, calendario: cal }))
+                      }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>×</button>
+                    </div>
+                  )
+                })}
+                <button type="button" onClick={() => {
+                  const cal = [...(editPortal.calendario || []), { formularioId: '', semanaInicio: 1, diasActiva: 7 }]
+                  setEditPortal(p => ({ ...p, calendario: cal }))
+                }} style={{ fontSize: 11, color: '#8b5cf6', background: 'none', border: '1px dashed #c4b5fd', borderRadius: 5, padding: '4px 10px', cursor: 'pointer', marginBottom: 16 }}>
+                  + Agregar regla
+                </button>
+              </>
+            )}
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" style={{ ...btnStyle('#8b5cf6'), flex: 1, padding: '9px' }} onClick={guardarPortal} disabled={saving}>
