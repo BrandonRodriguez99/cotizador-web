@@ -158,6 +158,7 @@ export default function SeguimientoOPT({ usuario }) {
   const [filtroGeneracion, setFiltroGeneracion] = useState('')
   const [filtroPerfil, setFiltroPerfil] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroEmpresa, setFiltroEmpresa] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [selectedAlumno, setSelectedAlumno] = useState(null)
   const [sortField, setSortField] = useState('nombre')
@@ -180,12 +181,14 @@ export default function SeguimientoOPT({ usuario }) {
 
   const generaciones = useMemo(() => [...new Set(data.alumnos.map(a => a.generacion).filter(Boolean))].sort(), [data.alumnos])
   const perfiles = useMemo(() => [...new Set(data.alumnos.map(a => a.perfil).filter(Boolean))].sort(), [data.alumnos])
+  const empresas = useMemo(() => [...new Set(data.alumnos.map(a => a.empresa).filter(Boolean))].sort(), [data.alumnos])
 
   const alumnosFiltrados = useMemo(() => {
     let arr = data.alumnos
     if (tabEtapa === 'opt') arr = arr.filter(a => (a.etapa || '').toUpperCase().includes('OPT'))
     if (filtroGeneracion) arr = arr.filter(a => a.generacion === filtroGeneracion)
     if (filtroPerfil) arr = arr.filter(a => a.perfil === filtroPerfil)
+    if (filtroEmpresa) arr = arr.filter(a => a.empresa === filtroEmpresa)
     if (filtroEstado === 'al_dia') arr = arr.filter(a => a.vencidas === 0 && a.completadas > 0)
     if (filtroEstado === 'con_vencidas') arr = arr.filter(a => a.vencidas > 0)
     if (filtroEstado === 'sin_iniciar') arr = arr.filter(a => a.completadas === 0)
@@ -202,13 +205,13 @@ export default function SeguimientoOPT({ usuario }) {
       return 0
     })
     return arr
-  }, [data.alumnos, tabEtapa, filtroGeneracion, filtroPerfil, filtroEstado, busqueda, sortField, sortDir])
+  }, [data.alumnos, tabEtapa, filtroGeneracion, filtroPerfil, filtroEmpresa, filtroEstado, busqueda, sortField, sortDir])
 
   const totalPaginas = Math.max(1, Math.ceil(alumnosFiltrados.length / porPagina))
   const paginaActual = Math.min(pagina, totalPaginas)
   const alumnosPagina = alumnosFiltrados.slice((paginaActual - 1) * porPagina, paginaActual * porPagina)
 
-  useEffect(() => { setPagina(1) }, [tabEtapa, filtroGeneracion, filtroPerfil, filtroEstado, busqueda, portalId, sortField, sortDir])
+  useEffect(() => { setPagina(1) }, [tabEtapa, filtroGeneracion, filtroPerfil, filtroEmpresa, filtroEstado, busqueda, portalId, sortField, sortDir])
 
   function toggleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -271,6 +274,10 @@ export default function SeguimientoOPT({ usuario }) {
           <option value="">Todos los perfiles</option>
           {perfiles.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
+        <select value={filtroEmpresa} onChange={e => setFiltroEmpresa(e.target.value)} style={inp}>
+          <option value="">Todas las empresas</option>
+          {empresas.map(e => <option key={e} value={e}>{e}</option>)}
+        </select>
         <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={inp}>
           <option value="">Todos los estados</option>
           <option value="al_dia">Al día</option>
@@ -302,6 +309,7 @@ export default function SeguimientoOPT({ usuario }) {
                 { field: 'nombre', label: 'Alumno' },
                 { field: 'generacion', label: 'Generación' },
                 { field: 'perfil', label: 'Perfil' },
+                { field: 'empresa', label: 'Empresa' },
                 ...(tabEtapa === 'todos' ? [{ field: 'etapa', label: 'Etapa' }] : []),
                 { field: 'semanaActual', label: 'Semana' },
                 { field: 'completadas', label: 'Completadas' },
@@ -324,7 +332,7 @@ export default function SeguimientoOPT({ usuario }) {
           <tbody>
             {alumnosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={tabEtapa === 'todos' ? 9 : 8} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
+                <td colSpan={tabEtapa === 'todos' ? 10 : 9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
                   No se encontraron alumnos con los filtros seleccionados
                 </td>
               </tr>
@@ -344,6 +352,7 @@ export default function SeguimientoOPT({ usuario }) {
                   </td>
                   <td style={{ padding: '10px 14px', color: '#475569' }}>{al.generacion || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#475569' }}>{al.perfil || '—'}</td>
+                  <td style={{ padding: '10px 14px', color: '#475569' }}>{al.empresa || '—'}</td>
                   {tabEtapa === 'todos' && (
                     <td style={{ padding: '10px 14px' }}>
                       <span style={{
