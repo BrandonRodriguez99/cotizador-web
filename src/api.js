@@ -828,6 +828,7 @@ export function updateFormulario(id, body) { return fetchJson(`formularios/${id}
 export function toggleFormularioActivo(id, activo) { return fetchJson(`formularios/${id}/activo`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activo }) }) }
 export function deleteFormulario(id) { return fetchJson(`formularios/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function getFormularioRespuestas(id) { return fetchJson(`formularios/${id}/respuestas`, { headers: authHeaders() }) }
+export function deleteRespuesta(rid) { return fetchJson(`formularios/respuestas/${rid}`, { method: 'DELETE', headers: authHeaders() }) }
 
 // ── 5S ──
 export function getCincoSProyectos() { return fetchJson('cincos/proyectos', { headers: authHeaders() }) }

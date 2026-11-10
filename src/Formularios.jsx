@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   getFormularios, getFormulario, createFormulario, updateFormulario,
-  toggleFormularioActivo, deleteFormulario, getFormularioRespuestas,
+  toggleFormularioActivo, deleteFormulario, getFormularioRespuestas, deleteRespuesta,
   getPortales, createPortal, updatePortal, deletePortal,
 } from './api'
 
@@ -366,7 +366,7 @@ function notaResumen(valores) {
 }
 
 // ── Panel de detalle de una respuesta ────────────────────────────────────────
-function RespuestaDetalle({ r, onClose }) {
+function RespuestaDetalle({ r, onClose, onDelete }) {
   if (!r) return null
   return (
     <div style={{
@@ -385,10 +385,18 @@ function RespuestaDetalle({ r, onClose }) {
             {new Date(r.FechaEnvio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}
           </div>
         </div>
-        <button type="button" onClick={onClose}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1, padding: 0 }}>
-          ×
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {onDelete && (
+            <button type="button" onClick={() => { if (confirm('¿Eliminar esta respuesta?')) onDelete(r.RespuestaId) }}
+              style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 6, cursor: 'pointer', color: '#dc2626', fontSize: 12, padding: '4px 10px', fontWeight: 600 }}>
+              Eliminar
+            </button>
+          )}
+          <button type="button" onClick={onClose}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1, padding: 0 }}>
+            ×
+          </button>
+        </div>
       </div>
 
       {/* Cuerpo */}
@@ -436,9 +444,54 @@ function RespuestasView({ formId, onBack }) {
   const [detalle, setDetalle] = useState(null)
   const [hoverId, setHoverId] = useState(null)
 
-  useEffect(() => {
+  function cargar() {
+    setLoading(true)
     getFormularioRespuestas(formId).then(setRespuestas).catch(console.error).finally(() => setLoading(false))
-  }, [formId])
+  }
+  useEffect(cargar, [formId])
+
+  async function handleDelete(rid) {
+    try {
+      await deleteRespuesta(rid)
+      setRespuestas(prev => prev.filter(r => r.RespuestaId !== rid))
+      setDetalle(null)
+    } catch (e) { alert('Error al eliminar: ' + e.message) }
+  }
+
+  function exportarExcel() {
+    if (!respuestas.length) return
+    const allKeys = []
+    const seen = new Set()
+    respuestas.forEach(r => (r.valores || []).forEach(v => {
+      if (!seen.has(v.Texto)) { seen.add(v.Texto); allKeys.push(v.Texto) }
+    }))
+
+    const escape = s => {
+      if (s == null) return ''
+      const str = String(s)
+      try {
+        const parsed = JSON.parse(str)
+        if (parsed && typeof parsed === 'object') return Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ')
+      } catch {}
+      return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str.replace(/"/g, '""')}"` : str
+    }
+
+    const headers = ['Enviado por', 'Fecha', ...allKeys]
+    const rows = respuestas.map(r => {
+      const valMap = {}
+      ;(r.valores || []).forEach(v => { valMap[v.Texto] = v.Valor })
+      return [escape(r.OperadorNombre), new Date(r.FechaEnvio).toLocaleString('es-MX'), ...allKeys.map(k => escape(valMap[k]))]
+    })
+
+    const bom = '﻿'
+    const csv = bom + [headers.map(escape).join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `respuestas_${formId}_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
 
   const cols = { enviado: '28%', recibido: '22%', tipo: '22%', notas: '28%' }
 
@@ -454,6 +507,12 @@ function RespuestasView({ formId, onBack }) {
         <span style={{ color: '#1e293b', fontWeight: 700, fontSize: 15 }}>
           Respuestas recibidas ({respuestas.length})
         </span>
+        {respuestas.length > 0 && (
+          <button type="button" onClick={exportarExcel}
+            style={{ marginLeft: 'auto', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            ⬇ Exportar CSV
+          </button>
+        )}
       </div>
 
       {respuestas.length === 0 ? (
@@ -510,7 +569,7 @@ function RespuestasView({ formId, onBack }) {
       )}
 
       {/* Panel de detalle (slide-in) */}
-      {detalle && <RespuestaDetalle r={detalle} onClose={() => setDetalle(null)} />}
+      {detalle && <RespuestaDetalle r={detalle} onClose={() => setDetalle(null)} onDelete={handleDelete} />}
       {/* Overlay para cerrar */}
       {detalle && (
         <div onClick={() => setDetalle(null)}
