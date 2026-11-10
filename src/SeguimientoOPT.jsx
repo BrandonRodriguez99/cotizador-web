@@ -338,6 +338,125 @@ function AlumnoDetalle({ alumno, onBack }) {
   )
 }
 
+const RIESGO_CONFIG = {
+  alto:  { bg: '#fef2f2', color: '#dc2626', border: '#fca5a5', icon: '🔴', label: 'Alto' },
+  medio: { bg: '#fffbeb', color: '#d97706', border: '#fcd34d', icon: '🟡', label: 'Medio' },
+  bajo:  { bg: '#f0fdf4', color: '#16a34a', border: '#86efac', icon: '🟢', label: 'Bajo' },
+}
+
+function AlertasPanel({ token, onSelectAlumno, alumnos }) {
+  const [alertas, setAlertas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filtroNivel, setFiltroNivel] = useState('')
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`${API}/seguimiento-opt-alertas`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => { setAlertas(Array.isArray(d) ? d : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const filtered = filtroNivel ? alertas.filter(a => a.nivelRiesgo === filtroNivel) : alertas
+  const altos = alertas.filter(a => a.nivelRiesgo === 'alto').length
+  const medios = alertas.filter(a => a.nivelRiesgo === 'medio').length
+  const bajos = alertas.filter(a => a.nivelRiesgo === 'bajo').length
+
+  if (loading) return <div style={{ padding: 20, color: '#64748b' }}>Analizando respuestas de alumnos...</div>
+
+  return (
+    <div>
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+        {[
+          { label: 'Requieren atención', value: altos, color: '#dc2626', bg: '#fef2f2', nivel: 'alto' },
+          { label: 'Precaución', value: medios, color: '#d97706', bg: '#fffbeb', nivel: 'medio' },
+          { label: 'Bajo riesgo', value: bajos, color: '#16a34a', bg: '#f0fdf4', nivel: 'bajo' },
+          { label: 'Sin alertas', value: (alumnos?.length || 0) - alertas.length, color: '#64748b', bg: '#f8fafc', nivel: '' },
+        ].map(c => (
+          <div key={c.label}
+            onClick={() => setFiltroNivel(f => f === c.nivel ? '' : c.nivel)}
+            style={{
+              background: c.bg, borderRadius: 12, padding: 16, textAlign: 'center', cursor: 'pointer',
+              border: `2px solid ${filtroNivel === c.nivel ? c.color : 'transparent'}`,
+              transition: 'border-color 0.2s',
+            }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: 12, color: c.color, fontWeight: 600, marginTop: 2 }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8', background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+          {alertas.length === 0 ? 'No se detectaron alertas en ningún alumno' : 'No hay alertas con el filtro seleccionado'}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.map(al => {
+            const cfg = RIESGO_CONFIG[al.nivelRiesgo] || RIESGO_CONFIG.bajo
+            const alumnoData = alumnos?.find(a => a.matricula === al.matricula)
+            return (
+              <div key={al.matricula} style={{
+                background: '#fff', borderRadius: 12, border: `1px solid ${cfg.border}`,
+                borderLeft: `4px solid ${cfg.color}`, overflow: 'hidden',
+              }}>
+                <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                    background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, fontWeight: 800, color: cfg.color, border: `2px solid ${cfg.color}30`,
+                  }}>
+                    {al.riesgo}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{al.nombre}</span>
+                      <span style={{
+                        padding: '1px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700,
+                        background: cfg.bg, color: cfg.color,
+                      }}>Riesgo {cfg.label}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 3 }}>
+                      {al.matricula} · Gen. {al.generacion || '—'} · {al.perfil || '—'} · {al.empresa || '—'} · Semana {al.semanaActual}
+                    </div>
+                    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {al.flags.map((f, i) => (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
+                          padding: '5px 10px', borderRadius: 8,
+                          background: f.nivel === 'alto' ? '#fef2f2' : f.nivel === 'medio' ? '#fffbeb' : '#f8fafc',
+                        }}>
+                          <span style={{ fontSize: 10 }}>
+                            {f.nivel === 'alto' ? '🔴' : f.nivel === 'medio' ? '🟡' : '🟢'}
+                          </span>
+                          <span style={{ color: '#334155' }}>{f.mensaje}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {alumnoData && (
+                    <button onClick={() => onSelectAlumno(alumnoData)}
+                      style={{
+                        background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8,
+                        padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#3b82f6',
+                        cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                      }}>
+                      Ver detalle →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SeguimientoOPT({ usuario }) {
   const [data, setData] = useState({ portales: [], alumnos: [] })
   const [loading, setLoading] = useState(true)
@@ -444,8 +563,16 @@ export default function SeguimientoOPT({ usuario }) {
         <button style={tabStyle(tabEtapa === 'todos')} onClick={() => setTabEtapa('todos')}>
           Todos <span style={{ background: tabEtapa === 'todos' ? '#dbeafe' : '#f1f5f9', color: tabEtapa === 'todos' ? '#3b82f6' : '#94a3b8', padding: '1px 8px', borderRadius: 10, fontSize: 11, marginLeft: 6 }}>{totalTodos}</span>
         </button>
+        <button style={tabStyle(tabEtapa === 'alertas')} onClick={() => setTabEtapa('alertas')}>
+          <span style={{ color: tabEtapa === 'alertas' ? '#dc2626' : '#64748b' }}>Alertas</span>
+        </button>
       </div>
 
+      {tabEtapa === 'alertas' && (
+        <AlertasPanel token={token} alumnos={data.alumnos} onSelectAlumno={al => setSelectedAlumno(al)} />
+      )}
+
+      {tabEtapa !== 'alertas' && <>
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {data.portales.length > 1 && (
@@ -603,6 +730,7 @@ export default function SeguimientoOPT({ usuario }) {
             style={{ ...paginBtn, opacity: paginaActual >= totalPaginas ? 0.4 : 1 }}>»</button>
         </div>
       </div>
+      </>}
     </div>
   )
 }
