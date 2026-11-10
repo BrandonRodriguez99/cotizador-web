@@ -121,7 +121,7 @@ function EvaluacionCard({ ev, defaultOpen }) {
           background: isEncargado ? '#f3e8ff' : '#dcfce7',
           color: isEncargado ? '#7c3aed' : '#166534',
         }}>
-          {isEncargado ? 'Evaluación encargado' : 'Respuesta alumno'}
+          {isEncargado ? 'Evaluación semanal OPT' : 'Respuesta alumno'}
         </span>
         <span style={{ fontSize: 16, color: '#94a3b8', transform: open ? 'rotate(180deg)' : '', transition: 'transform 0.2s' }}>▾</span>
       </div>
@@ -211,7 +211,7 @@ function AlumnoDetalle({ alumno, onBack }) {
           Encuestas Alumno <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{alumno.completadas}/{alumno.totalEncuestas}</span>
         </button>
         <button style={dtab(tabDetalle === 'encargado')} onClick={() => setTabDetalle('encargado')}>
-          Evaluaciones Encargado <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{evalsEncargado.length}</span>
+          Evaluaciones semanales OPT <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{evalsEncargado.length}</span>
         </button>
         <button style={dtab(tabDetalle === 'todas')} onClick={() => setTabDetalle('todas')}>
           Todas <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{evaluaciones.length}</span>
@@ -274,13 +274,13 @@ function AlumnoDetalle({ alumno, onBack }) {
       {tabDetalle === 'encargado' && (
         <>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
-            Evaluaciones del Encargado ({evalsEncargado.length})
+            Evaluaciones semanales OPT ({evalsEncargado.length})
           </div>
           {loadingEvals ? (
             <div style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Cargando evaluaciones...</div>
           ) : evalsEncargado.length === 0 ? (
             <div style={{ padding: 32, textAlign: 'center', color: '#94a3b8', background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-              No hay evaluaciones de encargado para este alumno
+              No hay evaluaciones semanales OPT para este alumno
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
