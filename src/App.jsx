@@ -54,6 +54,7 @@ import FormularioPublico from './FormularioPublico'
 import FormulariosPublico from './FormulariosPublico'
 import CargaDieselPublica from './CargaDieselPublica'
 import AsistenciaAcademiaPublica from './AsistenciaAcademiaPublica'
+import SeguimientoOPT from './SeguimientoOPT'
 
 const NAV_ICONS = {
   dashboard:            <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
@@ -81,6 +82,7 @@ const NAV_ICONS = {
   dvir:                 <><path d="M9 11l3 3L22 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></>,
   diesel:               <><path d="M3 22h12V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v18z"/><path d="M15 10h2a2 2 0 0 1 2 2v3a1 1 0 0 0 2 0v-5l-2-3"/><line x1="6" y1="9" x2="12" y2="9"/></>,
   formularios:          <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></>,
+  seguimientoOpt:       <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></>,
   academia:             <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></>,
   administracion:       <><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></>,
   mantenimiento_grupo:  <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></>,
@@ -172,6 +174,7 @@ const SIDEBAR_CONFIG = [
   ]},
   { titulo: 'App Móvil', items: [
     { vista: 'formularios', label: 'Formularios' },
+    { vista: 'seguimientoOpt', label: 'Seguimiento OPT' },
   ]},
   { titulo: 'Sistema', items: [
     { vista: 'usuarios', label: 'Usuarios' },
@@ -863,11 +866,13 @@ function App() {
                                   ? 'Control de Diésel'
                                   : activeView === 'formularios'
                                     ? 'Formularios'
-                                    : activeView === 'academia'
-                                      ? 'Academia'
-                                      : activeView === 'cincos'
-                                        ? 'Programa 5S'
-                                        : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                                    : activeView === 'seguimientoOpt'
+                                      ? 'Seguimiento OPT'
+                                      : activeView === 'academia'
+                                        ? 'Academia'
+                                        : activeView === 'cincos'
+                                          ? 'Programa 5S'
+                                          : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -896,7 +901,9 @@ function App() {
                                 ? 'Herramientas > Control de Diésel'
                                 : activeView === 'formularios'
                                   ? 'App Móvil > Formularios'
-                                  : activeView === 'academia'
+                                  : activeView === 'seguimientoOpt'
+                                    ? 'App Móvil > Seguimiento OPT'
+                                    : activeView === 'academia'
                                     ? 'Herramientas > Academia'
                                     : activeView === 'cincos'
                                       ? 'Lean 5S > Programa 5S'
@@ -1257,6 +1264,15 @@ function App() {
               </p>
             </div>
             <Formularios usuario={usuario} />
+          </section>
+        ) : activeView === 'seguimientoOpt' ? (
+          <section className="panel card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className="panel-header" style={{ marginBottom: 16 }}>
+              <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '13px' }}>
+                Seguimiento del avance de alumnos en su etapa OPT. Visualiza encuestas completadas, pendientes y vencidas.
+              </p>
+            </div>
+            <SeguimientoOPT usuario={usuario} />
           </section>
         ) : activeView === 'academia' ? (
           <Academia usuario={usuario} activeTab={academiaTab} />
