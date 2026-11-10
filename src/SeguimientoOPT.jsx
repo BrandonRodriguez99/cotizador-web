@@ -348,6 +348,8 @@ function AlertasPanel({ token, onSelectAlumno, alumnos }) {
   const [alertas, setAlertas] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtroNivel, setFiltroNivel] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const [porPagina, setPorPagina] = useState(25)
 
   useEffect(() => {
     setLoading(true)
@@ -359,7 +361,12 @@ function AlertasPanel({ token, onSelectAlumno, alumnos }) {
       .catch(() => setLoading(false))
   }, [])
 
+  useEffect(() => { setPagina(1) }, [filtroNivel])
+
   const filtered = filtroNivel ? alertas.filter(a => a.nivelRiesgo === filtroNivel) : alertas
+  const totalPaginas = Math.max(1, Math.ceil(filtered.length / porPagina))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const alertasPagina = filtered.slice((paginaActual - 1) * porPagina, paginaActual * porPagina)
   const altos = alertas.filter(a => a.nivelRiesgo === 'alto').length
   const medios = alertas.filter(a => a.nivelRiesgo === 'medio').length
   const bajos = alertas.filter(a => a.nivelRiesgo === 'bajo').length
@@ -395,7 +402,7 @@ function AlertasPanel({ token, onSelectAlumno, alumnos }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(al => {
+          {alertasPagina.map(al => {
             const cfg = RIESGO_CONFIG[al.nivelRiesgo] || RIESGO_CONFIG.bajo
             const alumnoData = alumnos?.find(a => a.matricula === al.matricula)
             return (
@@ -451,6 +458,37 @@ function AlertasPanel({ token, onSelectAlumno, alumnos }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {filtered.length > 0 && (
+        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, fontSize: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
+            <span>Mostrar</span>
+            <select value={porPagina} onChange={e => { setPorPagina(Number(e.target.value)); setPagina(1) }}
+              style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', fontSize: 13, background: '#fff' }}>
+              {[10, 25, 50].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <span>por página</span>
+            <span style={{ color: '#94a3b8', marginLeft: 8 }}>{filtered.length} alerta{filtered.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {[
+              { label: '«', go: 1, disabled: paginaActual <= 1 },
+              { label: '‹', go: Math.max(1, paginaActual - 1), disabled: paginaActual <= 1 },
+            ].map(b => (
+              <button key={b.label} onClick={() => setPagina(b.go)} disabled={b.disabled}
+                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 14, color: '#334155', fontWeight: 600, opacity: b.disabled ? 0.4 : 1 }}>{b.label}</button>
+            ))}
+            <span style={{ padding: '0 10px', fontSize: 13, color: '#334155', fontWeight: 600 }}>{paginaActual} / {totalPaginas}</span>
+            {[
+              { label: '›', go: Math.min(totalPaginas, paginaActual + 1), disabled: paginaActual >= totalPaginas },
+              { label: '»', go: totalPaginas, disabled: paginaActual >= totalPaginas },
+            ].map(b => (
+              <button key={b.label} onClick={() => setPagina(b.go)} disabled={b.disabled}
+                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 14, color: '#334155', fontWeight: 600, opacity: b.disabled ? 0.4 : 1 }}>{b.label}</button>
+            ))}
+          </div>
         </div>
       )}
     </div>
