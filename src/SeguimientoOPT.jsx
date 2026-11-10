@@ -73,7 +73,101 @@ function SummaryCards({ alumnos }) {
   )
 }
 
+function ValorDisplay({ valor, tipo }) {
+  if (!valor) return <span style={{ color: '#94a3b8' }}>—</span>
+  if (tipo === 'alumno' || tipo === 'operador_tutor') {
+    try {
+      const parsed = JSON.parse(valor)
+      return <span>{parsed.nombre || parsed.matricula || valor}</span>
+    } catch { return <span>{valor}</span> }
+  }
+  return <span>{valor}</span>
+}
+
+function EvaluacionCard({ ev, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen || false)
+  const isEncargado = ev.tipo === 'encargado'
+  const borderColor = isEncargado ? '#c084fc' : '#86efac'
+  const iconBg = isEncargado ? '#f3e8ff' : '#dcfce7'
+  const iconColor = isEncargado ? '#7c3aed' : '#166534'
+
+  return (
+    <div style={{
+      background: '#fff', borderRadius: 10, border: `1px solid ${borderColor}`,
+      overflow: 'hidden', transition: 'all 0.2s',
+    }}>
+      <div onClick={() => setOpen(o => !o)} style={{
+        padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = '#fafbfc'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+          background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, fontWeight: 700, color: iconColor,
+        }}>
+          {isEncargado ? 'E' : '✓'}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{ev.formularioNombre}</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+            {new Date(ev.fecha).toLocaleDateString('es-MX')} · {ev.operador}
+            {ev.portal && <span style={{ color: '#94a3b8' }}> · {ev.portal}</span>}
+          </div>
+        </div>
+        <span style={{
+          padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+          background: isEncargado ? '#f3e8ff' : '#dcfce7',
+          color: isEncargado ? '#7c3aed' : '#166534',
+        }}>
+          {isEncargado ? 'Evaluación encargado' : 'Respuesta alumno'}
+        </span>
+        <span style={{ fontSize: 16, color: '#94a3b8', transform: open ? 'rotate(180deg)' : '', transition: 'transform 0.2s' }}>▾</span>
+      </div>
+      {open && (
+        <div style={{ padding: '0 18px 16px', borderTop: '1px solid #f1f5f9' }}>
+          <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse', marginTop: 12 }}>
+            <tbody>
+              {ev.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map((v, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
+                  <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
+                  <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AlumnoDetalle({ alumno, onBack }) {
+  const [evaluaciones, setEvaluaciones] = useState([])
+  const [loadingEvals, setLoadingEvals] = useState(true)
+  const [tabDetalle, setTabDetalle] = useState('timeline')
+  const token = typeof window !== 'undefined' ? localStorage.getItem('cotizador-token') : null
+
+  useEffect(() => {
+    setLoadingEvals(true)
+    fetch(`${API}/seguimiento-opt/${encodeURIComponent(alumno.matricula)}/evaluaciones`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => { setEvaluaciones(Array.isArray(d) ? d : []); setLoadingEvals(false) })
+      .catch(() => setLoadingEvals(false))
+  }, [alumno.matricula])
+
+  const evalsAlumno = evaluaciones.filter(e => e.tipo === 'alumno')
+  const evalsEncargado = evaluaciones.filter(e => e.tipo === 'encargado')
+
+  const dtab = (active) => ({
+    padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+    border: 'none', borderBottom: active ? '3px solid #3b82f6' : '3px solid transparent',
+    background: 'none', color: active ? '#3b82f6' : '#64748b',
+  })
+
   return (
     <div>
       <button onClick={onBack} style={{
@@ -94,6 +188,7 @@ function AlumnoDetalle({ alumno, onBack }) {
             <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, color: '#64748b' }}>Generación: <strong>{alumno.generacion || '—'}</strong></span>
               <span style={{ fontSize: 12, color: '#64748b' }}>Perfil: <strong>{alumno.perfil || '—'}</strong></span>
+              <span style={{ fontSize: 12, color: '#64748b' }}>Empresa: <strong>{alumno.empresa || '—'}</strong></span>
               <span style={{ fontSize: 12, color: '#64748b' }}>Semana actual: <strong>{alumno.semanaActual}</strong></span>
               <span style={{ fontSize: 12, color: '#64748b' }}>Egreso: <strong>{new Date(alumno.fechaEgreso).toLocaleDateString('es-MX')}</strong></span>
             </div>
@@ -102,7 +197,7 @@ function AlumnoDetalle({ alumno, onBack }) {
             <div style={{ fontSize: 36, fontWeight: 800, color: alumno.porcentaje >= 80 ? '#22c55e' : alumno.porcentaje >= 50 ? '#f59e0b' : '#ef4444' }}>
               {alumno.porcentaje}%
             </div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>avance global</div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>avance encuestas</div>
           </div>
         </div>
         <div style={{ marginTop: 12 }}>
@@ -110,42 +205,109 @@ function AlumnoDetalle({ alumno, onBack }) {
         </div>
       </div>
 
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
-        Timeline de Encuestas ({alumno.completadas}/{alumno.totalEncuestas} completadas)
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e2e8f0', marginBottom: 16 }}>
+        <button style={dtab(tabDetalle === 'timeline')} onClick={() => setTabDetalle('timeline')}>
+          Encuestas Alumno <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{alumno.completadas}/{alumno.totalEncuestas}</span>
+        </button>
+        <button style={dtab(tabDetalle === 'encargado')} onClick={() => setTabDetalle('encargado')}>
+          Evaluaciones Encargado <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{evalsEncargado.length}</span>
+        </button>
+        <button style={dtab(tabDetalle === 'todas')} onClick={() => setTabDetalle('todas')}>
+          Todas <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{evaluaciones.length}</span>
+        </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {alumno.encuestas.map((enc, i) => {
-          const cfg = ESTADO_CONFIG[enc.estado] || ESTADO_CONFIG.pendiente
-          return (
-            <div key={i} style={{
-              background: '#fff', borderRadius: 10, border: `1px solid ${enc.estado === 'vencida' ? '#fca5a5' : enc.estado === 'completada' ? '#86efac' : '#e2e8f0'}`,
-              padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
-            }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 16, fontWeight: 700, color: cfg.color, border: `2px solid ${cfg.color}20`,
-              }}>
-                {enc.estado === 'completada' ? '✓' : enc.estado === 'vencida' ? '!' : enc.semanaInicio}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{enc.formularioNombre}</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                  Semana {enc.semanaInicio} · {enc.diasActiva} días activa
-                  {enc.perfil && <span> · Perfil: {enc.perfil}</span>}
-                </div>
-                {enc.fechaRespuesta && (
-                  <div style={{ fontSize: 11, color: '#22c55e', marginTop: 2 }}>
-                    Respondida el {new Date(enc.fechaRespuesta).toLocaleDateString('es-MX')}
+      {tabDetalle === 'timeline' && (
+        <>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
+            Timeline de Encuestas ({alumno.completadas}/{alumno.totalEncuestas} completadas)
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {alumno.encuestas.map((enc, i) => {
+              const cfg = ESTADO_CONFIG[enc.estado] || ESTADO_CONFIG.pendiente
+              return (
+                <div key={i} style={{
+                  background: '#fff', borderRadius: 10, border: `1px solid ${enc.estado === 'vencida' ? '#fca5a5' : enc.estado === 'completada' ? '#86efac' : '#e2e8f0'}`,
+                  padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                    background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 16, fontWeight: 700, color: cfg.color, border: `2px solid ${cfg.color}20`,
+                  }}>
+                    {enc.estado === 'completada' ? '✓' : enc.estado === 'vencida' ? '!' : enc.semanaInicio}
                   </div>
-                )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{enc.formularioNombre}</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                      Semana {enc.semanaInicio} · {enc.diasActiva} días activa
+                      {enc.perfil && <span> · Perfil: {enc.perfil}</span>}
+                    </div>
+                    {enc.fechaRespuesta && (
+                      <div style={{ fontSize: 11, color: '#22c55e', marginTop: 2 }}>
+                        Respondida el {new Date(enc.fechaRespuesta).toLocaleDateString('es-MX')}
+                      </div>
+                    )}
+                  </div>
+                  <Badge estado={enc.estado} />
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Show actual responses below timeline */}
+          {evalsAlumno.length > 0 && (
+            <>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 24, marginBottom: 12 }}>
+                Respuestas del Alumno ({evalsAlumno.length})
               </div>
-              <Badge estado={enc.estado} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {evalsAlumno.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} />)}
+              </div>
+            </>
+          )}
+          {loadingEvals && <div style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Cargando respuestas...</div>}
+        </>
+      )}
+
+      {tabDetalle === 'encargado' && (
+        <>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
+            Evaluaciones del Encargado ({evalsEncargado.length})
+          </div>
+          {loadingEvals ? (
+            <div style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Cargando evaluaciones...</div>
+          ) : evalsEncargado.length === 0 ? (
+            <div style={{ padding: 32, textAlign: 'center', color: '#94a3b8', background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+              No hay evaluaciones de encargado para este alumno
             </div>
-          )
-        })}
-      </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {evalsEncargado.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} defaultOpen />)}
+            </div>
+          )}
+        </>
+      )}
+
+      {tabDetalle === 'todas' && (
+        <>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
+            Todas las Evaluaciones ({evaluaciones.length})
+          </div>
+          {loadingEvals ? (
+            <div style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Cargando...</div>
+          ) : evaluaciones.length === 0 ? (
+            <div style={{ padding: 32, textAlign: 'center', color: '#94a3b8', background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+              No hay evaluaciones para este alumno
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {evaluaciones.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} />)}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
