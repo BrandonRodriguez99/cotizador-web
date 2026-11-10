@@ -437,6 +437,210 @@ function RespuestaDetalle({ r, onClose, onDelete }) {
   )
 }
 
+// ── Componentes SVG para gráficas ────────────────────────────────────────────
+const COLORS = ['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316','#14b8a6','#6366f1']
+
+function DonutChart({ data, size = 160 }) {
+  const total = data.reduce((s, d) => s + d.count, 0)
+  if (!total) return null
+  const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.22
+  let cumAngle = -Math.PI / 2
+  const slices = data.map((d, i) => {
+    const angle = (d.count / total) * 2 * Math.PI
+    const startAngle = cumAngle
+    cumAngle += angle
+    const endAngle = cumAngle
+    const largeArc = angle > Math.PI ? 1 : 0
+    const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle)
+    const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle)
+    const ix1 = cx + inner * Math.cos(endAngle), iy1 = cy + inner * Math.sin(endAngle)
+    const ix2 = cx + inner * Math.cos(startAngle), iy2 = cy + inner * Math.sin(startAngle)
+    const path = `M${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} L${ix1},${iy1} A${inner},${inner} 0 ${largeArc} 0 ${ix2},${iy2} Z`
+    return <path key={i} d={path} fill={COLORS[i % COLORS.length]} />
+  })
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <svg width={size} height={size}>{slices}
+        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" style={{ fontSize: 20, fontWeight: 700, fill: '#1e293b' }}>{total}</text>
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {data.map((d, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: COLORS[i % COLORS.length], flexShrink: 0 }} />
+            <span style={{ color: '#475569' }}>{d.label}</span>
+            <span style={{ color: '#94a3b8', marginLeft: 'auto', fontWeight: 600 }}>{d.count} ({Math.round(d.count / total * 100)}%)</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BarChart({ data, maxWidth = 400 }) {
+  const maxVal = Math.max(...data.map(d => d.value), 1)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, color: '#64748b', minWidth: 40, textAlign: 'right', flexShrink: 0 }}>{d.label}</span>
+          <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 4, height: 22, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ width: `${(d.value / maxVal) * 100}%`, height: '100%', background: COLORS[i % COLORS.length], borderRadius: 4, transition: 'width 0.3s' }} />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', minWidth: 32 }}>{typeof d.value === 'number' && d.value % 1 !== 0 ? d.value.toFixed(1) : d.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function HorizBar({ items, maxWidth = 500 }) {
+  const maxVal = Math.max(...items.map(d => d.count), 1)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth }}>
+      {items.slice(0, 10).map((d, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, color: '#475569', minWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{d.label}</span>
+          <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 4, height: 18, overflow: 'hidden' }}>
+            <div style={{ width: `${(d.count / maxVal) * 100}%`, height: '100%', background: COLORS[i % COLORS.length], borderRadius: 4 }} />
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#1e293b', minWidth: 24 }}>{d.count}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Vista de análisis ────────────────────────────────────────────────────────
+function AnalisisView({ formId, onBack }) {
+  const [respuestas, setRespuestas] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getFormularioRespuestas(formId).then(setRespuestas).catch(console.error).finally(() => setLoading(false))
+  }, [formId])
+
+  if (loading) return <div style={{ padding: 24, color: '#64748b' }}>Cargando análisis...</div>
+  if (!respuestas.length) return (
+    <div>
+      <button type="button" onClick={onBack} style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontSize: 13, padding: 0, marginBottom: 16 }}>← Volver</button>
+      <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', paddingTop: 32 }}>Sin respuestas para analizar.</div>
+    </div>
+  )
+
+  const tryParse = s => { try { const p = JSON.parse(s); if (p && typeof p === 'object' && !Array.isArray(p)) return p } catch {} return null }
+
+  const allPreguntas = []
+  const seenP = new Set()
+  respuestas.forEach(r => (r.valores || []).forEach(v => {
+    if (!seenP.has(v.Texto)) { seenP.add(v.Texto); allPreguntas.push(v) }
+  }))
+
+  const analyses = allPreguntas.map(pregRef => {
+    const vals = respuestas.map(r => (r.valores || []).find(v => v.Texto === pregRef.Texto)?.Valor).filter(v => v != null && v !== '')
+    if (!vals.length) return null
+
+    const parsed0 = tryParse(vals[0])
+    if (parsed0) {
+      const subAnalyses = []
+      const allParsed = vals.map(tryParse).filter(Boolean)
+      const jsonLabels = { id: 'ID', matricula: 'Matrícula', nombre: 'Nombre', empresa: 'Empresa', unidadNegocio: 'Unidad de Negocio', unidadOperativa: 'Unidad Operativa', operador: 'Operador' }
+      Object.keys(parsed0).filter(k => k !== 'id').forEach(key => {
+        const subVals = allParsed.map(p => p[key]).filter(Boolean)
+        const counts = {}
+        subVals.forEach(v => { counts[v] = (counts[v] || 0) + 1 })
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+        if (sorted.length > 1) {
+          subAnalyses.push({ label: jsonLabels[key] || key, type: 'top', items: sorted.map(([label, count]) => ({ label, count })) })
+        }
+      })
+      return { texto: pregRef.Texto, type: 'json', subAnalyses }
+    }
+
+    const numVals = vals.map(Number).filter(n => !isNaN(n))
+    if (numVals.length === vals.length && numVals.length > 0) {
+      const avg = numVals.reduce((s, n) => s + n, 0) / numVals.length
+      const min = Math.min(...numVals)
+      const max = Math.max(...numVals)
+      return { texto: pregRef.Texto, type: 'numeric', avg, min, max, count: numVals.length, values: numVals }
+    }
+
+    const counts = {}
+    vals.forEach(v => { counts[v] = (counts[v] || 0) + 1 })
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    return { texto: pregRef.Texto, type: 'categorical', data: sorted.map(([label, count]) => ({ label, count })) }
+  }).filter(Boolean)
+
+  const totalResp = respuestas.length
+  const fechas = respuestas.map(r => new Date(r.FechaEnvio)).sort((a, b) => a - b)
+  const fechaMin = fechas[0]?.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+  const fechaMax = fechas[fechas.length - 1]?.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+
+  const cardS = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16 }
+  const titleS = { fontSize: 13, fontWeight: 600, color: '#1e293b', marginBottom: 12 }
+
+  return (
+    <div style={{ overflow: 'auto', maxHeight: '85vh' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+        <button type="button" onClick={onBack} style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontSize: 13, padding: 0 }}>← Volver al formulario</button>
+        <span style={{ color: '#1e293b', fontWeight: 700, fontSize: 15 }}>Análisis de respuestas</span>
+      </div>
+
+      {/* Resumen */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div style={{ ...cardS, flex: '1 1 140px', textAlign: 'center', marginBottom: 0 }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#3b82f6' }}>{totalResp}</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>Respuestas totales</div>
+        </div>
+        <div style={{ ...cardS, flex: '1 1 140px', textAlign: 'center', marginBottom: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{fechaMin}</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>Primera respuesta</div>
+        </div>
+        <div style={{ ...cardS, flex: '1 1 140px', textAlign: 'center', marginBottom: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{fechaMax}</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>Última respuesta</div>
+        </div>
+        <div style={{ ...cardS, flex: '1 1 140px', textAlign: 'center', marginBottom: 0 }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#10b981' }}>{allPreguntas.length}</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>Preguntas</div>
+        </div>
+      </div>
+
+      {/* Análisis por pregunta */}
+      {analyses.map((a, i) => (
+        <div key={i} style={cardS}>
+          <div style={titleS}>{a.texto}</div>
+
+          {a.type === 'numeric' && (
+            <div>
+              <div style={{ display: 'flex', gap: 20, marginBottom: 12, flexWrap: 'wrap' }}>
+                <div><span style={{ fontSize: 11, color: '#64748b' }}>Promedio</span><div style={{ fontSize: 20, fontWeight: 700, color: '#3b82f6' }}>{a.avg.toFixed(1)}</div></div>
+                <div><span style={{ fontSize: 11, color: '#64748b' }}>Mínimo</span><div style={{ fontSize: 20, fontWeight: 700, color: '#ef4444' }}>{a.min}</div></div>
+                <div><span style={{ fontSize: 11, color: '#64748b' }}>Máximo</span><div style={{ fontSize: 20, fontWeight: 700, color: '#10b981' }}>{a.max}</div></div>
+                <div><span style={{ fontSize: 11, color: '#64748b' }}>Respuestas</span><div style={{ fontSize: 20, fontWeight: 700, color: '#475569' }}>{a.count}</div></div>
+              </div>
+              {(() => {
+                const dist = {}
+                a.values.forEach(v => { dist[v] = (dist[v] || 0) + 1 })
+                const sorted = Object.entries(dist).sort((x, y) => Number(x[0]) - Number(y[0]))
+                return <BarChart data={sorted.map(([label, value]) => ({ label, value }))} />
+              })()}
+            </div>
+          )}
+
+          {a.type === 'categorical' && <DonutChart data={a.data} />}
+
+          {a.type === 'json' && a.subAnalyses.map((sub, si) => (
+            <div key={si} style={{ marginBottom: si < a.subAnalyses.length - 1 ? 16 : 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>{sub.label}</div>
+              <HorizBar items={sub.items} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Vista de respuestas ───────────────────────────────────────────────────────
 function RespuestasView({ formId, onBack }) {
   const [respuestas, setRespuestas] = useState([])
@@ -605,6 +809,7 @@ export default function Formularios({ usuario }) {
   const [error, setError] = useState(null)
   const [showPreview, setShowPreview] = useState(true)
   const [viewRespuestas, setViewRespuestas] = useState(false)
+  const [viewAnalisis, setViewAnalisis] = useState(false)
   const [isNew, setIsNew] = useState(false)
   const [portales, setPortales] = useState([])
   const [showPortales, setShowPortales] = useState(false)
@@ -632,6 +837,7 @@ export default function Formularios({ usuario }) {
     })
     setIsNew(true)
     setViewRespuestas(false)
+    setViewAnalisis(false)
   }
 
   async function abrirFormulario(id) {
@@ -659,6 +865,7 @@ export default function Formularios({ usuario }) {
       setSelected(f)
       setIsNew(false)
       setViewRespuestas(false)
+      setViewAnalisis(false)
     } catch (e) { setError(e.message) }
   }
 
@@ -872,7 +1079,7 @@ export default function Formularios({ usuario }) {
       </div>
 
       {/* ── Panel derecho: editor / preview ── */}
-      {selected && !viewRespuestas ? (
+      {selected && !viewRespuestas && !viewAnalisis ? (
         <div style={{ flex: 1, display: 'flex', gap: 20, minWidth: 0, overflow: 'auto' }}>
           {/* Editor */}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -891,11 +1098,18 @@ export default function Formularios({ usuario }) {
                 </>
               )}
               {!isNew && (
-                <button type="button"
-                  style={{ ...btnStyle('#fff'), color: '#475569', border: '1px solid #e2e8f0' }}
-                  onClick={() => setViewRespuestas(true)}>
-                  Ver respuestas
-                </button>
+                <>
+                  <button type="button"
+                    style={{ ...btnStyle('#fff'), color: '#475569', border: '1px solid #e2e8f0' }}
+                    onClick={() => { setViewRespuestas(true); setViewAnalisis(false) }}>
+                    Ver respuestas
+                  </button>
+                  <button type="button"
+                    style={{ ...btnStyle('#fff'), color: '#8b5cf6', border: '1px solid #c4b5fd' }}
+                    onClick={() => { setViewAnalisis(true); setViewRespuestas(false) }}>
+                    Análisis
+                  </button>
+                </>
               )}
               <div style={{ marginLeft: 'auto' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#475569', cursor: 'pointer' }}>
@@ -1012,6 +1226,10 @@ export default function Formularios({ usuario }) {
               })),
             }} />
           )}
+        </div>
+      ) : selected && viewAnalisis ? (
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <AnalisisView formId={selected.FormularioId} onBack={() => setViewAnalisis(false)} />
         </div>
       ) : selected && viewRespuestas ? (
         <div style={{ flex: 1, minWidth: 0 }}>
