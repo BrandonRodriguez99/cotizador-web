@@ -786,6 +786,8 @@ export default function SeguimientoOPT({ usuario }) {
                 { field: 'completadas', label: 'Completadas' },
                 { field: 'vencidas', label: 'Vencidas' },
                 { field: 'porcentaje', label: 'Avance' },
+                { field: 'totalKm', label: 'Km' },
+                { field: 'totalHrs', label: 'Hrs' },
               ].map(col => (
                 <th key={col.field}
                   onClick={() => toggleSort(col.field)}
@@ -803,7 +805,7 @@ export default function SeguimientoOPT({ usuario }) {
           <tbody>
             {alumnosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={tabEtapa === 'todos' ? 10 : 9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
+                <td colSpan={tabEtapa === 'todos' ? 12 : 11} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
                   No se encontraron alumnos con los filtros seleccionados
                 </td>
               </tr>
@@ -847,6 +849,36 @@ export default function SeguimientoOPT({ usuario }) {
                   </td>
                   <td style={{ padding: '10px 14px', minWidth: 120 }}>
                     <ProgressBar porcentaje={al.porcentaje} />
+                  </td>
+                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                    {al.totalKm > 0 ? (
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 12 }}>{al.totalKm.toLocaleString('es-MX')}</span>
+                        {al.metaKm && (
+                          <>
+                            <span style={{ color: '#94a3b8', fontSize: 11 }}> / {al.metaKm.toLocaleString('es-MX')}</span>
+                            <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 3, width: 70 }}>
+                              <div style={{ width: `${Math.min(100, al.pctKm)}%`, height: '100%', borderRadius: 2, background: al.pctKm >= 100 ? '#22c55e' : al.pctKm >= 60 ? '#3b82f6' : '#ef4444' }} />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>}
+                  </td>
+                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                    {al.totalHrs > 0 ? (
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 12 }}>{al.totalHrs}</span>
+                        {al.metaHrs && (
+                          <>
+                            <span style={{ color: '#94a3b8', fontSize: 11 }}> / {al.metaHrs}</span>
+                            <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 3, width: 70 }}>
+                              <div style={{ width: `${Math.min(100, al.pctHrs)}%`, height: '100%', borderRadius: 2, background: al.pctHrs >= 100 ? '#22c55e' : al.pctHrs >= 60 ? '#8b5cf6' : '#ef4444' }} />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>}
                   </td>
                   <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                     <div style={{
