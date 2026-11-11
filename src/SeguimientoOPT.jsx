@@ -350,14 +350,23 @@ function AlumnoDetalle({ alumno, onBack }) {
       ? Math.round(evalsEncargado.filter(e => e.calificacion != null).reduce((s, e) => s + e.calificacion, 0) / evalsEncargado.filter(e => e.calificacion != null).length)
       : null
 
+    const secNames = ['Rev. Inicial', 'Maniobras', 'M. Defensivo', 'M. Técnico']
     const evalsOPTHtml = evalsEncargado.length === 0 ? '' : evalsEncargado.map(ev => {
       const calColor = ev.calificacion >= 80 ? '#16a34a' : ev.calificacion >= 60 ? '#d97706' : ev.calificacion != null ? '#dc2626' : '#6b7280'
-      const secHtml = ev.secciones ? ev.secciones.map(s => `<span style="font-size:10px;color:#64748b;margin-right:8px">${s.titulo.substring(0,20)}: <strong style="color:${s.puntos >= 80 ? '#16a34a' : s.puntos >= 60 ? '#d97706' : '#dc2626'}">${s.puntos}</strong>/100</span>`).join('') : ''
+      const secCells = ev.secciones ? ev.secciones.map(s => {
+        const c = s.puntos >= 80 ? '#16a34a' : s.puntos >= 60 ? '#d97706' : '#dc2626'
+        return `<td style="text-align:center;font-weight:700;color:${c}">${s.puntos}</td>`
+      }).join('') : secNames.map(() => '<td style="text-align:center;color:#94a3b8">—</td>').join('')
+      let semanaEval = ''
+      if (alumno.fechaEgreso && ev.fecha) {
+        const diffMs = new Date(ev.fecha) - new Date(alumno.fechaEgreso)
+        if (diffMs >= 0) semanaEval = `Sem. ${Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1}`
+      }
       return `<tr>
-        <td style="font-weight:600">${ev.formularioNombre}${secHtml ? `<br>${secHtml}` : ''}</td>
-        <td>${new Date(ev.fecha).toLocaleDateString('es-MX')}</td>
-        <td>${ev.operador}</td>
-        <td style="font-weight:700;color:${calColor};font-size:14px">${ev.calificacion != null ? ev.calificacion : '—'}</td>
+        <td>${new Date(ev.fecha).toLocaleDateString('es-MX')}${semanaEval ? `<br><span style="font-size:10px;color:#3b82f6;font-weight:600">${semanaEval}</span>` : ''}</td>
+        <td>${ev.operadorTutor || ev.operador || '—'}</td>
+        ${secCells}
+        <td style="font-weight:800;color:${calColor};font-size:14px;text-align:center">${ev.calificacion != null ? ev.calificacion : '—'}</td>
       </tr>`
     }).join('')
 
@@ -459,7 +468,7 @@ function AlumnoDetalle({ alumno, onBack }) {
 
         <h2>Evaluaciones Semanales OPT (${evalsEncargado.length})</h2>
         ${evalsOPTHtml ? `<table>
-          <thead><tr><th>Evaluación</th><th>Fecha</th><th>Evaluador</th><th>Calif.</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Evaluador</th><th style="text-align:center">Rev. Inicial</th><th style="text-align:center">Maniobras</th><th style="text-align:center">M. Defensivo</th><th style="text-align:center">M. Técnico</th><th style="text-align:center">Calif.</th></tr></thead>
           <tbody>${evalsOPTHtml}</tbody>
         </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin evaluaciones semanales registradas</p>'}
 
