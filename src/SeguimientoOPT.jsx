@@ -285,8 +285,6 @@ function AlumnoDetalle({ alumno, onBack }) {
 
     const semColor = pct => pct >= 100 ? '#22c55e' : pct >= 75 ? '#84cc16' : pct >= 50 ? '#eab308' : pct >= 25 ? '#f97316' : '#ef4444'
 
-    const pctEvalSemanal = evalsEncargado.length > 0 ? Math.round((evalsEncargado.length / Math.max(1, alumno.semanaActual)) * 100) : 0
-
     const encuestasHtml = alumno.encuestas.map(enc => {
       const estadoColors = { completada: '#16a34a', vencida: '#dc2626', activa: '#d97706', pendiente: '#6b7280', futura: '#94a3b8' }
       const estadoLabels = { completada: 'Completada', vencida: 'Vencida', activa: 'Pendiente', pendiente: 'Pendiente', futura: 'Futura' }
@@ -397,7 +395,8 @@ function AlumnoDetalle({ alumno, onBack }) {
         </div>
 
         <div class="stats">
-          <div class="stat"><div class="val" style="color:${pctEvalSemanal >= 80 ? '#16a34a' : pctEvalSemanal >= 50 ? '#d97706' : '#6b7280'}">${pctEvalSemanal}%</div><div class="lbl">Eval. Semanales</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">${evalsEncargado.length} de ${alumno.semanaActual} sem.</div></div>
+          <div class="stat"><div class="val" style="color:#6b7280">—</div><div class="lbl">Eval. Semanales</div></div>
+          <div class="stat"><div class="val" style="color:#1e293b">${practicas ? practicas.registros : 0}</div><div class="lbl">Total Viajes</div></div>
           ${practicas && practicas.pctKm != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctKm)}">${practicas.pctKm}%</div><div class="lbl">Avance Km</div></div>` : `<div class="stat"><div class="val" style="color:#94a3b8">—</div><div class="lbl">Avance Km</div></div>`}
           ${practicas && practicas.pctHrs != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctHrs)}">${practicas.pctHrs}%</div><div class="lbl">Avance Hrs</div></div>` : `<div class="stat"><div class="val" style="color:#94a3b8">—</div><div class="lbl">Avance Hrs</div></div>`}
           <div class="stat"><div class="val" style="color:${alumno.porcentaje >= 80 ? '#16a34a' : alumno.porcentaje >= 50 ? '#d97706' : '#dc2626'}">${alumno.porcentaje}%</div><div class="lbl">Avance Encuestas</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">${alumno.completadas}/${alumno.totalEncuestas}</div></div>
