@@ -226,6 +226,8 @@ function TimelineCard({ enc, cfg, evalData }) {
 function AlumnoDetalle({ alumno, onBack }) {
   const [evaluaciones, setEvaluaciones] = useState([])
   const [loadingEvals, setLoadingEvals] = useState(true)
+  const [practicas, setPracticas] = useState(null)
+  const [loadingPracticas, setLoadingPracticas] = useState(true)
   const [tabDetalle, setTabDetalle] = useState('timeline')
   const token = typeof window !== 'undefined' ? localStorage.getItem('cotizador-token') : null
 
@@ -237,6 +239,14 @@ function AlumnoDetalle({ alumno, onBack }) {
       .then(r => r.json())
       .then(d => { setEvaluaciones(Array.isArray(d) ? d : []); setLoadingEvals(false) })
       .catch(() => setLoadingEvals(false))
+
+    setLoadingPracticas(true)
+    fetch(`${API}/seguimiento-opt/${encodeURIComponent(alumno.nombre)}/practicas`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => { setPracticas(d); setLoadingPracticas(false) })
+      .catch(() => setLoadingPracticas(false))
   }, [alumno.matricula])
 
   const evalsAlumno = evaluaciones.filter(e => e.tipo === 'alumno')
@@ -296,6 +306,9 @@ function AlumnoDetalle({ alumno, onBack }) {
         <button style={dtab(tabDetalle === 'todas')} onClick={() => setTabDetalle('todas')}>
           Todas <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{evaluaciones.length}</span>
         </button>
+        <button style={dtab(tabDetalle === 'kmhrs')} onClick={() => setTabDetalle('kmhrs')}>
+          Km / Horas {practicas && practicas.registros > 0 && <span style={{ background: '#f1f5f9', padding: '1px 7px', borderRadius: 10, fontSize: 11, marginLeft: 4 }}>{practicas.registros}</span>}
+        </button>
       </div>
 
       {tabDetalle === 'timeline' && (
@@ -347,6 +360,99 @@ function AlumnoDetalle({ alumno, onBack }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {evaluaciones.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} />)}
+            </div>
+          )}
+        </>
+      )}
+
+      {tabDetalle === 'kmhrs' && (
+        <>
+          {loadingPracticas ? (
+            <div style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Cargando datos de prácticas...</div>
+          ) : !practicas || practicas.registros === 0 ? (
+            <div style={{ padding: 32, textAlign: 'center', color: '#94a3b8', background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+              No hay registros de prácticas para este alumno
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Info de asignación */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: '#64748b' }}>
+                <span>Empresa: <strong style={{ color: '#0f172a' }}>{practicas.empresa}</strong></span>
+                <span>Unidad de Negocio: <strong style={{ color: '#0f172a' }}>{practicas.unidadNegocio || '—'}</strong></span>
+                <span>Unidad Operativa: <strong style={{ color: '#0f172a' }}>{practicas.unidadOperativa || '—'}</strong></span>
+                <span>Viajes registrados: <strong style={{ color: '#0f172a' }}>{practicas.registros}</strong></span>
+              </div>
+
+              {/* Tarjetas de progreso Km y Hrs */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {[
+                  { label: 'Kilómetros', actual: practicas.totalKm.toLocaleString('es-MX'), meta: practicas.meta?.km, pct: practicas.pctKm, unit: 'km', color: '#3b82f6' },
+                  { label: 'Horas', actual: practicas.totalHrs, meta: practicas.meta?.hrs, pct: practicas.pctHrs, unit: 'hrs', color: '#8b5cf6' },
+                ].map(item => (
+                  <div key={item.label} style={{
+                    background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20,
+                  }}>
+                    <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 }}>
+                      <span style={{ fontSize: 32, fontWeight: 800, color: item.color }}>{item.actual}</span>
+                      {item.meta && (
+                        <span style={{ fontSize: 14, color: '#94a3b8', fontWeight: 600 }}>/ {item.meta.toLocaleString('es-MX')} {item.unit}</span>
+                      )}
+                    </div>
+                    {item.meta && (
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                          <span>Avance</span>
+                          <span style={{ fontWeight: 700, color: item.pct >= 100 ? '#22c55e' : item.pct >= 60 ? item.color : '#ef4444' }}>{item.pct}%</span>
+                        </div>
+                        <div style={{ height: 10, background: '#e2e8f0', borderRadius: 5, overflow: 'hidden' }}>
+                          <div style={{
+                            width: `${Math.min(100, item.pct)}%`, height: '100%', borderRadius: 5,
+                            background: item.pct >= 100 ? '#22c55e' : item.pct >= 60 ? item.color : '#ef4444',
+                            transition: 'width 0.5s ease',
+                          }} />
+                        </div>
+                      </div>
+                    )}
+                    {!item.meta && (
+                      <div style={{ marginTop: 8, fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>Sin meta configurada para esta unidad</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desglose semanal */}
+              <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                  Desglose por Semana
+                </div>
+                <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <th style={{ padding: '10px 18px', textAlign: 'left', fontWeight: 600, color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Semana</th>
+                      <th style={{ padding: '10px 18px', textAlign: 'right', fontWeight: 600, color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Viajes</th>
+                      <th style={{ padding: '10px 18px', textAlign: 'right', fontWeight: 600, color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Kilómetros</th>
+                      <th style={{ padding: '10px 18px', textAlign: 'right', fontWeight: 600, color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Horas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {practicas.semanas.map(s => (
+                      <tr key={s.semana} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 18px', fontWeight: 600, color: '#0f172a' }}>Semana {s.semana}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#64748b' }}>{s.viajes}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{s.km.toLocaleString('es-MX')}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{s.horas}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ background: '#f8fafc', fontWeight: 700 }}>
+                      <td style={{ padding: '10px 18px', color: '#0f172a' }}>Total</td>
+                      <td style={{ padding: '10px 18px', textAlign: 'right', color: '#64748b' }}>{practicas.semanas.reduce((s, r) => s + r.viajes, 0)}</td>
+                      <td style={{ padding: '10px 18px', textAlign: 'right', color: '#3b82f6' }}>{practicas.totalKm.toLocaleString('es-MX')}</td>
+                      <td style={{ padding: '10px 18px', textAlign: 'right', color: '#8b5cf6' }}>{practicas.totalHrs}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>
