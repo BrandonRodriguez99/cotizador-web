@@ -109,12 +109,32 @@ function ValorDisplay({ valor, tipo, severity }) {
   return <span>{valor}</span>
 }
 
-function EvaluacionCard({ ev, defaultOpen }) {
+function EvaluacionCard({ ev, defaultOpen, fechaEgreso }) {
   const [open, setOpen] = useState(defaultOpen || false)
   const isEncargado = ev.tipo === 'encargado'
   const borderColor = isEncargado ? '#c084fc' : '#86efac'
   const iconBg = isEncargado ? '#f3e8ff' : '#dcfce7'
   const iconColor = isEncargado ? '#7c3aed' : '#166534'
+
+  let semanaEval = null
+  if (fechaEgreso && ev.fecha) {
+    const egreso = new Date(fechaEgreso)
+    const evalDate = new Date(ev.fecha)
+    const diffMs = evalDate - egreso
+    if (diffMs >= 0) semanaEval = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1
+  }
+
+  const valoresVisibles = ev.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor' && v.tipo !== 'opt')
+  const seccionesGrupo = []
+  let currentSec = null
+  for (const v of valoresVisibles) {
+    const secKey = v.seccionOrden != null ? v.seccionOrden : -1
+    if (!currentSec || currentSec.orden !== secKey) {
+      currentSec = { orden: secKey, titulo: v.seccionTitulo || '', items: [] }
+      seccionesGrupo.push(currentSec)
+    }
+    currentSec.items.push(v)
+  }
 
   return (
     <div style={{
@@ -137,7 +157,10 @@ function EvaluacionCard({ ev, defaultOpen }) {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{ev.formularioNombre}</div>
           <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-            {new Date(ev.fecha).toLocaleDateString('es-MX')} · {ev.operador}
+            {new Date(ev.fecha).toLocaleDateString('es-MX')}
+            {semanaEval && <span style={{ color: '#3b82f6', fontWeight: 600 }}> · Semana {semanaEval}</span>}
+            {ev.operadorTutor && <span> · Tutor: {ev.operadorTutor}</span>}
+            {!ev.operadorTutor && ev.operador && <span> · {ev.operador}</span>}
             {ev.portal && <span style={{ color: '#94a3b8' }}> · {ev.portal}</span>}
           </div>
         </div>
@@ -175,16 +198,25 @@ function EvaluacionCard({ ev, defaultOpen }) {
               ))}
             </div>
           )}
-          <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse', marginTop: 12 }}>
-            <tbody>
-              {ev.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map((v, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
-                  <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
-                  <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} severity={v.severity} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {seccionesGrupo.map((sec, si) => (
+            <div key={si} style={{ marginTop: si === 0 ? 12 : 16 }}>
+              {sec.titulo && (
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, paddingBottom: 4, borderBottom: '2px solid #e2e8f0' }}>
+                  {sec.titulo}
+                </div>
+              )}
+              <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+                <tbody>
+                  {sec.items.map((v, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
+                      <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} severity={v.severity} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -240,7 +272,7 @@ function TimelineCard({ enc, cfg, evalData }) {
           </div>
           <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
             <tbody>
-              {evalData.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map((v, i) => (
+              {evalData.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor' && v.tipo !== 'opt').map((v, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
                   <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
                   <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} severity={v.severity} /></td>
@@ -589,7 +621,7 @@ function AlumnoDetalle({ alumno, onBack }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {evalsEncargado.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} defaultOpen />)}
+              {evalsEncargado.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} defaultOpen fechaEgreso={alumno.fechaEgreso} />)}
             </div>
           )}
         </>
@@ -608,7 +640,7 @@ function AlumnoDetalle({ alumno, onBack }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {evaluaciones.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} />)}
+              {evaluaciones.map(ev => <EvaluacionCard key={ev.respuestaId} ev={ev} fechaEgreso={alumno.fechaEgreso} />)}
             </div>
           )}
         </>
