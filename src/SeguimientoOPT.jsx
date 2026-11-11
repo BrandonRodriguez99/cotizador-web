@@ -298,7 +298,37 @@ function AlumnoDetalle({ alumno, onBack }) {
             <div style={{ fontSize: 11, color: '#64748b' }}>avance encuestas</div>
           </div>
         </div>
-        <div style={{ marginTop: 12 }}>
+        {/* Barras Km / Hrs siempre visibles */}
+        {!loadingPracticas && practicas && practicas.registros > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
+            {[
+              { label: 'Kilómetros', actual: practicas.totalKm.toLocaleString('es-MX'), meta: practicas.meta?.km, pct: practicas.pctKm, unit: 'km' },
+              { label: 'Horas', actual: practicas.totalHrs, meta: practicas.meta?.hrs, pct: practicas.pctHrs, unit: 'hrs' },
+            ].map(item => (
+              <div key={item.label}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
+                  <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{item.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: item.pct != null ? semaforoColor(item.pct) : '#334155' }}>
+                    {item.actual}{item.meta ? ` / ${item.meta.toLocaleString('es-MX')} ${item.unit}` : ''}{item.pct != null ? ` (${item.pct}%)` : ''}
+                  </span>
+                </div>
+                <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${Math.min(100, item.pct || 0)}%`, height: '100%', borderRadius: 4,
+                    background: item.pct != null ? semaforoColor(item.pct) : '#94a3b8',
+                    transition: 'width 0.5s ease',
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Barra avance encuestas */}
+        <div style={{ marginTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
+            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Encuestas</span>
+          </div>
           <ProgressBar porcentaje={alumno.porcentaje} />
         </div>
       </div>
@@ -455,8 +485,8 @@ function AlumnoDetalle({ alumno, onBack }) {
                     <tr style={{ background: '#f8fafc', fontWeight: 700 }}>
                       <td style={{ padding: '10px 18px', color: '#0f172a' }}>Total</td>
                       <td style={{ padding: '10px 18px', textAlign: 'right', color: '#64748b' }}>{practicas.semanas.reduce((s, r) => s + r.viajes, 0)}</td>
-                      <td style={{ padding: '10px 18px', textAlign: 'right', color: '#3b82f6' }}>{practicas.totalKm.toLocaleString('es-MX')}</td>
-                      <td style={{ padding: '10px 18px', textAlign: 'right', color: '#8b5cf6' }}>{practicas.totalHrs}</td>
+                      <td style={{ padding: '10px 18px', textAlign: 'right', color: semaforoColor(practicas.pctKm || 0) }}>{practicas.totalKm.toLocaleString('es-MX')}</td>
+                      <td style={{ padding: '10px 18px', textAlign: 'right', color: semaforoColor(practicas.pctHrs || 0) }}>{practicas.totalHrs}</td>
                     </tr>
                   </tbody>
                 </table>
