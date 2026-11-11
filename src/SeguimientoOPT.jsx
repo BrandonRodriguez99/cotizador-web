@@ -837,19 +837,17 @@ export default function SeguimientoOPT({ usuario }) {
                   {col.label}{sortIcon(col.field)}
                 </th>
               ))}
-              <th style={{ padding: '10px 14px', width: 40 }}></th>
             </tr>
           </thead>
           <tbody>
             {alumnosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={tabEtapa === 'todos' ? 12 : 11} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
+                <td colSpan={tabEtapa === 'todos' ? 11 : 10} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
                   No se encontraron alumnos con los filtros seleccionados
                 </td>
               </tr>
             )}
             {alumnosPagina.map(al => {
-              const statusColor = al.vencidas > 0 ? '#ef4444' : al.completadas > 0 ? '#22c55e' : '#f59e0b'
               return (
                 <tr key={al.matricula}
                   onClick={() => setSelectedAlumno(al)}
@@ -917,11 +915,6 @@ export default function SeguimientoOPT({ usuario }) {
                         )}
                       </div>
                     ) : <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>}
-                  </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                    <div style={{
-                      width: 8, height: 8, borderRadius: '50%', background: statusColor,
-                    }} />
                   </td>
                 </tr>
               )
