@@ -266,14 +266,172 @@ function AlumnoDetalle({ alumno, onBack }) {
     background: 'none', color: active ? '#3b82f6' : '#64748b',
   })
 
+  async function imprimirKardexOPT() {
+    async function toDataURL(url) {
+      try { const r = await fetch(url); const b = await r.blob(); return new Promise(res => { const rd = new FileReader(); rd.onloadend = () => res(rd.result); rd.readAsDataURL(b) }) } catch { return '' }
+    }
+    const origin = window.location.origin
+    const [selloHdSrc, udatDarkSrc] = await Promise.all([
+      toDataURL(`${origin}/logo-udat-sello-hd.png`),
+      toDataURL(`${origin}/logo-udat-dark.png`),
+    ])
+    const selloWM = await new Promise(resolve => {
+      if (!selloHdSrc) return resolve('')
+      const img = new Image()
+      img.onload = () => { const sz = 500; const cv = document.createElement('canvas'); cv.width = sz; cv.height = sz; const ctx = cv.getContext('2d'); ctx.globalAlpha = 0.07; ctx.drawImage(img, 0, 0, sz, sz); resolve(cv.toDataURL()) }
+      img.onerror = () => resolve('')
+      img.src = selloHdSrc
+    })
+
+    const semColor = pct => pct >= 100 ? '#22c55e' : pct >= 75 ? '#84cc16' : pct >= 50 ? '#eab308' : pct >= 25 ? '#f97316' : '#ef4444'
+
+    const encuestasHtml = alumno.encuestas.map(enc => {
+      const estadoColors = { completada: '#16a34a', vencida: '#dc2626', activa: '#d97706', pendiente: '#6b7280', futura: '#94a3b8' }
+      const estadoLabels = { completada: 'Completada', vencida: 'Vencida', activa: 'Pendiente', pendiente: 'Pendiente', futura: 'Futura' }
+      const c = estadoColors[enc.estado] || '#6b7280'
+      const matchEval = evalsAlumno.find(ev => ev.formularioId === enc.formularioId)
+      let respuestasHtml = ''
+      if (matchEval && matchEval.valores) {
+        const rows = matchEval.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map(v => {
+          const sevStyle = v.severity === 'alto' ? 'background:#fef2f2;color:#dc2626;font-weight:700' : v.severity === 'medio' ? 'background:#fffbeb;color:#d97706;font-weight:600' : ''
+          return `<tr><td style="padding:4px 8px;color:#64748b;width:45%;vertical-align:top;font-size:11px">${v.pregunta}</td><td style="padding:4px 8px;font-size:11px;${sevStyle}">${v.valor || '—'}</td></tr>`
+        }).join('')
+        respuestasHtml = `<table style="width:100%;border-collapse:collapse;margin-top:6px"><tbody>${rows}</tbody></table>`
+      }
+      return `<tr>
+        <td style="font-weight:600">${enc.formularioNombre}</td>
+        <td>Semana ${enc.semanaInicio}</td>
+        <td><span style="background:${c}22;color:${c};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${estadoLabels[enc.estado]}</span></td>
+        <td>${enc.fechaRespuesta ? new Date(enc.fechaRespuesta).toLocaleDateString('es-MX') : '—'}</td>
+      </tr>${respuestasHtml ? `<tr><td colspan="4" style="padding:2px 8px 10px">${respuestasHtml}</td></tr>` : ''}`
+    }).join('')
+
+    const evalsOPTHtml = evalsEncargado.length === 0 ? '' : evalsEncargado.map(ev => {
+      const rows = ev.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map(v => {
+        const sevStyle = v.severity === 'alto' ? 'background:#fef2f2;color:#dc2626;font-weight:700' : v.severity === 'medio' ? 'background:#fffbeb;color:#d97706;font-weight:600' : ''
+        return `<tr><td style="padding:4px 8px;color:#64748b;width:45%;vertical-align:top;font-size:11px">${v.pregunta}</td><td style="padding:4px 8px;font-size:11px;${sevStyle}">${v.valor || '—'}</td></tr>`
+      }).join('')
+      return `<tr style="background:#f8fafc"><td colspan="3" style="padding:8px;font-weight:600">${ev.formularioNombre}</td><td style="padding:8px;font-size:12px;color:#64748b">${new Date(ev.fecha).toLocaleDateString('es-MX')} · ${ev.operador}</td></tr>
+        <tr><td colspan="4" style="padding:2px 8px 10px"><table style="width:100%;border-collapse:collapse">${rows}</table></td></tr>`
+    }).join('')
+
+    const kmHrsHtml = !practicas || practicas.registros === 0 ? '<p style="color:#94a3b8;font-size:12px">Sin registros de prácticas</p>' : `
+      <div style="display:flex;gap:12px;margin-bottom:12px">
+        ${[{ label: 'Kilómetros', actual: practicas.totalKm.toLocaleString('es-MX'), meta: practicas.meta?.km, pct: practicas.pctKm, unit: 'km' },
+           { label: 'Horas', actual: practicas.totalHrs, meta: practicas.meta?.hrs, pct: practicas.pctHrs, unit: 'hrs' }].map(item => `
+          <div style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px">
+            <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase">${item.label}</div>
+            <div style="font-size:24px;font-weight:800;color:${item.pct != null ? semColor(item.pct) : '#334155'};margin-top:4px">${item.actual}${item.meta ? ` <span style="font-size:13px;color:#94a3b8;font-weight:600">/ ${item.meta.toLocaleString('es-MX')} ${item.unit}</span>` : ''}</div>
+            ${item.pct != null ? `<div style="margin-top:6px;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${Math.min(100, item.pct)}%;height:100%;border-radius:4px;background:${semColor(item.pct)}"></div></div><div style="text-align:right;font-size:11px;color:${semColor(item.pct)};font-weight:700;margin-top:2px">${item.pct}%</div>` : '<div style="font-size:11px;color:#f59e0b;font-weight:600;margin-top:4px">Sin meta configurada</div>'}
+          </div>`).join('')}
+      </div>
+      ${practicas.semanas.length > 0 ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f1f5f9"><th style="padding:6px 10px;text-align:left">Semana</th><th style="padding:6px 10px;text-align:right">Viajes</th><th style="padding:6px 10px;text-align:right">Km</th><th style="padding:6px 10px;text-align:right">Horas</th></tr></thead>
+        <tbody>${practicas.semanas.map(s => `<tr><td style="padding:6px 10px;font-weight:600">Semana ${s.semana}</td><td style="padding:6px 10px;text-align:right">${s.viajes}</td><td style="padding:6px 10px;text-align:right">${s.km.toLocaleString('es-MX')}</td><td style="padding:6px 10px;text-align:right">${s.horas}</td></tr>`).join('')}
+        <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 10px">Total</td><td style="padding:6px 10px;text-align:right">${practicas.registros}</td><td style="padding:6px 10px;text-align:right;color:${semColor(practicas.pctKm || 0)}">${practicas.totalKm.toLocaleString('es-MX')}</td><td style="padding:6px 10px;text-align:right;color:${semColor(practicas.pctHrs || 0)}">${practicas.totalHrs}</td></tr>
+        </tbody></table>` : ''}`
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>Kardex OPT — ${alumno.nombre}</title>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        html,body{margin:0;padding:0;width:100%}
+        body{font-family:Arial,sans-serif;font-size:12px;color:#111}
+        .cintilla{background:#1e293b;padding:16px 28px;display:flex;align-items:center;gap:16px;margin-bottom:20px;width:100%;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        .cintilla img{height:44px;width:auto;display:block;flex-shrink:0;mix-blend-mode:screen}
+        .content{padding:0 24px 24px;background-image:url(${selloWM});background-repeat:no-repeat;background-position:center 200px;background-size:500px 500px}
+        .emp-header{background:#1e293b;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        .emp-header h1{font-size:18px;margin-bottom:4px}
+        .emp-header .sub{font-size:11px;color:#94a3b8;display:flex;flex-wrap:wrap;gap:12px;margin-top:4px}
+        .stats{display:flex;gap:10px;margin-bottom:16px}
+        .stat{flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:10px;text-align:center}
+        .stat .val{font-size:20px;font-weight:800}
+        .stat .lbl{font-size:10px;color:#6b7280;margin-top:2px}
+        h2{font-size:14px;font-weight:700;color:#0b2341;margin:18px 0 8px}
+        table{width:100%;border-collapse:collapse}
+        th{background:#f1f5f9;text-align:left;padding:7px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#374151;border-bottom:2px solid #e5e7eb}
+        td{padding:7px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+        tr{page-break-inside:avoid}
+        .footer{margin-top:20px;font-size:10px;color:#9ca3af;text-align:right}
+        @media print{@page{margin:0;size:A4}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+      </style>
+    </head><body>
+      <div class="cintilla">
+        ${udatDarkSrc ? `<img src="${udatDarkSrc}" alt="UDAT"/>` : ''}
+        <span style="margin-left:auto;color:#94a3b8;font-size:12px;font-weight:600">Kardex Seguimiento OPT</span>
+      </div>
+      <div class="content">
+        <div class="emp-header">
+          <h1>${alumno.nombre}</h1>
+          <div class="sub">
+            <span>${alumno.matricula}</span>
+            <span>Generación: ${alumno.generacion || '—'}</span>
+            <span>Perfil: ${alumno.perfil || '—'}</span>
+            <span>Empresa: ${alumno.empresa || '—'}</span>
+            <span>Semana actual: ${alumno.semanaActual}</span>
+            <span>Egreso: ${new Date(alumno.fechaEgreso).toLocaleDateString('es-MX')}</span>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="val" style="color:${alumno.porcentaje >= 80 ? '#16a34a' : alumno.porcentaje >= 50 ? '#d97706' : '#dc2626'}">${alumno.porcentaje}%</div><div class="lbl">Avance encuestas</div></div>
+          <div class="stat"><div class="val" style="color:#2563eb">${alumno.completadas}/${alumno.totalEncuestas}</div><div class="lbl">Completadas</div></div>
+          <div class="stat"><div class="val" style="color:#dc2626">${alumno.vencidas || 0}</div><div class="lbl">Vencidas</div></div>
+          ${practicas && practicas.pctKm != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctKm)}">${practicas.pctKm}%</div><div class="lbl">Avance Km</div></div>` : ''}
+          ${practicas && practicas.pctHrs != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctHrs)}">${practicas.pctHrs}%</div><div class="lbl">Avance Hrs</div></div>` : ''}
+        </div>
+
+        <h2>Encuestas del Alumno</h2>
+        <table>
+          <thead><tr><th>Encuesta</th><th>Semana</th><th>Estado</th><th>Respondida</th></tr></thead>
+          <tbody>${encuestasHtml}</tbody>
+        </table>
+
+        ${evalsOPTHtml ? `<h2>Evaluaciones Semanales OPT (${evalsEncargado.length})</h2>
+        <table><tbody>${evalsOPTHtml}</tbody></table>` : ''}
+
+        <h2>Kilómetros / Horas</h2>
+        ${kmHrsHtml}
+
+        <div class="footer">Generado el ${new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})} · UDAT Seguimiento OPT</div>
+      </div>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+      <script>
+        window.onload = function() {
+          html2pdf().set({
+            margin: 0,
+            filename: 'KardexOPT_${(alumno.nombre || '').replace(/[^a-zA-Z0-9_áéíóúÁÉÍÓÚüÜñÑ ]/g,'').trim().replace(/ +/g,'_')}.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          }).from(document.body).save().then(function(){ window.close(); });
+        };
+      <\/script>
+    </body></html>`
+
+    const w = window.open('', '_blank', 'width=900,height=700')
+    w.document.write(html)
+    w.document.close()
+  }
+
   return (
     <div>
-      <button onClick={onBack} style={{
-        background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer',
-        fontSize: 13, padding: 0, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 4,
-      }}>
-        ← Volver al listado
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer',
+          fontSize: 13, padding: 0, display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          ← Volver al listado
+        </button>
+        <button onClick={imprimirKardexOPT} disabled={loadingEvals || loadingPracticas} style={{
+          background: '#1e293b', color: '#fff', border: 'none', borderRadius: 8,
+          padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          opacity: loadingEvals || loadingPracticas ? 0.5 : 1,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          ↓ Descargar Kardex OPT
+        </button>
+      </div>
 
       <div style={{
         background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0',
