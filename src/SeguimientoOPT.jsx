@@ -56,27 +56,57 @@ function SummaryCards({ alumnos }) {
   const alDia = alumnos.filter(a => a.vencidas === 0 && a.completadas > 0).length
   const conVencidas = alumnos.filter(a => a.vencidas > 0).length
   const sinIniciar = alumnos.filter(a => a.completadas === 0).length
-  const promedioAvance = total ? Math.round(alumnos.reduce((s, a) => s + a.porcentaje, 0) / total) : 0
 
-  const cards = [
-    { label: 'Total Alumnos',   value: total,          color: '#3b82f6' },
-    { label: 'Al Día',          value: alDia,           color: '#22c55e' },
-    { label: 'Con Vencidas',    value: conVencidas,     color: '#ef4444' },
-    { label: 'Sin Iniciar',     value: sinIniciar,      color: '#f59e0b' },
-    { label: 'Avance Promedio', value: `${promedioAvance}%`, color: '#8b5cf6' },
-  ]
+  const conKm = alumnos.filter(a => a.totalKm > 0)
+  const totalKm = alumnos.reduce((s, a) => s + (a.totalKm || 0), 0)
+  const totalMetaKm = alumnos.reduce((s, a) => s + (a.metaKm || 0), 0)
+  const promPctKm = conKm.length ? Math.round(conKm.reduce((s, a) => s + (a.pctKm || 0), 0) / conKm.length) : null
+
+  const conHrs = alumnos.filter(a => a.totalHrs > 0)
+  const totalHrs = Math.round(alumnos.reduce((s, a) => s + (a.totalHrs || 0), 0) * 10) / 10
+  const totalMetaHrs = alumnos.reduce((s, a) => s + (a.metaHrs || 0), 0)
+  const promPctHrs = conHrs.length ? Math.round(conHrs.reduce((s, a) => s + (a.pctHrs || 0), 0) / conHrs.length) : null
+
+  const promedioEncuestas = total ? Math.round(alumnos.reduce((s, a) => s + a.porcentaje, 0) / total) : 0
+
+  const conEvals = alumnos.filter(a => a.promedioEvals != null)
+  const promedioEvals = conEvals.length ? Math.round(conEvals.reduce((s, a) => s + a.promedioEvals, 0) / conEvals.length) : null
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-      {cards.map(c => (
-        <div key={c.label} style={{
-          background: '#fff', borderRadius: 12, padding: '16px 18px',
-          border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-        }}>
-          <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c.label}</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: c.color, marginTop: 4 }}>{c.value}</div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alumnos</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>{total}</div>
+        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+          <span style={{ color: '#22c55e' }}>{alDia} al día</span> · <span style={{ color: '#ef4444' }}>{conVencidas} vencidas</span> · <span style={{ color: '#f59e0b' }}>{sinIniciar} sin iniciar</span>
         </div>
-      ))}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eval. Semanales</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: promedioEvals != null ? (promedioEvals >= 80 ? '#16a34a' : promedioEvals >= 60 ? '#d97706' : '#dc2626') : '#94a3b8', marginTop: 4 }}>
+          {promedioEvals != null ? promedioEvals : '—'}
+        </div>
+        {promedioEvals != null && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Promedio de {conEvals.length} alumno{conEvals.length !== 1 ? 's' : ''}</div>}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kilómetros</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: promPctKm != null ? semaforoColor(promPctKm) : '#94a3b8', marginTop: 4 }}>
+          {totalKm > 0 ? totalKm.toLocaleString('es-MX') : '—'}
+        </div>
+        {totalMetaKm > 0 && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Meta: {totalMetaKm.toLocaleString('es-MX')} km · Prom: {promPctKm}%</div>}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horas</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: promPctHrs != null ? semaforoColor(promPctHrs) : '#94a3b8', marginTop: 4 }}>
+          {totalHrs > 0 ? totalHrs.toLocaleString('es-MX') : '—'}
+        </div>
+        {totalMetaHrs > 0 && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Meta: {totalMetaHrs.toLocaleString('es-MX')} hrs · Prom: {promPctHrs}%</div>}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avance Encuestas</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: semaforoColor(promedioEncuestas), marginTop: 4 }}>{promedioEncuestas}%</div>
+        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Promedio de {total} alumno{total !== 1 ? 's' : ''}</div>
+      </div>
     </div>
   )
 }
