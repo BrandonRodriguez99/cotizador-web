@@ -94,17 +94,11 @@ function ValorDisplay({ valor, tipo, severity }) {
       return <span>{parsed.nombre || parsed.matricula || valor}</span>
     } catch { return <span>{valor}</span> }
   }
-  const sev = SEVERITY_STYLES[severity]
-  if (sev) {
-    return (
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '2px 8px', borderRadius: 6, background: sev.bg, color: sev.color, fontWeight: 600,
-      }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: sev.dot, flexShrink: 0 }} />
-        {valor}
-      </span>
-    )
+  if (tipo === 'escala' && severity) {
+    const sev = SEVERITY_STYLES[severity]
+    if (sev) {
+      return <span style={{ padding: '2px 8px', borderRadius: 6, background: sev.bg, color: sev.color, fontWeight: 600 }}>{valor}</span>
+    }
   }
   return <span>{valor}</span>
 }
@@ -112,9 +106,9 @@ function ValorDisplay({ valor, tipo, severity }) {
 function EvaluacionCard({ ev, defaultOpen, fechaEgreso }) {
   const [open, setOpen] = useState(defaultOpen || false)
   const isEncargado = ev.tipo === 'encargado'
-  const borderColor = isEncargado ? '#c084fc' : '#86efac'
-  const iconBg = isEncargado ? '#f3e8ff' : '#dcfce7'
-  const iconColor = isEncargado ? '#7c3aed' : '#166534'
+  const borderColor = isEncargado ? '#0b2341' : '#86efac'
+  const iconBg = isEncargado ? '#e8edf3' : '#dcfce7'
+  const iconColor = isEncargado ? '#0b2341' : '#166534'
 
   let semanaEval = null
   if (fechaEgreso && ev.fecha) {
@@ -175,8 +169,8 @@ function EvaluacionCard({ ev, defaultOpen, fechaEgreso }) {
         ) : (
           <span style={{
             padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-            background: isEncargado ? '#f3e8ff' : '#dcfce7',
-            color: isEncargado ? '#7c3aed' : '#166534',
+            background: isEncargado ? '#e8edf3' : '#dcfce7',
+            color: isEncargado ? '#0b2341' : '#166534',
           }}>
             {isEncargado ? 'Evaluación semanal OPT' : 'Respuesta alumno'}
           </span>
