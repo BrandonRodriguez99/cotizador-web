@@ -285,38 +285,34 @@ function AlumnoDetalle({ alumno, onBack }) {
 
     const semColor = pct => pct >= 100 ? '#22c55e' : pct >= 75 ? '#84cc16' : pct >= 50 ? '#eab308' : pct >= 25 ? '#f97316' : '#ef4444'
 
+    const pctEvalSemanal = evalsEncargado.length > 0 ? Math.round((evalsEncargado.length / Math.max(1, alumno.semanaActual)) * 100) : 0
+
     const encuestasHtml = alumno.encuestas.map(enc => {
       const estadoColors = { completada: '#16a34a', vencida: '#dc2626', activa: '#d97706', pendiente: '#6b7280', futura: '#94a3b8' }
       const estadoLabels = { completada: 'Completada', vencida: 'Vencida', activa: 'Pendiente', pendiente: 'Pendiente', futura: 'Futura' }
       const c = estadoColors[enc.estado] || '#6b7280'
-      const matchEval = evalsAlumno.find(ev => ev.formularioId === enc.formularioId)
-      let respuestasHtml = ''
-      if (matchEval && matchEval.valores) {
-        const rows = matchEval.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map(v => {
-          const sevStyle = v.severity === 'alto' ? 'background:#fef2f2;color:#dc2626;font-weight:700' : v.severity === 'medio' ? 'background:#fffbeb;color:#d97706;font-weight:600' : ''
-          return `<tr><td style="padding:4px 8px;color:#64748b;width:45%;vertical-align:top;font-size:11px">${v.pregunta}</td><td style="padding:4px 8px;font-size:11px;${sevStyle}">${v.valor || '—'}</td></tr>`
-        }).join('')
-        respuestasHtml = `<table style="width:100%;border-collapse:collapse;margin-top:6px"><tbody>${rows}</tbody></table>`
-      }
       return `<tr>
         <td style="font-weight:600">${enc.formularioNombre}</td>
         <td>Semana ${enc.semanaInicio}</td>
         <td><span style="background:${c}22;color:${c};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${estadoLabels[enc.estado]}</span></td>
         <td>${enc.fechaRespuesta ? new Date(enc.fechaRespuesta).toLocaleDateString('es-MX') : '—'}</td>
-      </tr>${respuestasHtml ? `<tr><td colspan="4" style="padding:2px 8px 10px">${respuestasHtml}</td></tr>` : ''}`
+      </tr>`
     }).join('')
 
     const evalsOPTHtml = evalsEncargado.length === 0 ? '' : evalsEncargado.map(ev => {
-      const rows = ev.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map(v => {
-        const sevStyle = v.severity === 'alto' ? 'background:#fef2f2;color:#dc2626;font-weight:700' : v.severity === 'medio' ? 'background:#fffbeb;color:#d97706;font-weight:600' : ''
-        return `<tr><td style="padding:4px 8px;color:#64748b;width:45%;vertical-align:top;font-size:11px">${v.pregunta}</td><td style="padding:4px 8px;font-size:11px;${sevStyle}">${v.valor || '—'}</td></tr>`
-      }).join('')
-      return `<tr style="background:#f8fafc"><td colspan="3" style="padding:8px;font-weight:600">${ev.formularioNombre}</td><td style="padding:8px;font-size:12px;color:#64748b">${new Date(ev.fecha).toLocaleDateString('es-MX')} · ${ev.operador}</td></tr>
-        <tr><td colspan="4" style="padding:2px 8px 10px"><table style="width:100%;border-collapse:collapse">${rows}</table></td></tr>`
+      return `<tr>
+        <td style="font-weight:600">${ev.formularioNombre}</td>
+        <td>${new Date(ev.fecha).toLocaleDateString('es-MX')}</td>
+        <td>${ev.operador}</td>
+        <td><span style="background:#7c3aed22;color:#7c3aed;padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">Completada</span></td>
+      </tr>`
     }).join('')
 
+    const maxKm = practicas && practicas.semanas.length > 0 ? Math.max(...practicas.semanas.map(s => s.km)) : 0
+    const maxHrs = practicas && practicas.semanas.length > 0 ? Math.max(...practicas.semanas.map(s => s.horas)) : 0
+
     const kmHrsHtml = !practicas || practicas.registros === 0 ? '<p style="color:#94a3b8;font-size:12px">Sin registros de prácticas</p>' : `
-      <div style="display:flex;gap:12px;margin-bottom:12px">
+      <div style="display:flex;gap:12px;margin-bottom:16px">
         ${[{ label: 'Kilómetros', actual: practicas.totalKm.toLocaleString('es-MX'), meta: practicas.meta?.km, pct: practicas.pctKm, unit: 'km' },
            { label: 'Horas', actual: practicas.totalHrs, meta: practicas.meta?.hrs, pct: practicas.pctHrs, unit: 'hrs' }].map(item => `
           <div style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px">
@@ -325,11 +321,38 @@ function AlumnoDetalle({ alumno, onBack }) {
             ${item.pct != null ? `<div style="margin-top:6px;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${Math.min(100, item.pct)}%;height:100%;border-radius:4px;background:${semColor(item.pct)}"></div></div><div style="text-align:right;font-size:11px;color:${semColor(item.pct)};font-weight:700;margin-top:2px">${item.pct}%</div>` : '<div style="font-size:11px;color:#f59e0b;font-weight:600;margin-top:4px">Sin meta configurada</div>'}
           </div>`).join('')}
       </div>
-      ${practicas.semanas.length > 0 ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:#f1f5f9"><th style="padding:6px 10px;text-align:left">Semana</th><th style="padding:6px 10px;text-align:right">Viajes</th><th style="padding:6px 10px;text-align:right">Km</th><th style="padding:6px 10px;text-align:right">Horas</th></tr></thead>
-        <tbody>${practicas.semanas.map(s => `<tr><td style="padding:6px 10px;font-weight:600">Semana ${s.semana}</td><td style="padding:6px 10px;text-align:right">${s.viajes}</td><td style="padding:6px 10px;text-align:right">${s.km.toLocaleString('es-MX')}</td><td style="padding:6px 10px;text-align:right">${s.horas}</td></tr>`).join('')}
-        <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 10px">Total</td><td style="padding:6px 10px;text-align:right">${practicas.registros}</td><td style="padding:6px 10px;text-align:right;color:${semColor(practicas.pctKm || 0)}">${practicas.totalKm.toLocaleString('es-MX')}</td><td style="padding:6px 10px;text-align:right;color:${semColor(practicas.pctHrs || 0)}">${practicas.totalHrs}</td></tr>
-        </tbody></table>` : ''}`
+      ${practicas.semanas.length > 0 ? `
+      <div style="display:flex;gap:20px;margin-top:8px">
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">Kilómetros por Semana</div>
+          ${practicas.semanas.map(s => {
+            const pctBar = maxKm > 0 ? Math.round(s.km / maxKm * 100) : 0
+            return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <span style="font-size:11px;color:#64748b;width:52px;text-align:right;flex-shrink:0">S${s.semana}</span>
+              <div style="flex:1;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden;position:relative">
+                <div style="width:${pctBar}%;height:100%;background:linear-gradient(90deg,#f97316,#eab308);border-radius:4px"></div>
+                <span style="position:absolute;right:6px;top:2px;font-size:10px;font-weight:700;color:#334155">${s.km.toLocaleString('es-MX')}</span>
+              </div>
+            </div>`}).join('')}
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">Horas por Semana</div>
+          ${practicas.semanas.map(s => {
+            const pctBar = maxHrs > 0 ? Math.round(s.horas / maxHrs * 100) : 0
+            return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <span style="font-size:11px;color:#64748b;width:52px;text-align:right;flex-shrink:0">S${s.semana}</span>
+              <div style="flex:1;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden;position:relative">
+                <div style="width:${pctBar}%;height:100%;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:4px"></div>
+                <span style="position:absolute;right:6px;top:2px;font-size:10px;font-weight:700;color:#334155">${s.horas}</span>
+              </div>
+            </div>`}).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:20px;margin-top:10px;font-size:11px;color:#64748b;border-top:1px solid #e5e7eb;padding-top:8px">
+        <span><strong>Total:</strong> ${practicas.registros} viajes</span>
+        <span><strong>Km:</strong> <span style="color:${semColor(practicas.pctKm || 0)};font-weight:700">${practicas.totalKm.toLocaleString('es-MX')}</span></span>
+        <span><strong>Hrs:</strong> <span style="color:${semColor(practicas.pctHrs || 0)};font-weight:700">${practicas.totalHrs}</span></span>
+      </div>` : ''}`
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
       <title>Kardex OPT — ${alumno.nombre}</title>
@@ -374,11 +397,10 @@ function AlumnoDetalle({ alumno, onBack }) {
         </div>
 
         <div class="stats">
-          <div class="stat"><div class="val" style="color:${alumno.porcentaje >= 80 ? '#16a34a' : alumno.porcentaje >= 50 ? '#d97706' : '#dc2626'}">${alumno.porcentaje}%</div><div class="lbl">Avance encuestas</div></div>
-          <div class="stat"><div class="val" style="color:#2563eb">${alumno.completadas}/${alumno.totalEncuestas}</div><div class="lbl">Completadas</div></div>
-          <div class="stat"><div class="val" style="color:#dc2626">${alumno.vencidas || 0}</div><div class="lbl">Vencidas</div></div>
-          ${practicas && practicas.pctKm != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctKm)}">${practicas.pctKm}%</div><div class="lbl">Avance Km</div></div>` : ''}
-          ${practicas && practicas.pctHrs != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctHrs)}">${practicas.pctHrs}%</div><div class="lbl">Avance Hrs</div></div>` : ''}
+          <div class="stat"><div class="val" style="color:${pctEvalSemanal >= 80 ? '#16a34a' : pctEvalSemanal >= 50 ? '#d97706' : '#6b7280'}">${pctEvalSemanal}%</div><div class="lbl">Eval. Semanales</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">${evalsEncargado.length} de ${alumno.semanaActual} sem.</div></div>
+          ${practicas && practicas.pctKm != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctKm)}">${practicas.pctKm}%</div><div class="lbl">Avance Km</div></div>` : `<div class="stat"><div class="val" style="color:#94a3b8">—</div><div class="lbl">Avance Km</div></div>`}
+          ${practicas && practicas.pctHrs != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctHrs)}">${practicas.pctHrs}%</div><div class="lbl">Avance Hrs</div></div>` : `<div class="stat"><div class="val" style="color:#94a3b8">—</div><div class="lbl">Avance Hrs</div></div>`}
+          <div class="stat"><div class="val" style="color:${alumno.porcentaje >= 80 ? '#16a34a' : alumno.porcentaje >= 50 ? '#d97706' : '#dc2626'}">${alumno.porcentaje}%</div><div class="lbl">Avance Encuestas</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">${alumno.completadas}/${alumno.totalEncuestas}</div></div>
         </div>
 
         <h2>Encuestas del Alumno</h2>
@@ -388,7 +410,10 @@ function AlumnoDetalle({ alumno, onBack }) {
         </table>
 
         ${evalsOPTHtml ? `<h2>Evaluaciones Semanales OPT (${evalsEncargado.length})</h2>
-        <table><tbody>${evalsOPTHtml}</tbody></table>` : ''}
+        <table>
+          <thead><tr><th>Evaluación</th><th>Fecha</th><th>Evaluador</th><th>Estado</th></tr></thead>
+          <tbody>${evalsOPTHtml}</tbody>
+        </table>` : ''}
 
         <h2>Kilómetros / Horas</h2>
         ${kmHrsHtml}
