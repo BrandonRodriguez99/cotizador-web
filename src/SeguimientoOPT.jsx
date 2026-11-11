@@ -10,6 +10,14 @@ function fetchSeguimiento(token, portalId) {
   })
 }
 
+function semaforoColor(pct) {
+  if (pct >= 100) return '#22c55e'
+  if (pct >= 75) return '#84cc16'
+  if (pct >= 50) return '#eab308'
+  if (pct >= 25) return '#f97316'
+  return '#ef4444'
+}
+
 const ESTADO_CONFIG = {
   completada: { bg: '#dcfce7', color: '#166534', label: 'Completada', icon: '✓' },
   activa:     { bg: '#fef3c7', color: '#92400e', label: 'Pendiente',  icon: '●' },
@@ -386,15 +394,15 @@ function AlumnoDetalle({ alumno, onBack }) {
               {/* Tarjetas de progreso Km y Hrs */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 {[
-                  { label: 'Kilómetros', actual: practicas.totalKm.toLocaleString('es-MX'), meta: practicas.meta?.km, pct: practicas.pctKm, unit: 'km', color: '#3b82f6' },
-                  { label: 'Horas', actual: practicas.totalHrs, meta: practicas.meta?.hrs, pct: practicas.pctHrs, unit: 'hrs', color: '#8b5cf6' },
+                  { label: 'Kilómetros', actual: practicas.totalKm.toLocaleString('es-MX'), meta: practicas.meta?.km, pct: practicas.pctKm, unit: 'km' },
+                  { label: 'Horas', actual: practicas.totalHrs, meta: practicas.meta?.hrs, pct: practicas.pctHrs, unit: 'hrs' },
                 ].map(item => (
                   <div key={item.label} style={{
                     background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20,
                   }}>
                     <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 }}>
-                      <span style={{ fontSize: 32, fontWeight: 800, color: item.color }}>{item.actual}</span>
+                      <span style={{ fontSize: 32, fontWeight: 800, color: item.pct != null ? semaforoColor(item.pct) : '#334155' }}>{item.actual}</span>
                       {item.meta && (
                         <span style={{ fontSize: 14, color: '#94a3b8', fontWeight: 600 }}>/ {item.meta.toLocaleString('es-MX')} {item.unit}</span>
                       )}
@@ -403,12 +411,12 @@ function AlumnoDetalle({ alumno, onBack }) {
                       <div style={{ marginTop: 10 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 4 }}>
                           <span>Avance</span>
-                          <span style={{ fontWeight: 700, color: item.pct >= 100 ? '#22c55e' : item.pct >= 60 ? item.color : '#ef4444' }}>{item.pct}%</span>
+                          <span style={{ fontWeight: 700, color: semaforoColor(item.pct) }}>{item.pct}%</span>
                         </div>
                         <div style={{ height: 10, background: '#e2e8f0', borderRadius: 5, overflow: 'hidden' }}>
                           <div style={{
                             width: `${Math.min(100, item.pct)}%`, height: '100%', borderRadius: 5,
-                            background: item.pct >= 100 ? '#22c55e' : item.pct >= 60 ? item.color : '#ef4444',
+                            background: semaforoColor(item.pct),
                             transition: 'width 0.5s ease',
                           }} />
                         </div>
@@ -858,7 +866,7 @@ export default function SeguimientoOPT({ usuario }) {
                           <>
                             <span style={{ color: '#94a3b8', fontSize: 11 }}> / {al.metaKm.toLocaleString('es-MX')}</span>
                             <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 3, width: 70 }}>
-                              <div style={{ width: `${Math.min(100, al.pctKm)}%`, height: '100%', borderRadius: 2, background: al.pctKm >= 100 ? '#22c55e' : al.pctKm >= 60 ? '#3b82f6' : '#ef4444' }} />
+                              <div style={{ width: `${Math.min(100, al.pctKm)}%`, height: '100%', borderRadius: 2, background: semaforoColor(al.pctKm) }} />
                             </div>
                           </>
                         )}
@@ -873,7 +881,7 @@ export default function SeguimientoOPT({ usuario }) {
                           <>
                             <span style={{ color: '#94a3b8', fontSize: 11 }}> / {al.metaHrs}</span>
                             <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 3, width: 70 }}>
-                              <div style={{ width: `${Math.min(100, al.pctHrs)}%`, height: '100%', borderRadius: 2, background: al.pctHrs >= 100 ? '#22c55e' : al.pctHrs >= 60 ? '#8b5cf6' : '#ef4444' }} />
+                              <div style={{ width: `${Math.min(100, al.pctHrs)}%`, height: '100%', borderRadius: 2, background: semaforoColor(al.pctHrs) }} />
                             </div>
                           </>
                         )}
