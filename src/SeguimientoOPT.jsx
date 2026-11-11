@@ -73,13 +73,30 @@ function SummaryCards({ alumnos }) {
   )
 }
 
-function ValorDisplay({ valor, tipo }) {
+const SEVERITY_STYLES = {
+  alto:  { bg: '#fef2f2', color: '#dc2626', dot: '#ef4444' },
+  medio: { bg: '#fffbeb', color: '#d97706', dot: '#f59e0b' },
+}
+
+function ValorDisplay({ valor, tipo, severity }) {
   if (!valor) return <span style={{ color: '#94a3b8' }}>—</span>
   if (tipo === 'alumno' || tipo === 'operador_tutor') {
     try {
       const parsed = JSON.parse(valor)
       return <span>{parsed.nombre || parsed.matricula || valor}</span>
     } catch { return <span>{valor}</span> }
+  }
+  const sev = SEVERITY_STYLES[severity]
+  if (sev) {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '2px 8px', borderRadius: 6, background: sev.bg, color: sev.color, fontWeight: 600,
+      }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: sev.dot, flexShrink: 0 }} />
+        {valor}
+      </span>
+    )
   }
   return <span>{valor}</span>
 }
@@ -132,7 +149,7 @@ function EvaluacionCard({ ev, defaultOpen }) {
               {ev.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map((v, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
                   <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
-                  <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} /></td>
+                  <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} severity={v.severity} /></td>
                 </tr>
               ))}
             </tbody>
@@ -195,7 +212,7 @@ function TimelineCard({ enc, cfg, evalData }) {
               {evalData.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map((v, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
                   <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
-                  <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} /></td>
+                  <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} severity={v.severity} /></td>
                 </tr>
               ))}
             </tbody>
@@ -411,13 +428,6 @@ function AlertasPanel({ token, onSelectAlumno, alumnos }) {
                 borderLeft: `4px solid ${cfg.color}`, overflow: 'hidden',
               }}>
                 <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                    background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 14, fontWeight: 800, color: cfg.color, border: `2px solid ${cfg.color}30`,
-                  }}>
-                    {al.riesgo}
-                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{al.nombre}</span>
@@ -429,20 +439,22 @@ function AlertasPanel({ token, onSelectAlumno, alumnos }) {
                     <div style={{ fontSize: 12, color: '#64748b', marginTop: 3 }}>
                       {al.matricula} · Gen. {al.generacion || '—'} · {al.perfil || '—'} · {al.empresa || '—'} · Semana {al.semanaActual}
                     </div>
-                    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {al.flags.map((f, i) => (
-                        <div key={i} style={{
-                          display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
-                          padding: '5px 10px', borderRadius: 8,
-                          background: f.nivel === 'alto' ? '#fef2f2' : f.nivel === 'medio' ? '#fffbeb' : '#f8fafc',
-                        }}>
-                          <span style={{ fontSize: 10 }}>
-                            {f.nivel === 'alto' ? '🔴' : f.nivel === 'medio' ? '🟡' : '🟢'}
-                          </span>
-                          <span style={{ color: '#334155' }}>{f.mensaje}</span>
+                    {(() => {
+                      const encFlag = al.flags.find(f => f.tipo === 'encuestas')
+                      const respAltas = al.flags.filter(f => f.tipo === 'respuesta' && f.nivel === 'alto').length
+                      const respMedias = al.flags.filter(f => f.tipo === 'respuesta' && f.nivel === 'medio').length
+                      const sinDatos = al.flags.find(f => f.tipo === 'sin_datos')
+                      const partes = []
+                      if (encFlag) partes.push(encFlag.mensaje)
+                      if (sinDatos) partes.push(sinDatos.mensaje)
+                      if (respAltas > 0) partes.push(`${respAltas} respuesta${respAltas > 1 ? 's' : ''} crítica${respAltas > 1 ? 's' : ''}`)
+                      if (respMedias > 0) partes.push(`${respMedias} respuesta${respMedias > 1 ? 's' : ''} de atención`)
+                      return partes.length > 0 ? (
+                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>
+                          {partes.join(' · ')}
                         </div>
-                      ))}
-                    </div>
+                      ) : null
+                    })()}
                   </div>
                   {alumnoData && (
                     <button onClick={() => onSelectAlumno(alumnoData)}
