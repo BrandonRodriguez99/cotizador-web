@@ -1,6 +1,6 @@
 # Cotizador Servicios UDAT — Documentación del Proyecto
 
-**Versión:** 4.0  
+**Versión:** 5.0  
 **Fecha:** Noviembre 2026  
 **Autor:** Brandon Rodriguez
 
@@ -23,7 +23,8 @@
 13. [Instalación y Ejecución](#13-instalación-y-ejecución)
 14. [Dependencias](#14-dependencias)
 15. [Módulo Lean 5S](#15-módulo-lean-5s)
-16. [Historial de Cambios](#16-historial-de-cambios)
+16. [Módulo Seguimiento OPT](#16-módulo-seguimiento-opt)
+17. [Historial de Cambios](#17-historial-de-cambios)
 
 ---
 
@@ -79,7 +80,7 @@
 │  /api/usuarios            /api/ordenes-mantenimiento │
 │  /api/inventario          /api/seguridad             │
 │  /api/vehiculos           /api/solicitud-vehiculo    │
-│  /api/cincos                                         │
+│  /api/cincos              /api/seguimiento-opt        │
 │                                                      │
 │  Nodemailer → Gmail SMTP (notificaciones)            │
 └────────────────────────┬─────────────────────────────┘
@@ -129,6 +130,7 @@ CotizadorServiciosUDAT/
 │   │   ├── Seguridad.jsx           # Módulo de seguridad: rondines, extintores, visitas, vehículos
 │   │   ├── SolicitudVehiculoPublica.jsx  # Formulario público (sin login) para solicitar vehículo
 │   │   ├── Usuarios.jsx            # Administración de usuarios (solo admin)
+│   │   ├── SeguimientoOPT.jsx      # Seguimiento OPT: alumnos, evaluaciones, km/hrs, kardex
 │   │   │
 │   │   ├── CatalogFormModal.jsx        # Modal genérico para catálogos
 │   │   ├── ChangePasswordModal.jsx     # Modal de cambio de contraseña
@@ -1515,7 +1517,270 @@ Todos los iconos del módulo usan **SVG vectoriales** tanto en web como en Andro
 
 ---
 
-## 16. Historial de Cambios
+## 16. Módulo Seguimiento OPT
+
+### 16.1 Descripción
+
+Sistema de seguimiento para alumnos en etapa **OPT (Operador Profesional de Tractocamión)**. Monitorea el progreso de cada alumno en 4 dimensiones:
+
+1. **Evaluaciones semanales** — Evaluaciones del encargado/tutor con calificación por secciones
+2. **Encuestas del alumno** — Auto-evaluaciones semanales del alumno
+3. **Kilómetros / Horas** — Registro de práctica en tractocamión vs meta asignada
+4. **Alertas de riesgo** — Análisis automático de respuestas para detectar situaciones de riesgo
+
+**Archivos principales:**
+
+| Capa | Archivo | Descripción |
+|------|---------|-------------|
+| Frontend | `src/SeguimientoOPT.jsx` | Componente completo del módulo |
+| Backend | `server.js` (endpoints `/api/seguimiento-opt*`) | 4 endpoints API |
+
+**Bases de datos utilizadas:**
+
+| Base | Pool | Uso |
+|------|------|-----|
+| `biUDAT` | `pool` (principal) | Formularios, encuestas, evaluaciones, operaciones |
+| `UDAT` | `poolUDAT` (secundario) | `PracticaTractorOPT` (km, hrs, viajes) |
+
+**Enlace entre bases:** `biUDAT.OperacionesUDAT.sPerfil` = `UDAT.Operador.Matricula`
+
+---
+
+### 16.2 Endpoints API
+
+Todos requieren autenticación JWT.
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/seguimiento-opt` | Lista alumnos OPT con encuestas y avance |
+| GET | `/api/seguimiento-opt/:matricula/evaluaciones` | Evaluaciones del alumno (encuestas + evals semanales) |
+| GET | `/api/seguimiento-opt/:matricula/practicas` | Registros de práctica (km, hrs, viajes) desde DB UDAT |
+| GET | `/api/seguimiento-opt-alertas` | Análisis de riesgo por alumno |
+
+**Clasificación de evaluaciones (endpoint evaluaciones):**
+- **tipo `alumno`**: formularios en portales CON calendario (portal "Alumno OPT")
+- **tipo `encargado`**: formularios en portales SIN calendario (portal "OPT")
+
+**Campos devueltos por evaluación:**
+
+| Campo | Descripción |
+|-------|-------------|
+| `respuestaId` | ID de la respuesta |
+| `formularioNombre` | Nombre del formulario |
+| `fecha` | Fecha de envío |
+| `operador` | Nombre del operador que respondió |
+| `operadorTutor` | Nombre del tutor (extraído del campo JSON tipo `opt`) |
+| `tipo` | `alumno` o `encargado` |
+| `secciones` | Array de secciones con puntuación (solo encargado) |
+| `calificacion` | Promedio de las 4 secciones (solo encargado) |
+| `valores` | Respuestas con `pregunta`, `tipo`, `valor`, `severity`, `seccionTitulo`, `seccionOrden` |
+
+---
+
+### 16.3 Evaluación Semanal OPT (FormularioId = 3)
+
+#### Estructura del formulario
+
+| Sección | Orden | Nombre | Preguntas | Tipo | Max | ¿Se puntúa? |
+|---------|-------|--------|-----------|------|-----|-------------|
+| 0 | 0 | Datos generales | 5 | alumno, opt, fecha, lista, numero | — | No |
+| 1 | 1 | Actitud y Disponibilidad | 3 | escala, lista | — | No |
+| 2 | 2 | Revisión Inicial (Inspección) | 5 | escala | 100 | **Sí** |
+| 3 | 3 | Maniobras (Inspección, Acople, Desacople y Enrampe) | 5 | escala | 100 | **Sí** |
+| 4 | 4 | Manejo Defensivo (Técnicas Smith System) | 10 | escala | 100 | **Sí** |
+| 5 | 5 | Manejo Técnico (Rendimiento de Diesel) | 10 escala + 2 texto | escala/texto | 100 | **Sí** |
+
+#### Sistema de calificación
+
+```
+Calificación = Promedio de las 4 secciones evaluadas (secciones 2, 3, 4, 5)
+Cada sección = Suma de puntos de preguntas tipo escala (max 100)
+```
+
+| Secciones 2-3 (5 preguntas) | Secciones 4-5 (10 preguntas) |
+|------------------------------|------------------------------|
+| Valores posibles: 5, 10, 20 | Valores posibles: 2, 5, 10 |
+| Máximo por sección: 100 | Máximo por sección: 100 |
+
+**Exclusiones del cálculo:**
+- Sección 0 (datos generales): tipos `alumno`, `opt`, `fecha`, `lista`, `numero`
+- Sección 1 (actitud): no forma parte de las 4 secciones evaluadas
+- Preguntas tipo `texto` en sección 5 (son comentarios)
+
+#### Colorimetría de calificaciones
+
+| Rango | Color | Hex |
+|-------|-------|-----|
+| ≥ 80 | Verde | `#16a34a` |
+| ≥ 60 y < 80 | Amarillo | `#d97706` |
+| < 60 | Rojo | `#dc2626` |
+
+#### Campos del formulario — Sección 0
+
+| Campo | TipoRespuesta | Valor almacenado |
+|-------|---------------|-----------------|
+| Alumno | `alumno` | `{"id":N,"matricula":"...","nombre":"..."}` |
+| Operador Tutor | `opt` | `{"empresa":"...","unidadNegocio":"...","unidadOperativa":"...","operador":"NOMBRE"}` |
+| Fecha de evaluación | `fecha` | `2026-11-11T14:35` |
+| Semana con OPT | `lista` | Número de semana (1-9) |
+| Tipo de unidad | `lista` | Diésel, Gas, etc. |
+| Numero de unidad | `numero` | Número del tractocamión |
+
+> **Nota:** El backend extrae el nombre del operador tutor del JSON tipo `opt` y lo devuelve como campo `operadorTutor` en la respuesta.
+
+---
+
+### 16.4 Metas de Kilómetros y Horas
+
+Las metas se asignan según la combinación **Empresa + Unidad de Negocio + Unidad Operativa**.
+
+| Empresa | Meta Km típica | Meta Hrs típica |
+|---------|---------------|-----------------|
+| ALA (EmpresaId=1) | 1,000 - 8,500 | 96 |
+| LARMEX (EmpresaId=10) | 16,200 | 240 |
+
+#### Normalización de nombres
+
+Los registros en `UDAT.PracticaTractorOPT` pueden tener nombres antiguos de unidades. Se aplica:
+
+1. **Normalización de acentos:** NFD + strip diacríticos (`FORÁNEO` → `FORANEO`)
+2. **Tabla de aliases UO:** 22 mapeos de nombres antiguos a actuales
+3. **Tabla de aliases UN:** 13 mapeos de unidades de negocio antiguas a actuales
+
+Ejemplos:
+```
+"ALA|IMPORT EXPORT|IMPORT EXPORT LAREDO" → UO: "Import Export", UN: "INTERNACIONAL"
+"LARMEX|GM SILAO|SILAO LOCAL" → UO: "GM SLP LOCAL", UN: "GM"
+"ALA|TOYOTA|OPERACION TOYOTA" → UO: "Toyota SLP", UN: "AUTOMOTRIZ"
+```
+
+#### Batch query
+
+Para obtener empresa/UN/UO de un alumno, se usa subquery con `MAX(PracticaTractorOPTId)` + JOIN al mismo registro. **No usar `MAX()` por columna independiente**, ya que mezcla valores de registros diferentes.
+
+---
+
+### 16.5 Cálculo de semana
+
+La semana se calcula con base en la `fechaEgreso` del alumno:
+
+```javascript
+semana = Math.floor((fechaEvaluacion - fechaEgreso) / (7 * 24 * 60 * 60 * 1000)) + 1
+```
+
+Se muestra en la `EvaluacionCard` y en el Kardex PDF.
+
+---
+
+### 16.6 Severity / Alertas
+
+Análisis automático de respuestas para detectar riesgos:
+
+| Nivel | Fondo | Color | Criterio |
+|-------|-------|-------|----------|
+| `alto` | `#fef2f2` | `#dc2626` | Escala ≤30% del máximo, respuesta en extremo negativo |
+| `medio` | `#fffbeb` | `#d97706` | Escala ≤50%, respuesta "No", keywords negativos |
+| (normal) | ninguno | `#0f172a` | Sin riesgo detectado |
+
+**Solo se aplica colorimetría a campos tipo `escala` en el frontend.**
+
+Se excluyen del análisis: tipos `alumno`, `operador_tutor`, `opt`.
+
+---
+
+### 16.7 Kardex OPT (PDF)
+
+Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
+
+**Encabezado:** Cintilla UDAT + marca de agua
+
+**Datos del alumno:** Nombre, matrícula, generación, perfil, empresa, semana actual, fecha egreso
+
+**Estadísticas (5 tarjetas):**
+1. Eval. Semanales (promedio calificaciones)
+2. Total Viajes
+3. Avance Km (% vs meta)
+4. Avance Hrs (% vs meta)
+5. Avance Encuestas (completadas / total)
+
+**Tabla de Evaluaciones Semanales OPT:**
+
+| Fecha | Evaluador | Rev. Inicial | Maniobras | M. Defensivo | M. Técnico | Calif. |
+|-------|-----------|-------------|-----------|-------------|-----------|--------|
+| 11/11/2026 (Sem. 7) | NOMBRE TUTOR | 65 | 80 | 59 | 66 | 68 |
+
+- Fecha incluye la semana calculada desde fechaEgreso
+- Evaluador muestra el nombre del tutor (campo `operadorTutor`)
+- Cada sección con colorimetría según puntuación
+- Calif. = promedio de las 4 secciones
+
+**Tabla de Encuestas del Alumno:** Encuesta, Semana, Estado, Respondida
+
+**Sección Kilómetros / Horas:**
+- Tarjetas de resumen (actual vs meta con barra de progreso)
+- Gráficas de barras horizontales por semana (naranja=km, azul=hrs, colores sólidos sin degradado)
+
+---
+
+### 16.8 Componentes Frontend
+
+| Componente | Descripción |
+|-----------|-------------|
+| `SeguimientoOPT` | Componente principal: tabla de alumnos, búsqueda, barras de avance, detalle |
+| `EvaluacionCard` | Evaluación individual con calificación, desglose por sección, semana, valores agrupados por sección |
+| `ValorDisplay` | Renderiza valor de respuesta, severity solo en tipo `escala` |
+| `TimelineCard` | Encuesta en la vista de detalle, expandible si completada |
+| `StatCards` | Grid de estadísticas (valor + label) |
+
+**EvaluacionCard — detalles:**
+- Borde azul `#0b2341` para evaluaciones tipo encargado
+- Badge de calificación con colorimetría (verde/amarillo/rojo)
+- Desglose de 4 secciones (puntos/100) al expandir
+- Valores agrupados por sección con headers separadores
+- Semana calculada desde `fechaEgreso` en azul
+- Nombre del tutor (campo `operadorTutor`)
+
+---
+
+### 16.9 Portales OPT
+
+| Portal | Formularios | Tiene calendario |
+|--------|------------|------------------|
+| Alumno OPT | Encuestas de auto-evaluación del alumno | Sí |
+| OPT | Evaluaciones semanales del encargado | No |
+
+---
+
+### 16.10 Reglas de negocio
+
+1. **No JOIN a tabla Empresas**: usar `CASE` sobre `iIdEmpresa` (EmpresaId=1→ALA, EmpresaId=10→LARMEX)
+2. **Batch query**: subquery `MAX(PracticaTractorOPTId)` + JOIN para obtener campos del mismo registro
+3. **Secciones 0 y 1 del formulario NO se puntúan** en el sistema de calificación
+4. **TipoRespuesta `opt`** (no `operador_tutor`): el campo del tutor en la BD usa tipo `opt`, se filtra con `v.tipo !== 'opt'`
+5. **Normalización**: NFD + strip diacríticos + tablas de aliases para matching de metas km/hrs
+
+---
+
+## 17. Historial de Cambios
+
+### v5.0 — Noviembre 2026
+
+#### Nuevo: Módulo Seguimiento OPT
+- Nuevo componente `SeguimientoOPT.jsx` con tabla de alumnos, barras de avance y detalle por alumno
+- 4 endpoints API: listado de alumnos, evaluaciones, prácticas (km/hrs) y alertas de riesgo
+- Conexión dual a BD: `biUDAT` (formularios) y `UDAT` (prácticas tractocamión) via `poolUDAT`
+- Sistema de evaluación semanal con calificación por 4 secciones (Rev. Inicial, Maniobras, M. Defensivo, M. Técnico)
+- Cada sección max 100 puntos, calificación = promedio de las 4 secciones
+- Componente `EvaluacionCard` con desglose por sección, valores agrupados con headers, semana calculada desde fechaEgreso
+- Extracción de nombre de tutor desde campo JSON tipo `opt` (TipoRespuesta en BD)
+- Metas de km/hrs por empresa/UN/UO con normalización de acentos (NFD) y tablas de aliases (22 UO + 13 UN)
+- Batch query corregida: subquery `MAX(PracticaTractorOPTId)` + JOIN para evitar mezcla de valores
+- Kardex OPT en PDF (html2pdf.js): datos del alumno, 5 estadísticas, tabla de evaluaciones con columnas por sección, encuestas, gráficas de km/hrs
+- Severity/alertas: análisis automático de respuestas, colorimetría solo en campos tipo `escala`
+- Barras de avance km/hrs/encuestas visibles en la tarjeta de cada alumno
+- Tabs de detalle: Encuestas Alumno, Evaluaciones semanales OPT, Todas, Km/Horas
+
+---
 
 ### v4.0 — Noviembre 2026
 
@@ -1601,4 +1866,4 @@ Todos los iconos del módulo usan **SVG vectoriales** tanto en web como en Andro
 
 ---
 
-*Documentación actualizada el 4 de noviembre de 2026. Versión 4.0.*
+*Documentación actualizada el 11 de noviembre de 2026. Versión 5.0.*
