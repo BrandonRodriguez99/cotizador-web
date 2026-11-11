@@ -330,7 +330,7 @@ function AlumnoDetalle({ alumno, onBack }) {
             return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
               <span style="font-size:11px;color:#64748b;width:52px;text-align:right;flex-shrink:0">S${s.semana}</span>
               <div style="flex:1;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden;position:relative">
-                <div style="width:${pctBar}%;height:100%;background:linear-gradient(90deg,#f97316,#eab308);border-radius:4px"></div>
+                <div style="width:${pctBar}%;height:100%;background:#f97316;border-radius:4px"></div>
                 <span style="position:absolute;right:6px;top:2px;font-size:10px;font-weight:700;color:#334155">${s.km.toLocaleString('es-MX')}</span>
               </div>
             </div>`}).join('')}
@@ -342,7 +342,7 @@ function AlumnoDetalle({ alumno, onBack }) {
             return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
               <span style="font-size:11px;color:#64748b;width:52px;text-align:right;flex-shrink:0">S${s.semana}</span>
               <div style="flex:1;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden;position:relative">
-                <div style="width:${pctBar}%;height:100%;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:4px"></div>
+                <div style="width:${pctBar}%;height:100%;background:#3b82f6;border-radius:4px"></div>
                 <span style="position:absolute;right:6px;top:2px;font-size:10px;font-weight:700;color:#334155">${s.horas}</span>
               </div>
             </div>`}).join('')}
@@ -403,17 +403,17 @@ function AlumnoDetalle({ alumno, onBack }) {
           <div class="stat"><div class="val" style="color:${alumno.porcentaje >= 80 ? '#16a34a' : alumno.porcentaje >= 50 ? '#d97706' : '#dc2626'}">${alumno.porcentaje}%</div><div class="lbl">Avance Encuestas</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">${alumno.completadas}/${alumno.totalEncuestas}</div></div>
         </div>
 
+        <h2>Evaluaciones Semanales OPT (${evalsEncargado.length})</h2>
+        ${evalsOPTHtml ? `<table>
+          <thead><tr><th>Evaluación</th><th>Fecha</th><th>Evaluador</th><th>Estado</th></tr></thead>
+          <tbody>${evalsOPTHtml}</tbody>
+        </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin evaluaciones semanales registradas</p>'}
+
         <h2>Encuestas del Alumno</h2>
         <table>
           <thead><tr><th>Encuesta</th><th>Semana</th><th>Estado</th><th>Respondida</th></tr></thead>
           <tbody>${encuestasHtml}</tbody>
         </table>
-
-        ${evalsOPTHtml ? `<h2>Evaluaciones Semanales OPT (${evalsEncargado.length})</h2>
-        <table>
-          <thead><tr><th>Evaluación</th><th>Fecha</th><th>Evaluador</th><th>Estado</th></tr></thead>
-          <tbody>${evalsOPTHtml}</tbody>
-        </table>` : ''}
 
         <h2>Kilómetros / Horas</h2>
         ${kmHrsHtml}
