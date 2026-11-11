@@ -141,17 +141,40 @@ function EvaluacionCard({ ev, defaultOpen }) {
             {ev.portal && <span style={{ color: '#94a3b8' }}> · {ev.portal}</span>}
           </div>
         </div>
-        <span style={{
-          padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-          background: isEncargado ? '#f3e8ff' : '#dcfce7',
-          color: isEncargado ? '#7c3aed' : '#166534',
-        }}>
-          {isEncargado ? 'Evaluación semanal OPT' : 'Respuesta alumno'}
-        </span>
+        {isEncargado && ev.calificacion != null ? (
+          <span style={{
+            padding: '4px 12px', borderRadius: 12, fontSize: 16, fontWeight: 800,
+            background: ev.calificacion >= 80 ? '#dcfce7' : ev.calificacion >= 60 ? '#fef3c7' : '#fef2f2',
+            color: ev.calificacion >= 80 ? '#16a34a' : ev.calificacion >= 60 ? '#d97706' : '#dc2626',
+          }}>
+            {ev.calificacion}
+          </span>
+        ) : (
+          <span style={{
+            padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+            background: isEncargado ? '#f3e8ff' : '#dcfce7',
+            color: isEncargado ? '#7c3aed' : '#166534',
+          }}>
+            {isEncargado ? 'Evaluación semanal OPT' : 'Respuesta alumno'}
+          </span>
+        )}
         <span style={{ fontSize: 16, color: '#94a3b8', transform: open ? 'rotate(180deg)' : '', transition: 'transform 0.2s' }}>▾</span>
       </div>
       {open && (
         <div style={{ padding: '0 18px 16px', borderTop: '1px solid #f1f5f9' }}>
+          {isEncargado && ev.secciones && ev.secciones.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, padding: '12px 0 8px', flexWrap: 'wrap' }}>
+              {ev.secciones.map((s, i) => (
+                <div key={i} style={{
+                  flex: 1, minWidth: 120, padding: '8px 12px', borderRadius: 8,
+                  border: '1px solid #e2e8f0', textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>{s.titulo.length > 25 ? s.titulo.substring(0, 25) + '...' : s.titulo}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: s.puntos >= 80 ? '#16a34a' : s.puntos >= 60 ? '#d97706' : '#dc2626' }}>{s.puntos}<span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>/100</span></div>
+                </div>
+              ))}
+            </div>
+          )}
           <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse', marginTop: 12 }}>
             <tbody>
               {ev.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor').map((v, i) => (
@@ -297,12 +320,18 @@ function AlumnoDetalle({ alumno, onBack }) {
       </tr>`
     }).join('')
 
+    const promedioEvals = evalsEncargado.filter(e => e.calificacion != null).length > 0
+      ? Math.round(evalsEncargado.filter(e => e.calificacion != null).reduce((s, e) => s + e.calificacion, 0) / evalsEncargado.filter(e => e.calificacion != null).length)
+      : null
+
     const evalsOPTHtml = evalsEncargado.length === 0 ? '' : evalsEncargado.map(ev => {
+      const calColor = ev.calificacion >= 80 ? '#16a34a' : ev.calificacion >= 60 ? '#d97706' : ev.calificacion != null ? '#dc2626' : '#6b7280'
+      const secHtml = ev.secciones ? ev.secciones.map(s => `<span style="font-size:10px;color:#64748b;margin-right:8px">${s.titulo.substring(0,20)}: <strong style="color:${s.puntos >= 80 ? '#16a34a' : s.puntos >= 60 ? '#d97706' : '#dc2626'}">${s.puntos}</strong>/100</span>`).join('') : ''
       return `<tr>
-        <td style="font-weight:600">${ev.formularioNombre}</td>
+        <td style="font-weight:600">${ev.formularioNombre}${secHtml ? `<br>${secHtml}` : ''}</td>
         <td>${new Date(ev.fecha).toLocaleDateString('es-MX')}</td>
         <td>${ev.operador}</td>
-        <td><span style="background:#7c3aed22;color:#7c3aed;padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">Completada</span></td>
+        <td style="font-weight:700;color:${calColor};font-size:14px">${ev.calificacion != null ? ev.calificacion : '—'}</td>
       </tr>`
     }).join('')
 
@@ -395,7 +424,7 @@ function AlumnoDetalle({ alumno, onBack }) {
         </div>
 
         <div class="stats">
-          <div class="stat"><div class="val" style="color:#6b7280">—</div><div class="lbl">Eval. Semanales</div></div>
+          <div class="stat"><div class="val" style="color:${promedioEvals != null ? (promedioEvals >= 80 ? '#16a34a' : promedioEvals >= 60 ? '#d97706' : '#dc2626') : '#6b7280'}">${promedioEvals != null ? promedioEvals : '—'}</div><div class="lbl">Eval. Semanales</div>${promedioEvals != null ? `<div style="font-size:9px;color:#94a3b8;margin-top:2px">Promedio ${evalsEncargado.length} eval.</div>` : ''}</div>
           <div class="stat"><div class="val" style="color:#1e293b">${practicas ? practicas.registros : 0}</div><div class="lbl">Total Viajes</div></div>
           ${practicas && practicas.pctKm != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctKm)}">${practicas.pctKm}%</div><div class="lbl">Avance Km</div></div>` : `<div class="stat"><div class="val" style="color:#94a3b8">—</div><div class="lbl">Avance Km</div></div>`}
           ${practicas && practicas.pctHrs != null ? `<div class="stat"><div class="val" style="color:${semColor(practicas.pctHrs)}">${practicas.pctHrs}%</div><div class="lbl">Avance Hrs</div></div>` : `<div class="stat"><div class="val" style="color:#94a3b8">—</div><div class="lbl">Avance Hrs</div></div>`}
@@ -404,7 +433,7 @@ function AlumnoDetalle({ alumno, onBack }) {
 
         <h2>Evaluaciones Semanales OPT (${evalsEncargado.length})</h2>
         ${evalsOPTHtml ? `<table>
-          <thead><tr><th>Evaluación</th><th>Fecha</th><th>Evaluador</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Evaluación</th><th>Fecha</th><th>Evaluador</th><th>Calif.</th></tr></thead>
           <tbody>${evalsOPTHtml}</tbody>
         </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin evaluaciones semanales registradas</p>'}
 
