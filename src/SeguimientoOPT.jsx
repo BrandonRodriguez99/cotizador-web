@@ -241,7 +241,7 @@ function AlumnoDetalle({ alumno, onBack }) {
       .catch(() => setLoadingEvals(false))
 
     setLoadingPracticas(true)
-    fetch(`${API}/seguimiento-opt/${encodeURIComponent(alumno.nombre)}/practicas`, {
+    fetch(`${API}/seguimiento-opt/${encodeURIComponent(alumno.matricula)}/practicas`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
