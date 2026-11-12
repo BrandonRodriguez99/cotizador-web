@@ -126,7 +126,7 @@ function SummaryCards({ alumnos }) {
   const promedioEvals = conEvals.length ? Math.round(conEvals.reduce((s, a) => s + a.promedioEvals, 0) / conEvals.length) : null
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alumnos</div>
         <div style={{ fontSize: 28, fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>{total}</div>
@@ -1459,21 +1459,21 @@ export default function SeguimientoOPT({ usuario }) {
 
       {/* Tabla */}
       <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
           <thead>
             <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
               {[
-                { field: 'nombre', label: 'Alumno' },
-                { field: 'generacion', label: 'Generación' },
-                { field: 'perfil', label: 'Perfil' },
-                { field: 'empresa', label: 'Empresa' },
-                ...(tabEtapa === 'todos' ? [{ field: 'etapa', label: 'Etapa' }] : []),
-                { field: 'semanaActual', label: 'Semana' },
-                { field: 'completadas', label: 'Completadas' },
-                { field: 'vencidas', label: 'Vencidas' },
-                { field: 'porcentaje', label: 'Avance' },
-                { field: 'totalKm', label: 'Km' },
-                { field: 'totalHrs', label: 'Hrs' },
+                { field: 'nombre', label: 'Alumno', width: '18%' },
+                { field: 'generacion', label: 'Gen.', width: '6%' },
+                { field: 'perfil', label: 'Perfil', width: '8%' },
+                { field: 'empresa', label: 'Empresa', width: '7%' },
+                ...(tabEtapa === 'todos' ? [{ field: 'etapa', label: 'Etapa', width: '7%' }] : []),
+                { field: 'semanaActual', label: 'Sem.', width: '5%' },
+                { field: 'completadas', label: 'Compl.', width: '8%' },
+                { field: 'vencidas', label: 'Venc.', width: '6%' },
+                { field: 'porcentaje', label: 'Avance', width: '12%' },
+                { field: 'totalKm', label: 'Km', width: '12%' },
+                { field: 'totalHrs', label: 'Hrs', width: '10%' },
               ].map(col => (
                 <th key={col.field}
                   onClick={() => toggleSort(col.field)}
@@ -1481,6 +1481,7 @@ export default function SeguimientoOPT({ usuario }) {
                     padding: '10px 14px', textAlign: 'left', cursor: 'pointer',
                     fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase',
                     letterSpacing: '0.05em', whiteSpace: 'nowrap', userSelect: 'none',
+                    width: col.width, overflow: 'hidden',
                   }}>
                   {col.label}{sortIcon(col.field)}
                 </th>
