@@ -803,6 +803,261 @@ function AlumnoDetalle({ alumno, onBack }) {
   )
 }
 
+function ReportePanel({ alumnos, portales }) {
+  const [filtroGen, setFiltroGen] = useState('')
+  const [filtroPerfil, setFiltroPerfil] = useState('')
+  const [filtroEmpresa, setFiltroEmpresa] = useState('')
+
+  const generaciones = useMemo(() => [...new Set(alumnos.map(a => a.generacion).filter(Boolean))].sort(), [alumnos])
+  const perfiles = useMemo(() => [...new Set(alumnos.map(a => a.perfil).filter(Boolean))].sort(), [alumnos])
+  const empresas = useMemo(() => [...new Set(alumnos.map(a => a.empresa).filter(Boolean))].sort(), [alumnos])
+
+  const filtered = useMemo(() => {
+    let arr = alumnos.filter(a => (a.etapa || '').toUpperCase().includes('OPT'))
+    if (filtroGen) arr = arr.filter(a => a.generacion === filtroGen)
+    if (filtroPerfil) arr = arr.filter(a => a.perfil === filtroPerfil)
+    if (filtroEmpresa) arr = arr.filter(a => a.empresa === filtroEmpresa)
+    return arr.sort((a, b) => (a.generacion || '').localeCompare(b.generacion || '') || (a.nombre || '').localeCompare(b.nombre || ''))
+  }, [alumnos, filtroGen, filtroPerfil, filtroEmpresa])
+
+  const grouped = useMemo(() => {
+    const map = {}
+    for (const a of filtered) {
+      const g = a.generacion || 'Sin generación'
+      if (!map[g]) map[g] = []
+      map[g].push(a)
+    }
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b))
+  }, [filtered])
+
+  const semColor = pct => pct >= 100 ? '#22c55e' : pct >= 75 ? '#84cc16' : pct >= 50 ? '#eab308' : pct >= 25 ? '#f97316' : '#ef4444'
+  const evalColor = v => v >= 80 ? '#16a34a' : v >= 60 ? '#d97706' : '#dc2626'
+
+  function generarPDF() {
+    const filtroTexto = [
+      filtroGen ? `Generación: ${filtroGen}` : '',
+      filtroPerfil ? `Perfil: ${filtroPerfil}` : '',
+      filtroEmpresa ? `Empresa: ${filtroEmpresa}` : '',
+    ].filter(Boolean).join(' · ') || 'Todos los alumnos OPT'
+
+    const rows = filtered.map(a => {
+      const evalProm = a.promedioEvals != null ? a.promedioEvals : '—'
+      const evalColor = a.promedioEvals != null ? (a.promedioEvals >= 80 ? '#16a34a' : a.promedioEvals >= 60 ? '#d97706' : '#dc2626') : '#6b7280'
+      const kmTxt = a.totalKm > 0 ? `${a.totalKm.toLocaleString('es-MX')}${a.metaKm ? ' / ' + a.metaKm.toLocaleString('es-MX') : ''}` : '—'
+      const kmPct = a.pctKm != null ? `${a.pctKm}%` : ''
+      const hrsTxt = a.totalHrs > 0 ? `${a.totalHrs}${a.metaHrs ? ' / ' + a.metaHrs : ''}` : '—'
+      const hrsPct = a.pctHrs != null ? `${a.pctHrs}%` : ''
+      return { ...a, evalProm, evalColor, kmTxt, kmPct, hrsTxt, hrsPct }
+    })
+
+    let tablaHtml = ''
+    let currentGen = ''
+    for (const a of rows) {
+      const gen = a.generacion || 'Sin generación'
+      if (gen !== currentGen) {
+        currentGen = gen
+        const genAlumnos = rows.filter(r => (r.generacion || 'Sin generación') === gen)
+        const genEvalProm = genAlumnos.filter(r => r.promedioEvals != null)
+        const genEval = genEvalProm.length ? Math.round(genEvalProm.reduce((s, r) => s + r.promedioEvals, 0) / genEvalProm.length) : null
+        tablaHtml += `<tr style="background:#e8edf3"><td colspan="10" style="padding:10px 12px;font-weight:800;font-size:13px;color:#0b2341;border-bottom:2px solid #0b2341">
+          Generación ${gen} — ${genAlumnos.length} alumno${genAlumnos.length !== 1 ? 's' : ''}${genEval != null ? ` · Eval. promedio: ${genEval}` : ''}
+        </td></tr>`
+      }
+      const pctColor = a.porcentaje >= 80 ? '#16a34a' : a.porcentaje >= 50 ? '#d97706' : '#dc2626'
+      tablaHtml += `<tr style="border-bottom:1px solid #e2e8f0">
+        <td style="padding:7px 10px;font-weight:600">${a.nombre}</td>
+        <td style="padding:7px 10px;font-size:11px;color:#64748b">${a.matricula}</td>
+        <td style="padding:7px 10px;text-align:center">${a.perfil || '—'}</td>
+        <td style="padding:7px 10px;text-align:center">${a.empresa || '—'}</td>
+        <td style="padding:7px 10px;text-align:center;font-weight:700;color:#3b82f6">${a.semanaActual}</td>
+        <td style="padding:7px 10px;text-align:center;font-weight:700;color:${a.evalColor}">${a.evalProm}</td>
+        <td style="padding:7px 10px;text-align:right;font-size:11px">${a.kmTxt}${a.kmPct ? '<br><span style="color:' + (a.pctKm >= 75 ? '#16a34a' : a.pctKm >= 50 ? '#d97706' : '#dc2626') + ';font-weight:700">' + a.kmPct + '</span>' : ''}</td>
+        <td style="padding:7px 10px;text-align:right;font-size:11px">${a.hrsTxt}${a.hrsPct ? '<br><span style="color:' + (a.pctHrs >= 75 ? '#16a34a' : a.pctHrs >= 50 ? '#d97706' : '#dc2626') + ';font-weight:700">' + a.hrsPct + '</span>' : ''}</td>
+        <td style="padding:7px 10px;text-align:center"><span style="color:${pctColor};font-weight:700">${a.completadas}/${a.totalEncuestas}</span></td>
+        <td style="padding:7px 10px;text-align:center">${a.vencidas > 0 ? '<span style="color:#dc2626;font-weight:700">' + a.vencidas + '</span>' : '<span style="color:#94a3b8">0</span>'}</td>
+      </tr>`
+    }
+
+    const totalAlumnos = filtered.length
+    const totalConEval = filtered.filter(a => a.promedioEvals != null)
+    const promEvalGlobal = totalConEval.length ? Math.round(totalConEval.reduce((s, a) => s + a.promedioEvals, 0) / totalConEval.length) : null
+    const promEncuestas = totalAlumnos ? Math.round(filtered.reduce((s, a) => s + a.porcentaje, 0) / totalAlumnos) : 0
+    const totalVencidas = filtered.reduce((s, a) => s + a.vencidas, 0)
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 12px; color: #1e293b; padding: 30px; }
+      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 3px solid #0b2341; }
+      .title { font-size: 22px; font-weight: 800; color: #0b2341; }
+      .subtitle { font-size: 11px; color: #64748b; margin-top: 4px; }
+      .stats { display: flex; gap: 16px; margin-bottom: 18px; }
+      .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 16px; text-align: center; }
+      .stat-val { font-size: 22px; font-weight: 800; }
+      .stat-lbl { font-size: 10px; color: #64748b; margin-top: 2px; text-transform: uppercase; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th { background: #0b2341; color: #fff; padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+      .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+    </style></head><body>
+      <div class="header">
+        <div>
+          <div class="title">Reporte Seguimiento OPT</div>
+          <div class="subtitle">${filtroTexto}</div>
+          <div class="subtitle">Generado: ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#64748b">UDAT · Seguimiento OPT</div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-val" style="color:#0b2341">${totalAlumnos}</div><div class="stat-lbl">Alumnos</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:${promEvalGlobal != null ? (promEvalGlobal >= 80 ? '#16a34a' : promEvalGlobal >= 60 ? '#d97706' : '#dc2626') : '#94a3b8'}">${promEvalGlobal != null ? promEvalGlobal : '—'}</div><div class="stat-lbl">Eval. Promedio</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:${promEncuestas >= 80 ? '#16a34a' : promEncuestas >= 50 ? '#d97706' : '#dc2626'}">${promEncuestas}%</div><div class="stat-lbl">Avance Encuestas</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:${totalVencidas > 0 ? '#dc2626' : '#16a34a'}">${totalVencidas}</div><div class="stat-lbl">Encuestas Vencidas</div></div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Alumno</th><th>Matrícula</th><th style="text-align:center">Perfil</th><th style="text-align:center">Empresa</th>
+          <th style="text-align:center">Sem.</th><th style="text-align:center">Eval.</th>
+          <th style="text-align:right">Kilómetros</th><th style="text-align:right">Horas</th>
+          <th style="text-align:center">Encuestas</th><th style="text-align:center">Vencidas</th>
+        </tr></thead>
+        <tbody>${tablaHtml}</tbody>
+      </table>
+      <div class="footer">Reporte generado automáticamente · UDAT Seguimiento OPT · ${new Date().toLocaleDateString('es-MX')}</div>
+    </body></html>`
+
+    const w = window.open('', '_blank', 'width=1100,height=800')
+    w.document.write(html)
+    w.document.close()
+    const script = w.document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+    script.onload = () => {
+      w.html2pdf().set({
+        margin: [10, 8, 10, 8],
+        filename: `Reporte_OPT_${filtroGen || 'Todas'}${filtroEmpresa ? '_' + filtroEmpresa : ''}_${new Date().toISOString().slice(0, 10)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+      }).from(w.document.body).save().then(() => w.close())
+    }
+    w.document.head.appendChild(script)
+  }
+
+  const inp = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 12px', fontSize: 13, background: '#fff', color: '#0f172a' }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <select value={filtroGen} onChange={e => setFiltroGen(e.target.value)} style={inp}>
+          <option value="">Todas las generaciones</option>
+          {generaciones.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+        <select value={filtroPerfil} onChange={e => setFiltroPerfil(e.target.value)} style={inp}>
+          <option value="">Todos los perfiles</option>
+          {perfiles.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={filtroEmpresa} onChange={e => setFiltroEmpresa(e.target.value)} style={inp}>
+          <option value="">Todas las empresas</option>
+          {empresas.map(e => <option key={e} value={e}>{e}</option>)}
+        </select>
+        <button onClick={generarPDF} disabled={filtered.length === 0} style={{
+          background: '#0b2341', color: '#fff', border: 'none', borderRadius: 8,
+          padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 6,
+          opacity: filtered.length === 0 ? 0.5 : 1,
+        }}>
+          ↓ Descargar PDF
+        </button>
+        <span style={{ fontSize: 12, color: '#94a3b8' }}>{filtered.length} alumno{filtered.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      {grouped.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
+          No hay alumnos con los filtros seleccionados
+        </div>
+      ) : grouped.map(([gen, als]) => {
+        const genEvalArr = als.filter(a => a.promedioEvals != null)
+        const genEval = genEvalArr.length ? Math.round(genEvalArr.reduce((s, a) => s + a.promedioEvals, 0) / genEvalArr.length) : null
+        const genPctEnc = als.length ? Math.round(als.reduce((s, a) => s + a.porcentaje, 0) / als.length) : 0
+        return (
+          <div key={gen} style={{ marginBottom: 20 }}>
+            <div style={{
+              background: '#e8edf3', padding: '10px 16px', borderRadius: '8px 8px 0 0',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              borderBottom: '2px solid #0b2341',
+            }}>
+              <span style={{ fontWeight: 800, color: '#0b2341', fontSize: 14 }}>Generación {gen} — {als.length} alumno{als.length !== 1 ? 's' : ''}</span>
+              <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+                {genEval != null && <span>Eval: <strong style={{ color: genEval >= 80 ? '#16a34a' : genEval >= 60 ? '#d97706' : '#dc2626' }}>{genEval}</strong></span>}
+                <span>Encuestas: <strong style={{ color: genPctEnc >= 80 ? '#16a34a' : genPctEnc >= 50 ? '#d97706' : '#dc2626' }}>{genPctEnc}%</strong></span>
+              </div>
+            </div>
+            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Alumno</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Perfil</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Empresa</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Sem.</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Eval.</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Km</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Hrs</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Encuestas</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Vencidas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {als.map(a => (
+                    <tr key={a.matricula} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px 12px' }}>
+                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 12 }}>{a.nombre}</div>
+                        <div style={{ fontSize: 10, color: '#94a3b8' }}>{a.matricula}</div>
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 12 }}>{a.perfil || '—'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 12 }}>{a.empresa || '—'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: '#3b82f6' }}>{a.semanaActual}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: a.promedioEvals != null ? (a.promedioEvals >= 80 ? '#16a34a' : a.promedioEvals >= 60 ? '#d97706' : '#dc2626') : '#94a3b8' }}>
+                        {a.promedioEvals != null ? a.promedioEvals : '—'}
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: 11 }}>
+                        {a.totalKm > 0 ? (
+                          <div>
+                            <span style={{ fontWeight: 600 }}>{a.totalKm.toLocaleString('es-MX')}</span>
+                            {a.metaKm && <span style={{ color: '#94a3b8' }}> / {a.metaKm.toLocaleString('es-MX')}</span>}
+                            {a.pctKm != null && <div style={{ fontWeight: 700, color: semColor(a.pctKm), fontSize: 10 }}>{a.pctKm}%</div>}
+                          </div>
+                        ) : <span style={{ color: '#cbd5e1' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: 11 }}>
+                        {a.totalHrs > 0 ? (
+                          <div>
+                            <span style={{ fontWeight: 600 }}>{a.totalHrs}</span>
+                            {a.metaHrs && <span style={{ color: '#94a3b8' }}> / {a.metaHrs}</span>}
+                            {a.pctHrs != null && <div style={{ fontWeight: 700, color: semColor(a.pctHrs), fontSize: 10 }}>{a.pctHrs}%</div>}
+                          </div>
+                        ) : <span style={{ color: '#cbd5e1' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                        <span style={{ fontWeight: 700, color: a.porcentaje >= 80 ? '#16a34a' : a.porcentaje >= 50 ? '#d97706' : '#dc2626' }}>{a.completadas}/{a.totalEncuestas}</span>
+                        <div style={{ fontSize: 10, color: '#94a3b8' }}>{a.porcentaje}%</div>
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                        {a.vencidas > 0 ? <span style={{ fontWeight: 700, color: '#dc2626' }}>{a.vencidas}</span> : <span style={{ color: '#94a3b8' }}>0</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 const RIESGO_CONFIG = {
   alto:  { bg: '#fef2f2', color: '#dc2626', border: '#fca5a5', icon: '🔴', label: 'Alto' },
   medio: { bg: '#fffbeb', color: '#d97706', border: '#fcd34d', icon: '🟡', label: 'Medio' },
@@ -1064,13 +1319,20 @@ export default function SeguimientoOPT({ usuario }) {
         <button style={tabStyle(tabEtapa === 'alertas')} onClick={() => setTabEtapa('alertas')}>
           <span style={{ color: tabEtapa === 'alertas' ? '#dc2626' : '#64748b' }}>Alertas</span>
         </button>
+        <button style={tabStyle(tabEtapa === 'reporte')} onClick={() => setTabEtapa('reporte')}>
+          Reporte
+        </button>
       </div>
 
       {tabEtapa === 'alertas' && (
         <AlertasPanel token={token} alumnos={data.alumnos} onSelectAlumno={al => setSelectedAlumno(al)} />
       )}
 
-      {tabEtapa !== 'alertas' && <>
+      {tabEtapa === 'reporte' && (
+        <ReportePanel alumnos={data.alumnos} portales={data.portales} />
+      )}
+
+      {tabEtapa !== 'alertas' && tabEtapa !== 'reporte' && <>
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {data.portales.length > 1 && (
