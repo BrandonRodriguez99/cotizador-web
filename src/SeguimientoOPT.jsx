@@ -128,9 +128,6 @@ function SummaryCards({ alumnos }) {
       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alumnos</div>
         <div style={{ fontSize: 28, fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>{total}</div>
-        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
-          <span style={{ color: '#22c55e' }}>{alDia} al día</span> · <span style={{ color: '#ef4444' }}>{conVencidas} vencidas</span> · <span style={{ color: '#f59e0b' }}>{sinIniciar} sin iniciar</span>
-        </div>
       </div>
       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eval. Semanales</div>
@@ -156,7 +153,9 @@ function SummaryCards({ alumnos }) {
       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avance Encuestas</div>
         <div style={{ fontSize: 28, fontWeight: 800, color: semaforoColor(promedioEncuestas), marginTop: 4 }}>{promedioEncuestas}%</div>
-        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Promedio de {total} alumno{total !== 1 ? 's' : ''}</div>
+        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+          <span style={{ color: '#22c55e' }}>{alDia} al día</span> · <span style={{ color: '#ef4444' }}>{conVencidas} vencidas</span> · <span style={{ color: '#f59e0b' }}>{sinIniciar} sin iniciar</span>
+        </div>
       </div>
     </div>
   )
