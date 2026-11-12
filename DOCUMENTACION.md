@@ -1672,7 +1672,32 @@ Se muestra en la `EvaluacionCard` y en el Kardex PDF.
 
 ---
 
-### 16.6 Severity / Alertas
+### 16.6 Mapeo UN/UO desde OperacionesUDAT
+
+Los filtros de Unidad de Negocio y Unidad Operativa usan un mapeo backend (`unOpsMap`) porque `OperacionesUDAT.sUnidadNegocio` tiene nombres no estándar que difieren de `PracticaTractorOPT`. Solo ~129 de ~1972 alumnos OPT tienen registros en `PracticaTractorOPT`, por lo que se necesita el mapeo para cubrir a todos.
+
+**Mapeo por empresa:**
+
+| Empresa | sUnidadNegocio (OperacionesUDAT) | UN estándar | UO |
+|---------|----------------------------------|-------------|-----|
+| ALA (1) | `INT-Import Export` | INTERNACIONAL | Import Export |
+| ALA (1) | `INT-Ruta Corta` | INTERNACIONAL | Ruta Corta |
+| ALA (1) | `INT-Cruces` | INTERNACIONAL | Cruces |
+| ALA (1) | `Intermodal` | INTERMODAL | — |
+| ALA (1) | `Automotriz` | AUTOMOTRIZ | — |
+| ALA (1) | `AUT-Toyota` | AUTOMOTRIZ | — |
+| ALA (1) | `AUT-Op Celaya` | AUTOMOTRIZ | Operaciones Celaya |
+| ALA (1) | `AUT-Cuentas Nacionales` | AUTOMOTRIZ | Cuentas Nacionales |
+| LARMEX (10) | `CE-Nacional` | NACIONAL | — |
+| LARMEX (10) | `CE-Aceros` | NACIONAL | ACEROS SWI |
+| LARMEX (10) | `CE-I/E` | IMPORT-EXPORT | — |
+| LARMEX (10) | `CE-Intermodal` | INTERMODAL | — |
+| LARMEX (10) | `FORD` | FORD | — |
+| LARMEX (10) | `GM` | GM | — |
+
+---
+
+### 16.7 Severity / Alertas
 
 Análisis automático de respuestas para detectar riesgos:
 
@@ -1686,9 +1711,60 @@ Análisis automático de respuestas para detectar riesgos:
 
 Se excluyen del análisis: tipos `alumno`, `operador_tutor`, `opt`.
 
+#### Sistema de análisis de riesgo (endpoint alertas)
+
+El endpoint `/api/seguimiento-opt-alertas` evalúa múltiples factores para calcular un puntaje de riesgo por alumno:
+
+**Fase 1 — Encuestas:**
+
+| Factor | Condición | Puntos | Nivel |
+|--------|-----------|--------|-------|
+| Encuestas sin completar | ≥3 encuestas vencidas | +30 | alto |
+| Encuestas sin completar | 1-2 encuestas vencidas | +15 | medio |
+| Respuestas con severity | `alto` en respuestas | +10 | alto |
+| Respuestas con severity | `medio` en respuestas | +4 | medio |
+
+**Fase 2a — Evaluaciones semanales:**
+
+| Factor | Condición | Puntos | Nivel |
+|--------|-----------|--------|-------|
+| Promedio evaluaciones | < 60% | +20 | alto |
+| Promedio evaluaciones | < 80% | +10 | medio |
+| Sin evaluaciones | semana ≥ 3 y sin evaluaciones | +10 | medio |
+
+**Fase 2b — Progreso Km/Hrs (lineal esperado):**
+
+El progreso esperado se calcula como: `meta / totalSemanasOPT × semanaActual`
+
+| Factor | Condición | Puntos | Nivel |
+|--------|-----------|--------|-------|
+| Km actual | < 50% del esperado lineal | +15 | alto |
+| Km actual | < 75% del esperado lineal | +8 | medio |
+| Hrs actual | < 50% del esperado lineal | +15 | alto |
+| Hrs actual | < 75% del esperado lineal | +8 | medio |
+
+**Clasificación final de riesgo:**
+
+| Puntaje total | Nivel |
+|---------------|-------|
+| ≥ 30 | alto |
+| ≥ 10 | medio |
+| > 0 | bajo |
+
+**`totalSemanasOPT` dinámico:** Se calcula por alumno a partir de las reglas de `PortalCalendario`, filtrando por perfil y empresa del alumno. Si no hay reglas que apliquen, se usa 9 como fallback. Esto permite que alumnos con diferentes perfiles o empresas tengan diferente número de semanas OPT.
+
+**Panel de alertas (frontend):** Solo muestra 3 tarjetas de resumen:
+- Requieren atención (alto) — rojo
+- Precaución (medio) — amarillo
+- Bajo riesgo (bajo) — verde
+
+No se muestra tarjeta de "Sin alertas".
+
+**Flags por alumno:** Cada alerta incluye un array `flags` con tipos: `encuesta`, `respuesta`, `evaluacion`, `km`, `hrs`, que se muestran como badges de color en el detalle del alumno.
+
 ---
 
-### 16.7 Kardex OPT (PDF)
+### 16.8 Kardex OPT (PDF)
 
 Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
 
@@ -1722,7 +1798,7 @@ Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
 
 ---
 
-### 16.8 Componentes Frontend
+### 16.9 Componentes Frontend
 
 | Componente | Descripción |
 |-----------|-------------|
@@ -1742,7 +1818,41 @@ Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
 
 ---
 
-### 16.9 Portales OPT
+### 16.10 Tabla principal OPT
+
+**Columnas de la tabla:**
+
+| Campo | Label | Ancho | Descripción |
+|-------|-------|-------|-------------|
+| `semanaActual` | Sem. | 5% | Semana actual del alumno |
+| `completadas` | Compl. | 8% | Encuestas completadas / total |
+| `promedioEvals` | Eval. | 7% | Promedio de evaluaciones semanales con colorimetría |
+| `totalKm` | Km | 12% | Km actuales + barra de progreso con porcentaje |
+| `totalHrs` | Hrs | 10% | Hrs actuales + barra de progreso con porcentaje |
+
+**Barras de progreso Km/Hrs:**
+- Altura: 8px (grosor aumentado para mayor visibilidad)
+- Porcentaje numérico al final de la barra con `fontWeight: 700`
+- Colorimetría semáforo: verde (≥80%), amarillo (≥50%), rojo (<50%)
+
+**Tarjetas de resumen:**
+- Etiqueta "Avance:" (no "Prom:") seguida del porcentaje con colorimetría
+- Meta total en formato localizado `es-MX`
+
+**Modal WhatsApp:**
+- Badges muestran nombre de la encuesta en vez de número de semana (ej. "Encuesta Semanal - Pendiente")
+- Mensaje personalizado incluye nombre de la encuesta: `tu encuesta "${nombreEnc}"`
+- Función `getEncuestasPendientes()` filtra encuestas activas/vencidas
+- Badge activa (amarillo) tiene prioridad sobre vencida (rojo)
+
+**Botón CSV:**
+- Ubicado después del botón WhatsApp
+- Exporta tabla filtrada con BOM UTF-8 para compatibilidad con Excel
+- Columnas: Alumno, Matrícula, Generación, Perfil, Empresa, Unidad Negocio, Unidad Operativa, Semana, Completadas, Total Encuestas, Eval. Promedio, Km, Meta Km, % Km, Hrs, Meta Hrs, % Hrs
+
+---
+
+### 16.11 Portales OPT
 
 | Portal | Formularios | Tiene calendario |
 |--------|------------|------------------|
@@ -1751,7 +1861,7 @@ Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
 
 ---
 
-### 16.10 Reglas de negocio
+### 16.12 Reglas de negocio
 
 1. **No JOIN a tabla Empresas**: usar `CASE` sobre `iIdEmpresa` (EmpresaId=1→ALA, EmpresaId=10→LARMEX)
 2. **Batch query**: subquery `MAX(PracticaTractorOPTId)` + JOIN para obtener campos del mismo registro
@@ -1763,7 +1873,7 @@ Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
 8. **Avance general KM/HRS**: Se calcula como `totalKm / totalMetaKm` (no promedio de % individuales), consistente con Power BI
 9. **PreguntaId global**: Las preguntas tipo `alumno` se buscan globalmente (no por formulario), ya que las respuestas pueden referenciar PreguntaIds antiguos cuando se actualiza un formulario
 
-### 16.11 Tab Reporte
+### 16.13 Tab Reporte
 
 Pestaña de reporte con tabla agrupada por generación y exportación PDF.
 
@@ -1785,6 +1895,21 @@ Pestaña de reporte con tabla agrupada por generación y exportación PDF.
 ---
 
 ## 17. Historial de Cambios
+
+### v5.1 — Noviembre 2026
+
+#### Mejoras: Módulo Seguimiento OPT
+- **Mapeo UN/UO backend** — Tabla `unOpsMap` que convierte `sUnidadNegocio` de OperacionesUDAT a nombres estándar de UN/UO, cubriendo los ~1800 alumnos sin registros en PracticaTractorOPT
+- **WhatsApp: nombres de encuesta** — Badges y mensajes del modal WhatsApp ahora muestran el nombre de la encuesta (ej. "Encuesta Semanal - Pendiente") en vez del número de semana
+- **Tabla: columna Eval.** — Reemplazadas columnas Vencidas y Avance (encuestas) por columna de Evaluaciones Promedio con colorimetría verde/amarillo/rojo
+- **Barras Km/Hrs mejoradas** — Barras de progreso más gruesas (8px) con porcentaje numérico al final en negrita
+- **Botón CSV** — Descarga de tabla filtrada en CSV con BOM UTF-8 para Excel. 17 columnas incluyendo metas y porcentajes
+- **Etiqueta "Avance:"** — Tarjetas de resumen ahora dicen "Avance:" en vez de "Prom:" con texto más visible
+- **Panel Alertas simplificado** — Eliminada tarjeta "Sin alertas" (solo mostraba alumnos no-OPT). Solo se muestran 3 niveles: alto, medio, bajo
+- **Análisis de riesgo ampliado** — Ahora incluye evaluaciones semanales (promedio < 60% = alto, < 80% = medio, sin evals sem≥3 = medio) y progreso Km/Hrs vs esperado lineal (< 50% = alto, < 75% = medio)
+- **totalSemanasOPT dinámico** — Calculado por alumno desde reglas de PortalCalendario (perfil + empresa), fallback a 9 semanas. Usado en cálculo de progreso esperado lineal
+
+---
 
 ### v5.0 — Noviembre 2026
 
@@ -1899,4 +2024,4 @@ Pestaña de reporte con tabla agrupada por generación y exportación PDF.
 
 ---
 
-*Documentación actualizada el 11 de noviembre de 2026. Versión 5.0.*
+*Documentación actualizada el 12 de noviembre de 2026. Versión 5.1.*
