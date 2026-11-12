@@ -141,14 +141,14 @@ function SummaryCards({ alumnos }) {
         <div style={{ fontSize: 28, fontWeight: 800, color: promPctKm != null ? semaforoColor(promPctKm) : '#94a3b8', marginTop: 4 }}>
           {totalKm > 0 ? totalKm.toLocaleString('es-MX') : '—'}
         </div>
-        {totalMetaKm > 0 && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Meta: {totalMetaKm.toLocaleString('es-MX')} km · Prom: {promPctKm}%</div>}
+        {totalMetaKm > 0 && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Meta: {totalMetaKm.toLocaleString('es-MX')} km · Avance: <span style={{ fontWeight: 700, color: semaforoColor(promPctKm) }}>{promPctKm}%</span></div>}
       </div>
       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horas</div>
         <div style={{ fontSize: 28, fontWeight: 800, color: promPctHrs != null ? semaforoColor(promPctHrs) : '#94a3b8', marginTop: 4 }}>
           {totalHrs > 0 ? totalHrs.toLocaleString('es-MX') : '—'}
         </div>
-        {totalMetaHrs > 0 && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Meta: {totalMetaHrs.toLocaleString('es-MX')} hrs · Prom: {promPctHrs}%</div>}
+        {totalMetaHrs > 0 && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Meta: {totalMetaHrs.toLocaleString('es-MX')} hrs · Avance: <span style={{ fontWeight: 700, color: semaforoColor(promPctHrs) }}>{promPctHrs}%</span></div>}
       </div>
       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avance Encuestas</div>
