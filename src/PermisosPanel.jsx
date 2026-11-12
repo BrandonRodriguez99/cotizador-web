@@ -4,7 +4,7 @@ import { getPermisos, updatePermisosRol } from './api'
 const ROLES_DEFAULT = [
   'admin', 'autorizador1', 'autorizador2', 'empleado',
   'jefe_mantenimiento', 'mantenimiento', 'seguridad', 'encargado_vehiculos',
-  'academia', 'capacitacion',
+  'academia', 'capacitacion', 'mentor_lider',
 ]
 
 const ROL_LABELS = {
@@ -18,6 +18,7 @@ const ROL_LABELS = {
   encargado_vehiculos: 'Enc. Vehículos',
   academia: 'Academia',
   capacitacion: 'Capacitación',
+  mentor_lider: 'Mentor Líder',
 }
 
 const SECCIONES = [

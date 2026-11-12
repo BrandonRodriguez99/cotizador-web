@@ -1758,6 +1758,29 @@ Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
 3. **Secciones 0 y 1 del formulario NO se puntúan** en el sistema de calificación
 4. **TipoRespuesta `opt`** (no `operador_tutor`): el campo del tutor en la BD usa tipo `opt`, se filtra con `v.tipo !== 'opt'`
 5. **Normalización**: NFD + strip diacríticos + tablas de aliases para matching de metas km/hrs
+6. **Fallback UN**: Si el alumno no tiene registros en `PracticaTractorOPT`, se usa `OperacionesUDAT.sUnidadNegocio` como UN de respaldo
+7. **Meta default LARMEX**: Alumnos LARMEX sin datos de km reciben meta 16,200 km / 240 hrs (uniforme para todas las UO)
+8. **Avance general KM/HRS**: Se calcula como `totalKm / totalMetaKm` (no promedio de % individuales), consistente con Power BI
+9. **PreguntaId global**: Las preguntas tipo `alumno` se buscan globalmente (no por formulario), ya que las respuestas pueden referenciar PreguntaIds antiguos cuando se actualiza un formulario
+
+### 16.11 Tab Reporte
+
+Pestaña de reporte con tabla agrupada por generación y exportación PDF.
+
+**Filtros multi-select con cascada:**
+- Generación, Perfil, Empresa, U. Negocio, U. Operativa
+- UN se filtra por empresa seleccionada; UO se filtra por empresa + UN
+- Auto-limpieza de selecciones inválidas al cambiar filtro padre
+
+**Tabla por generación:**
+- Header con nombre de generación, cantidad de alumnos, eval. promedio y % encuestas
+- Columnas: Alumno, Perfil, Empresa, U. Negocio, U. Operativa, Sem., Eval., Km, Hrs, Encuestas, Vencidas
+- `tableLayout: 'fixed'` con `colgroup` para anchos uniformes entre tablas
+- Overflow con ellipsis en celdas de texto largo
+
+**PDF (html2pdf.js):**
+- Landscape A4, incluye filtros aplicados, fecha, stats cards y tabla completa
+- Colorimetría en evaluaciones, km/hrs y encuestas
 
 ---
 
@@ -1779,6 +1802,16 @@ Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
 - Severity/alertas: análisis automático de respuestas, colorimetría solo en campos tipo `escala`
 - Barras de avance km/hrs/encuestas visibles en la tarjeta de cada alumno
 - Tabs de detalle: Encuestas Alumno, Evaluaciones semanales OPT, Todas, Km/Horas
+- Tab Reporte con tabla agrupada por generación, filtros multi-select cascada y exportación PDF
+- Fallback UN desde `OperacionesUDAT.sUnidadNegocio` para alumnos sin datos de km
+- Meta default LARMEX (16,200 km / 240 hrs) para alumnos sin registros en PracticaTractorOPT
+- Cálculo de avance general como total/meta (alineado con Power BI)
+- Promedio de evaluaciones semanales por alumno (`promedioEvals`) en listado y detalle
+
+#### Nuevo: Rol mentor_lider
+- Puede autorizar/rechazar salidas de vehículos (mismo permiso que `encargado_vehiculos`)
+- Recibe notificaciones por correo de nuevas solicitudes de vehículo
+- Permisos de vista: inicio, vehiculos, seguridad
 
 ---
 

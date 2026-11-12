@@ -84,7 +84,7 @@ export default function Seguridad({ usuario, soloVehiculos = false, activeTab })
   const rol        = usuario?.rol || ''
   const esAdmin    = rol === 'admin'
   const esSeguridad = rol === 'seguridad'
-  const esEncargado = rol === 'encargado_vehiculos'
+  const esEncargado = rol === 'encargado_vehiculos' || rol === 'mentor_lider'
   const esJefeSeg  = rol === 'jefe_seguridad'
 
   const tabs = []

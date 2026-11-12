@@ -11,6 +11,7 @@ const ROL_LABELS_BASE = {
   seguridad: 'Guardia de Seguridad',
   jefe_seguridad: 'Jefe de Seguridad',
   encargado_vehiculos: 'Encargado de Vehículos',
+  mentor_lider: 'Mentor Líder',
 }
 
 function labelRol(r) {
