@@ -1200,7 +1200,6 @@ function AlertasPanel({ token, onSelectAlumno, alumnos }) {
           { label: 'Requieren atención', value: altos, color: '#dc2626', bg: '#fef2f2', nivel: 'alto' },
           { label: 'Precaución', value: medios, color: '#d97706', bg: '#fffbeb', nivel: 'medio' },
           { label: 'Bajo riesgo', value: bajos, color: '#16a34a', bg: '#f0fdf4', nivel: 'bajo' },
-          { label: 'Sin alertas', value: (alumnos?.length || 0) - alertas.length, color: '#64748b', bg: '#f8fafc', nivel: '' },
         ].map(c => (
           <div key={c.label}
             onClick={() => setFiltroNivel(f => f === c.nivel ? '' : c.nivel)}
@@ -1246,9 +1245,15 @@ function AlertasPanel({ token, onSelectAlumno, alumnos }) {
                       const respAltas = al.flags.filter(f => f.tipo === 'respuesta' && f.nivel === 'alto').length
                       const respMedias = al.flags.filter(f => f.tipo === 'respuesta' && f.nivel === 'medio').length
                       const sinDatos = al.flags.find(f => f.tipo === 'sin_datos')
+                      const evalFlag = al.flags.find(f => f.tipo === 'evaluacion')
+                      const kmFlag = al.flags.find(f => f.tipo === 'km')
+                      const hrsFlag = al.flags.find(f => f.tipo === 'hrs')
                       const partes = []
                       if (encFlag) partes.push(encFlag.mensaje)
                       if (sinDatos) partes.push(sinDatos.mensaje)
+                      if (evalFlag) partes.push(evalFlag.mensaje)
+                      if (kmFlag) partes.push(kmFlag.mensaje)
+                      if (hrsFlag) partes.push(hrsFlag.mensaje)
                       if (respAltas > 0) partes.push(`${respAltas} respuesta${respAltas > 1 ? 's' : ''} crítica${respAltas > 1 ? 's' : ''}`)
                       if (respMedias > 0) partes.push(`${respMedias} respuesta${respMedias > 1 ? 's' : ''} de atención`)
                       return partes.length > 0 ? (
