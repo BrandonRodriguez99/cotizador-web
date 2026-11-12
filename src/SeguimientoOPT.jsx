@@ -1951,8 +1951,11 @@ export default function SeguimientoOPT({ usuario }) {
                         {al.metaKm && (
                           <>
                             <span style={{ color: '#94a3b8', fontSize: 11 }}> / {al.metaKm.toLocaleString('es-MX')}</span>
-                            <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 3, width: 70 }}>
-                              <div style={{ width: `${Math.min(100, al.pctKm)}%`, height: '100%', borderRadius: 2, background: semaforoColor(al.pctKm) }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                              <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, flex: 1, minWidth: 70 }}>
+                                <div style={{ width: `${Math.min(100, al.pctKm)}%`, height: '100%', borderRadius: 4, background: semaforoColor(al.pctKm), transition: 'width 0.3s' }} />
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: semaforoColor(al.pctKm), minWidth: 32 }}>{al.pctKm}%</span>
                             </div>
                           </>
                         )}
@@ -1966,8 +1969,11 @@ export default function SeguimientoOPT({ usuario }) {
                         {al.metaHrs && (
                           <>
                             <span style={{ color: '#94a3b8', fontSize: 11 }}> / {al.metaHrs}</span>
-                            <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 3, width: 70 }}>
-                              <div style={{ width: `${Math.min(100, al.pctHrs)}%`, height: '100%', borderRadius: 2, background: semaforoColor(al.pctHrs) }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                              <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, flex: 1, minWidth: 70 }}>
+                                <div style={{ width: `${Math.min(100, al.pctHrs)}%`, height: '100%', borderRadius: 4, background: semaforoColor(al.pctHrs), transition: 'width 0.3s' }} />
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: semaforoColor(al.pctHrs), minWidth: 32 }}>{al.pctHrs}%</span>
                             </div>
                           </>
                         )}
