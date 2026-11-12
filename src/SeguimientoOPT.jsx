@@ -110,15 +110,13 @@ function SummaryCards({ alumnos }) {
   const conVencidas = alumnos.filter(a => a.vencidas > 0).length
   const sinIniciar = alumnos.filter(a => a.completadas === 0).length
 
-  const conKm = alumnos.filter(a => a.totalKm > 0)
   const totalKm = alumnos.reduce((s, a) => s + (a.totalKm || 0), 0)
   const totalMetaKm = alumnos.reduce((s, a) => s + (a.metaKm || 0), 0)
-  const promPctKm = conKm.length ? Math.round(conKm.reduce((s, a) => s + (a.pctKm || 0), 0) / conKm.length) : null
+  const promPctKm = totalMetaKm > 0 ? Math.round(totalKm / totalMetaKm * 100) : null
 
-  const conHrs = alumnos.filter(a => a.totalHrs > 0)
   const totalHrs = Math.round(alumnos.reduce((s, a) => s + (a.totalHrs || 0), 0) * 10) / 10
   const totalMetaHrs = alumnos.reduce((s, a) => s + (a.metaHrs || 0), 0)
-  const promPctHrs = conHrs.length ? Math.round(conHrs.reduce((s, a) => s + (a.pctHrs || 0), 0) / conHrs.length) : null
+  const promPctHrs = totalMetaHrs > 0 ? Math.round(totalHrs / totalMetaHrs * 100) : null
 
   const promedioEncuestas = total ? Math.round(alumnos.reduce((s, a) => s + a.porcentaje, 0) / total) : 0
 
