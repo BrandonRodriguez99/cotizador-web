@@ -1883,8 +1883,7 @@ export default function SeguimientoOPT({ usuario }) {
                 ...(tabEtapa === 'todos' ? [{ field: 'etapa', label: 'Etapa', width: '7%' }] : []),
                 { field: 'semanaActual', label: 'Sem.', width: '5%' },
                 { field: 'completadas', label: 'Compl.', width: '8%' },
-                { field: 'vencidas', label: 'Venc.', width: '6%' },
-                { field: 'porcentaje', label: 'Avance', width: '12%' },
+                { field: 'promedioEvals', label: 'Eval.', width: '7%' },
                 { field: 'totalKm', label: 'Km', width: '12%' },
                 { field: 'totalHrs', label: 'Hrs', width: '10%' },
               ].map(col => (
@@ -1904,7 +1903,7 @@ export default function SeguimientoOPT({ usuario }) {
           <tbody>
             {alumnosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={tabEtapa === 'todos' ? 11 : 10} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
+                <td colSpan={tabEtapa === 'todos' ? 10 : 9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
                   No se encontraron alumnos con los filtros seleccionados
                 </td>
               </tr>
@@ -1939,14 +1938,11 @@ export default function SeguimientoOPT({ usuario }) {
                     <span style={{ color: '#94a3b8' }}> / {al.totalEncuestas}</span>
                   </td>
                   <td style={{ padding: '10px 14px' }}>
-                    {al.vencidas > 0 ? (
-                      <span style={{ fontWeight: 700, color: '#ef4444' }}>{al.vencidas}</span>
-                    ) : (
-                      <span style={{ color: '#94a3b8' }}>0</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '10px 14px', minWidth: 120 }}>
-                    <ProgressBar porcentaje={al.porcentaje} />
+                    {al.promedioEvals != null ? (
+                      <span style={{ fontWeight: 600, color: al.promedioEvals >= 80 ? '#22c55e' : al.promedioEvals >= 60 ? '#f59e0b' : '#ef4444' }}>
+                        {al.promedioEvals}%
+                      </span>
+                    ) : <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>}
                   </td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     {al.totalKm > 0 ? (
