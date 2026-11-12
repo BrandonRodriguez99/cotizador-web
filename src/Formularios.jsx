@@ -1346,6 +1346,15 @@ export default function Formularios({ usuario }) {
                         <option value="">Todos los perfiles</option>
                         {perfilesOpt.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
+                      <select value={c.empresa || c.Empresa || ''} onChange={e => {
+                        const cal = [...(editPortal.calendario || [])]
+                        cal[ci] = { ...cal[ci], empresa: e.target.value || null }
+                        setEditPortal(p => ({ ...p, calendario: cal }))
+                      }} style={{ flex: '0 1 120px', border: '1px solid #e2e8f0', borderRadius: 5, padding: '5px 8px', fontSize: 12 }}>
+                        <option value="">Todas empresas</option>
+                        <option value="ALA">ALA</option>
+                        <option value="LARMEX">LARMEX</option>
+                      </select>
                       <button type="button" onClick={() => {
                         const cal = (editPortal.calendario || []).filter((_, i) => i !== ci)
                         setEditPortal(p => ({ ...p, calendario: cal }))
@@ -1354,7 +1363,7 @@ export default function Formularios({ usuario }) {
                   )
                 })}
                 <button type="button" onClick={() => {
-                  const cal = [...(editPortal.calendario || []), { formularioId: '', semanaInicio: 1, diasActiva: 7, perfil: null }]
+                  const cal = [...(editPortal.calendario || []), { formularioId: '', semanaInicio: 1, diasActiva: 7, perfil: null, empresa: null }]
                   setEditPortal(p => ({ ...p, calendario: cal }))
                 }} style={{ fontSize: 11, color: '#8b5cf6', background: 'none', border: '1px dashed #c4b5fd', borderRadius: 5, padding: '4px 10px', cursor: 'pointer', marginBottom: 16 }}>
                   + Agregar regla
