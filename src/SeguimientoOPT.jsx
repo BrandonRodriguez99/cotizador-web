@@ -970,8 +970,9 @@ function ReportePanel({ alumnos, portales }) {
       .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 16px; text-align: center; }
       .stat-val { font-size: 22px; font-weight: 800; }
       .stat-lbl { font-size: 10px; color: #64748b; margin-top: 2px; text-transform: uppercase; }
-      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
       th { background: #0b2341; color: #fff; padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+      td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
     </style></head><body>
       <div class="header">
@@ -991,6 +992,13 @@ function ReportePanel({ alumnos, portales }) {
         <div class="stat-card"><div class="stat-val" style="color:${totalVencidas > 0 ? '#dc2626' : '#16a34a'}">${totalVencidas}</div><div class="stat-lbl">Encuestas Vencidas</div></div>
       </div>
       <table>
+        <colgroup>
+          <col style="width:15%"><col style="width:10%"><col style="width:7%"><col style="width:8%">
+          <col style="width:10%"><col style="width:10%">
+          <col style="width:5%"><col style="width:5%">
+          <col style="width:10%"><col style="width:8%">
+          <col style="width:7%"><col style="width:5%">
+        </colgroup>
         <thead><tr>
           <th>Alumno</th><th>Matrícula</th><th style="text-align:center">Perfil</th><th style="text-align:center">Empresa</th>
           <th style="text-align:center">U. Negocio</th><th style="text-align:center">U. Operativa</th>
@@ -1061,7 +1069,20 @@ function ReportePanel({ alumnos, portales }) {
               </div>
             </div>
             <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '6%' }} />
+                </colgroup>
                 <thead>
                   <tr style={{ background: '#f8fafc' }}>
                     <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Alumno</th>
@@ -1080,14 +1101,14 @@ function ReportePanel({ alumnos, portales }) {
                 <tbody>
                   {als.map(a => (
                     <tr key={a.matricula} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '8px 12px' }}>
-                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 12 }}>{a.nombre}</div>
-                        <div style={{ fontSize: 10, color: '#94a3b8' }}>{a.matricula}</div>
+                      <td style={{ padding: '8px 12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.nombre}</div>
+                        <div style={{ fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.matricula}</div>
                       </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 12 }}>{a.perfil || '—'}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 12 }}>{a.empresa || '—'}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 11 }}>{a.unidadNegocio || '—'}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 11 }}>{a.unidadOperativa || '—'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.perfil || '—'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.empresa || '—'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.unidadNegocio || ''}>{a.unidadNegocio || '—'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.unidadOperativa || ''}>{a.unidadOperativa || '—'}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: '#3b82f6' }}>{a.semanaActual}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: a.promedioEvals != null ? (a.promedioEvals >= 80 ? '#16a34a' : a.promedioEvals >= 60 ? '#d97706' : '#dc2626') : '#94a3b8' }}>
                         {a.promedioEvals != null ? a.promedioEvals : '—'}
