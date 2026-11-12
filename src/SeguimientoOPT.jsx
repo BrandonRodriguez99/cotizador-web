@@ -1,6 +1,59 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+
+function MultiSelect({ options, selected, onChange, placeholder }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  const toggle = val => {
+    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val])
+  }
+  const label = selected.length === 0 ? placeholder : selected.length === 1 ? selected[0] : `${selected.length} seleccionados`
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 12px', fontSize: 13,
+        background: '#fff', color: selected.length ? '#0f172a' : '#94a3b8', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 6, minWidth: 140, justifyContent: 'space-between',
+      }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{label}</span>
+        <span style={{ fontSize: 10, color: '#94a3b8' }}>▾</span>
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#fff',
+          border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          zIndex: 50, maxHeight: 220, overflowY: 'auto', minWidth: 200,
+        }}>
+          {selected.length > 0 && (
+            <div onClick={() => onChange([])} style={{
+              padding: '6px 12px', fontSize: 12, color: '#3b82f6', cursor: 'pointer',
+              borderBottom: '1px solid #f1f5f9', fontWeight: 600,
+            }}>Limpiar selección</div>
+          )}
+          {options.map(opt => (
+            <label key={opt} style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer',
+              fontSize: 12, color: '#334155', background: selected.includes(opt) ? '#f0f9ff' : 'transparent',
+            }} onClick={() => toggle(opt)}>
+              <span style={{
+                width: 16, height: 16, borderRadius: 4, border: '2px solid ' + (selected.includes(opt) ? '#3b82f6' : '#cbd5e1'),
+                background: selected.includes(opt) ? '#3b82f6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0,
+              }}>{selected.includes(opt) ? '✓' : ''}</span>
+              {opt}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function fetchSeguimiento(token, portalId) {
   const url = `${API}/seguimiento-opt${portalId ? `?portalId=${portalId}` : ''}`
@@ -804,21 +857,27 @@ function AlumnoDetalle({ alumno, onBack }) {
 }
 
 function ReportePanel({ alumnos, portales }) {
-  const [filtroGen, setFiltroGen] = useState('')
-  const [filtroPerfil, setFiltroPerfil] = useState('')
-  const [filtroEmpresa, setFiltroEmpresa] = useState('')
+  const [filtroGen, setFiltroGen] = useState([])
+  const [filtroPerfil, setFiltroPerfil] = useState([])
+  const [filtroEmpresa, setFiltroEmpresa] = useState([])
+  const [filtroUN, setFiltroUN] = useState([])
+  const [filtroUO, setFiltroUO] = useState([])
 
   const generaciones = useMemo(() => [...new Set(alumnos.map(a => a.generacion).filter(Boolean))].sort(), [alumnos])
   const perfiles = useMemo(() => [...new Set(alumnos.map(a => a.perfil).filter(Boolean))].sort(), [alumnos])
   const empresas = useMemo(() => [...new Set(alumnos.map(a => a.empresa).filter(Boolean))].sort(), [alumnos])
+  const unidades = useMemo(() => [...new Set(alumnos.map(a => a.unidadNegocio).filter(Boolean))].sort(), [alumnos])
+  const uOperativas = useMemo(() => [...new Set(alumnos.map(a => a.unidadOperativa).filter(Boolean))].sort(), [alumnos])
 
   const filtered = useMemo(() => {
     let arr = alumnos.filter(a => (a.etapa || '').toUpperCase().includes('OPT'))
-    if (filtroGen) arr = arr.filter(a => a.generacion === filtroGen)
-    if (filtroPerfil) arr = arr.filter(a => a.perfil === filtroPerfil)
-    if (filtroEmpresa) arr = arr.filter(a => a.empresa === filtroEmpresa)
+    if (filtroGen.length) arr = arr.filter(a => filtroGen.includes(a.generacion))
+    if (filtroPerfil.length) arr = arr.filter(a => filtroPerfil.includes(a.perfil))
+    if (filtroEmpresa.length) arr = arr.filter(a => filtroEmpresa.includes(a.empresa))
+    if (filtroUN.length) arr = arr.filter(a => filtroUN.includes(a.unidadNegocio))
+    if (filtroUO.length) arr = arr.filter(a => filtroUO.includes(a.unidadOperativa))
     return arr.sort((a, b) => (a.generacion || '').localeCompare(b.generacion || '') || (a.nombre || '').localeCompare(b.nombre || ''))
-  }, [alumnos, filtroGen, filtroPerfil, filtroEmpresa])
+  }, [alumnos, filtroGen, filtroPerfil, filtroEmpresa, filtroUN, filtroUO])
 
   const grouped = useMemo(() => {
     const map = {}
@@ -835,9 +894,11 @@ function ReportePanel({ alumnos, portales }) {
 
   function generarPDF() {
     const filtroTexto = [
-      filtroGen ? `Generación: ${filtroGen}` : '',
-      filtroPerfil ? `Perfil: ${filtroPerfil}` : '',
-      filtroEmpresa ? `Empresa: ${filtroEmpresa}` : '',
+      filtroGen.length ? `Generación: ${filtroGen.join(', ')}` : '',
+      filtroPerfil.length ? `Perfil: ${filtroPerfil.join(', ')}` : '',
+      filtroEmpresa.length ? `Empresa: ${filtroEmpresa.join(', ')}` : '',
+      filtroUN.length ? `U. Negocio: ${filtroUN.join(', ')}` : '',
+      filtroUO.length ? `U. Operativa: ${filtroUO.join(', ')}` : '',
     ].filter(Boolean).join(' · ') || 'Todos los alumnos OPT'
 
     const rows = filtered.map(a => {
@@ -859,7 +920,7 @@ function ReportePanel({ alumnos, portales }) {
         const genAlumnos = rows.filter(r => (r.generacion || 'Sin generación') === gen)
         const genEvalProm = genAlumnos.filter(r => r.promedioEvals != null)
         const genEval = genEvalProm.length ? Math.round(genEvalProm.reduce((s, r) => s + r.promedioEvals, 0) / genEvalProm.length) : null
-        tablaHtml += `<tr style="background:#e8edf3"><td colspan="10" style="padding:10px 12px;font-weight:800;font-size:13px;color:#0b2341;border-bottom:2px solid #0b2341">
+        tablaHtml += `<tr style="background:#e8edf3"><td colspan="12" style="padding:10px 12px;font-weight:800;font-size:13px;color:#0b2341;border-bottom:2px solid #0b2341">
           Generación ${gen} — ${genAlumnos.length} alumno${genAlumnos.length !== 1 ? 's' : ''}${genEval != null ? ` · Eval. promedio: ${genEval}` : ''}
         </td></tr>`
       }
@@ -869,6 +930,8 @@ function ReportePanel({ alumnos, portales }) {
         <td style="padding:7px 10px;font-size:11px;color:#64748b">${a.matricula}</td>
         <td style="padding:7px 10px;text-align:center">${a.perfil || '—'}</td>
         <td style="padding:7px 10px;text-align:center">${a.empresa || '—'}</td>
+        <td style="padding:7px 10px;text-align:center;font-size:10px">${a.unidadNegocio || '—'}</td>
+        <td style="padding:7px 10px;text-align:center;font-size:10px">${a.unidadOperativa || '—'}</td>
         <td style="padding:7px 10px;text-align:center;font-weight:700;color:#3b82f6">${a.semanaActual}</td>
         <td style="padding:7px 10px;text-align:center;font-weight:700;color:${a.evalColor}">${a.evalProm}</td>
         <td style="padding:7px 10px;text-align:right;font-size:11px">${a.kmTxt}${a.kmPct ? '<br><span style="color:' + (a.pctKm >= 75 ? '#16a34a' : a.pctKm >= 50 ? '#d97706' : '#dc2626') + ';font-weight:700">' + a.kmPct + '</span>' : ''}</td>
@@ -918,6 +981,7 @@ function ReportePanel({ alumnos, portales }) {
       <table>
         <thead><tr>
           <th>Alumno</th><th>Matrícula</th><th style="text-align:center">Perfil</th><th style="text-align:center">Empresa</th>
+          <th style="text-align:center">U. Negocio</th><th style="text-align:center">U. Operativa</th>
           <th style="text-align:center">Sem.</th><th style="text-align:center">Eval.</th>
           <th style="text-align:right">Kilómetros</th><th style="text-align:right">Horas</th>
           <th style="text-align:center">Encuestas</th><th style="text-align:center">Vencidas</th>
@@ -935,7 +999,7 @@ function ReportePanel({ alumnos, portales }) {
     script.onload = () => {
       w.html2pdf().set({
         margin: [10, 8, 10, 8],
-        filename: `Reporte_OPT_${filtroGen || 'Todas'}${filtroEmpresa ? '_' + filtroEmpresa : ''}_${new Date().toISOString().slice(0, 10)}.pdf`,
+        filename: `Reporte_OPT_${filtroGen.length ? filtroGen.join('-') : 'Todas'}${filtroEmpresa.length ? '_' + filtroEmpresa.join('-') : ''}_${new Date().toISOString().slice(0, 10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
@@ -944,23 +1008,14 @@ function ReportePanel({ alumnos, portales }) {
     w.document.head.appendChild(script)
   }
 
-  const inp = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 12px', fontSize: 13, background: '#fff', color: '#0f172a' }
-
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select value={filtroGen} onChange={e => setFiltroGen(e.target.value)} style={inp}>
-          <option value="">Todas las generaciones</option>
-          {generaciones.map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
-        <select value={filtroPerfil} onChange={e => setFiltroPerfil(e.target.value)} style={inp}>
-          <option value="">Todos los perfiles</option>
-          {perfiles.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <select value={filtroEmpresa} onChange={e => setFiltroEmpresa(e.target.value)} style={inp}>
-          <option value="">Todas las empresas</option>
-          {empresas.map(e => <option key={e} value={e}>{e}</option>)}
-        </select>
+        <MultiSelect options={generaciones} selected={filtroGen} onChange={setFiltroGen} placeholder="Generación" />
+        <MultiSelect options={perfiles} selected={filtroPerfil} onChange={setFiltroPerfil} placeholder="Perfil" />
+        <MultiSelect options={empresas} selected={filtroEmpresa} onChange={setFiltroEmpresa} placeholder="Empresa" />
+        <MultiSelect options={unidades} selected={filtroUN} onChange={setFiltroUN} placeholder="U. Negocio" />
+        <MultiSelect options={uOperativas} selected={filtroUO} onChange={setFiltroUO} placeholder="U. Operativa" />
         <button onClick={generarPDF} disabled={filtered.length === 0} style={{
           background: '#0b2341', color: '#fff', border: 'none', borderRadius: 8,
           padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -1000,6 +1055,8 @@ function ReportePanel({ alumnos, portales }) {
                     <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Alumno</th>
                     <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Perfil</th>
                     <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Empresa</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>U. Negocio</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>U. Operativa</th>
                     <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Sem.</th>
                     <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Eval.</th>
                     <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Km</th>
@@ -1017,6 +1074,8 @@ function ReportePanel({ alumnos, portales }) {
                       </td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 12 }}>{a.perfil || '—'}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 12 }}>{a.empresa || '—'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 11 }}>{a.unidadNegocio || '—'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#475569', fontSize: 11 }}>{a.unidadOperativa || '—'}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: '#3b82f6' }}>{a.semanaActual}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: a.promedioEvals != null ? (a.promedioEvals >= 80 ? '#16a34a' : a.promedioEvals >= 60 ? '#d97706' : '#dc2626') : '#94a3b8' }}>
                         {a.promedioEvals != null ? a.promedioEvals : '—'}
@@ -1215,10 +1274,12 @@ export default function SeguimientoOPT({ usuario }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [portalId, setPortalId] = useState('')
-  const [filtroGeneracion, setFiltroGeneracion] = useState('')
-  const [filtroPerfil, setFiltroPerfil] = useState('')
-  const [filtroEstado, setFiltroEstado] = useState('')
-  const [filtroEmpresa, setFiltroEmpresa] = useState('')
+  const [filtroGeneracion, setFiltroGeneracion] = useState([])
+  const [filtroPerfil, setFiltroPerfil] = useState([])
+  const [filtroEstado, setFiltroEstado] = useState([])
+  const [filtroEmpresa, setFiltroEmpresa] = useState([])
+  const [filtroUN, setFiltroUN] = useState([])
+  const [filtroUO, setFiltroUO] = useState([])
   const [busqueda, setBusqueda] = useState('')
   const [selectedAlumno, setSelectedAlumno] = useState(null)
   const [sortField, setSortField] = useState('nombre')
@@ -1242,16 +1303,25 @@ export default function SeguimientoOPT({ usuario }) {
   const generaciones = useMemo(() => [...new Set(data.alumnos.map(a => a.generacion).filter(Boolean))].sort(), [data.alumnos])
   const perfiles = useMemo(() => [...new Set(data.alumnos.map(a => a.perfil).filter(Boolean))].sort(), [data.alumnos])
   const empresas = useMemo(() => [...new Set(data.alumnos.map(a => a.empresa).filter(Boolean))].sort(), [data.alumnos])
+  const unidades = useMemo(() => [...new Set(data.alumnos.map(a => a.unidadNegocio).filter(Boolean))].sort(), [data.alumnos])
+  const uOperativas = useMemo(() => [...new Set(data.alumnos.map(a => a.unidadOperativa).filter(Boolean))].sort(), [data.alumnos])
 
   const alumnosFiltrados = useMemo(() => {
     let arr = data.alumnos
     if (tabEtapa === 'opt') arr = arr.filter(a => (a.etapa || '').toUpperCase().includes('OPT'))
-    if (filtroGeneracion) arr = arr.filter(a => a.generacion === filtroGeneracion)
-    if (filtroPerfil) arr = arr.filter(a => a.perfil === filtroPerfil)
-    if (filtroEmpresa) arr = arr.filter(a => a.empresa === filtroEmpresa)
-    if (filtroEstado === 'al_dia') arr = arr.filter(a => a.vencidas === 0 && a.completadas > 0)
-    if (filtroEstado === 'con_vencidas') arr = arr.filter(a => a.vencidas > 0)
-    if (filtroEstado === 'sin_iniciar') arr = arr.filter(a => a.completadas === 0)
+    if (filtroGeneracion.length) arr = arr.filter(a => filtroGeneracion.includes(a.generacion))
+    if (filtroPerfil.length) arr = arr.filter(a => filtroPerfil.includes(a.perfil))
+    if (filtroEmpresa.length) arr = arr.filter(a => filtroEmpresa.includes(a.empresa))
+    if (filtroUN.length) arr = arr.filter(a => filtroUN.includes(a.unidadNegocio))
+    if (filtroUO.length) arr = arr.filter(a => filtroUO.includes(a.unidadOperativa))
+    if (filtroEstado.length) {
+      arr = arr.filter(a => {
+        if (filtroEstado.includes('al_dia') && a.vencidas === 0 && a.completadas > 0) return true
+        if (filtroEstado.includes('con_vencidas') && a.vencidas > 0) return true
+        if (filtroEstado.includes('sin_iniciar') && a.completadas === 0) return true
+        return false
+      })
+    }
     if (busqueda.length >= 2) {
       const q = busqueda.toLowerCase()
       arr = arr.filter(a => a.nombre?.toLowerCase().includes(q) || a.matricula?.toLowerCase().includes(q))
@@ -1265,13 +1335,13 @@ export default function SeguimientoOPT({ usuario }) {
       return 0
     })
     return arr
-  }, [data.alumnos, tabEtapa, filtroGeneracion, filtroPerfil, filtroEmpresa, filtroEstado, busqueda, sortField, sortDir])
+  }, [data.alumnos, tabEtapa, filtroGeneracion, filtroPerfil, filtroEmpresa, filtroEstado, filtroUN, filtroUO, busqueda, sortField, sortDir])
 
   const totalPaginas = Math.max(1, Math.ceil(alumnosFiltrados.length / porPagina))
   const paginaActual = Math.min(pagina, totalPaginas)
   const alumnosPagina = alumnosFiltrados.slice((paginaActual - 1) * porPagina, paginaActual * porPagina)
 
-  useEffect(() => { setPagina(1) }, [tabEtapa, filtroGeneracion, filtroPerfil, filtroEmpresa, filtroEstado, busqueda, portalId, sortField, sortDir])
+  useEffect(() => { setPagina(1) }, [tabEtapa, filtroGeneracion, filtroPerfil, filtroEmpresa, filtroEstado, filtroUN, filtroUO, busqueda, portalId, sortField, sortDir])
 
   function toggleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -1341,24 +1411,12 @@ export default function SeguimientoOPT({ usuario }) {
             {data.portales.map(p => <option key={p.PortalId} value={p.PortalId}>{p.Nombre}</option>)}
           </select>
         )}
-        <select value={filtroGeneracion} onChange={e => setFiltroGeneracion(e.target.value)} style={inp}>
-          <option value="">Todas las generaciones</option>
-          {generaciones.map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
-        <select value={filtroPerfil} onChange={e => setFiltroPerfil(e.target.value)} style={inp}>
-          <option value="">Todos los perfiles</option>
-          {perfiles.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <select value={filtroEmpresa} onChange={e => setFiltroEmpresa(e.target.value)} style={inp}>
-          <option value="">Todas las empresas</option>
-          {empresas.map(e => <option key={e} value={e}>{e}</option>)}
-        </select>
-        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={inp}>
-          <option value="">Todos los estados</option>
-          <option value="al_dia">Al día</option>
-          <option value="con_vencidas">Con vencidas</option>
-          <option value="sin_iniciar">Sin iniciar</option>
-        </select>
+        <MultiSelect options={generaciones} selected={filtroGeneracion} onChange={setFiltroGeneracion} placeholder="Generación" />
+        <MultiSelect options={perfiles} selected={filtroPerfil} onChange={setFiltroPerfil} placeholder="Perfil" />
+        <MultiSelect options={empresas} selected={filtroEmpresa} onChange={setFiltroEmpresa} placeholder="Empresa" />
+        <MultiSelect options={unidades} selected={filtroUN} onChange={setFiltroUN} placeholder="Unidad Negocio" />
+        <MultiSelect options={uOperativas} selected={filtroUO} onChange={setFiltroUO} placeholder="Unidad Operativa" />
+        <MultiSelect options={['al_dia', 'con_vencidas', 'sin_iniciar']} selected={filtroEstado} onChange={setFiltroEstado} placeholder="Estado" />
         <input
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
