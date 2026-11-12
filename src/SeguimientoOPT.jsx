@@ -866,8 +866,20 @@ function ReportePanel({ alumnos, portales }) {
   const generaciones = useMemo(() => [...new Set(alumnos.map(a => a.generacion).filter(Boolean))].sort(), [alumnos])
   const perfiles = useMemo(() => [...new Set(alumnos.map(a => a.perfil).filter(Boolean))].sort(), [alumnos])
   const empresas = useMemo(() => [...new Set(alumnos.map(a => a.empresa).filter(Boolean))].sort(), [alumnos])
-  const unidades = useMemo(() => [...new Set(alumnos.map(a => a.unidadNegocio).filter(Boolean))].sort(), [alumnos])
-  const uOperativas = useMemo(() => [...new Set(alumnos.map(a => a.unidadOperativa).filter(Boolean))].sort(), [alumnos])
+  const unidades = useMemo(() => {
+    let arr = alumnos
+    if (filtroEmpresa.length) arr = arr.filter(a => filtroEmpresa.includes(a.empresa))
+    return [...new Set(arr.map(a => a.unidadNegocio).filter(Boolean))].sort()
+  }, [alumnos, filtroEmpresa])
+  const uOperativas = useMemo(() => {
+    let arr = alumnos
+    if (filtroEmpresa.length) arr = arr.filter(a => filtroEmpresa.includes(a.empresa))
+    if (filtroUN.length) arr = arr.filter(a => filtroUN.includes(a.unidadNegocio))
+    return [...new Set(arr.map(a => a.unidadOperativa).filter(Boolean))].sort()
+  }, [alumnos, filtroEmpresa, filtroUN])
+
+  useEffect(() => { setFiltroUN(prev => prev.filter(u => unidades.includes(u))) }, [unidades])
+  useEffect(() => { setFiltroUO(prev => prev.filter(u => uOperativas.includes(u))) }, [uOperativas])
 
   const filtered = useMemo(() => {
     let arr = alumnos.filter(a => (a.etapa || '').toUpperCase().includes('OPT'))
@@ -1303,8 +1315,20 @@ export default function SeguimientoOPT({ usuario }) {
   const generaciones = useMemo(() => [...new Set(data.alumnos.map(a => a.generacion).filter(Boolean))].sort(), [data.alumnos])
   const perfiles = useMemo(() => [...new Set(data.alumnos.map(a => a.perfil).filter(Boolean))].sort(), [data.alumnos])
   const empresas = useMemo(() => [...new Set(data.alumnos.map(a => a.empresa).filter(Boolean))].sort(), [data.alumnos])
-  const unidades = useMemo(() => [...new Set(data.alumnos.map(a => a.unidadNegocio).filter(Boolean))].sort(), [data.alumnos])
-  const uOperativas = useMemo(() => [...new Set(data.alumnos.map(a => a.unidadOperativa).filter(Boolean))].sort(), [data.alumnos])
+  const unidades = useMemo(() => {
+    let arr = data.alumnos
+    if (filtroEmpresa.length) arr = arr.filter(a => filtroEmpresa.includes(a.empresa))
+    return [...new Set(arr.map(a => a.unidadNegocio).filter(Boolean))].sort()
+  }, [data.alumnos, filtroEmpresa])
+  const uOperativas = useMemo(() => {
+    let arr = data.alumnos
+    if (filtroEmpresa.length) arr = arr.filter(a => filtroEmpresa.includes(a.empresa))
+    if (filtroUN.length) arr = arr.filter(a => filtroUN.includes(a.unidadNegocio))
+    return [...new Set(arr.map(a => a.unidadOperativa).filter(Boolean))].sort()
+  }, [data.alumnos, filtroEmpresa, filtroUN])
+
+  useEffect(() => { setFiltroUN(prev => prev.filter(u => unidades.includes(u))) }, [unidades])
+  useEffect(() => { setFiltroUO(prev => prev.filter(u => uOperativas.includes(u))) }, [uOperativas])
 
   const alumnosFiltrados = useMemo(() => {
     let arr = data.alumnos
