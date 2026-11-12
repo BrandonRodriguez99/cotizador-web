@@ -1311,8 +1311,12 @@ function normalizarTelefono(tel) {
 function WhatsAppModal({ alumnos, onClose }) {
   const [filtroEmp, setFiltroEmp] = useState('')
   const [filtroGen, setFiltroGen] = useState('')
+  const [filtroEncuesta, setFiltroEncuesta] = useState('activa')
   const [busq, setBusq] = useState('')
   const [enviados, setEnviados] = useState(new Set())
+  const [enviandoTodos, setEnviandoTodos] = useState(false)
+  const [envioIdx, setEnvioIdx] = useState(-1)
+  const envioRef = useRef(false)
 
   const optAlumnos = alumnos.filter(a => (a.etapa || '').toUpperCase().includes('OPT'))
 
@@ -1323,31 +1327,70 @@ function WhatsAppModal({ alumnos, onClose }) {
     return [...new Set(arr.map(a => a.generacion).filter(Boolean))].sort()
   }, [optAlumnos, filtroEmp])
 
+  const tieneEncuestaEstado = (al, estado) => {
+    if (!al.encuestas || !al.encuestas.length) return false
+    return al.encuestas.some(e => e.estado === estado)
+  }
+
   const filtrados = useMemo(() => {
     let arr = optAlumnos
     if (filtroEmp) arr = arr.filter(a => a.empresa === filtroEmp)
     if (filtroGen) arr = arr.filter(a => a.generacion === filtroGen)
+    if (filtroEncuesta === 'activa') arr = arr.filter(a => tieneEncuestaEstado(a, 'activa'))
+    if (filtroEncuesta === 'vencida') arr = arr.filter(a => tieneEncuestaEstado(a, 'vencida'))
+    if (filtroEncuesta === 'pendiente') arr = arr.filter(a => tieneEncuestaEstado(a, 'activa') || tieneEncuestaEstado(a, 'vencida'))
     if (busq) {
       const q = busq.toLowerCase()
       arr = arr.filter(a => (a.nombre || '').toLowerCase().includes(q) || (a.matricula || '').toLowerCase().includes(q))
     }
     return arr
-  }, [optAlumnos, filtroEmp, filtroGen, busq])
+  }, [optAlumnos, filtroEmp, filtroGen, filtroEncuesta, busq])
 
   const conTelefono = filtrados.filter(a => normalizarTelefono(a.telefono))
   const sinTelefono = filtrados.filter(a => !normalizarTelefono(a.telefono))
+  const pendientesEnvio = conTelefono.filter(a => !enviados.has(a.matricula))
 
   const SURVEY_URL = 'https://cotizador-web-coral.vercel.app/p/seguimientopt'
-  const buildMsg = (nombre) => {
-    return `Hola ${nombre.split(' ')[0]}, te compartimos el link para contestar tu encuesta de seguimiento OPT:\n${SURVEY_URL}`
+  const buildMsg = (alumno) => {
+    const nombre = alumno.nombre.split(' ')[0]
+    const sem = alumno.semanaActual || ''
+    return `Hola ${nombre}, te compartimos el link para contestar tu encuesta de seguimiento OPT${sem ? ` (Semana ${sem})` : ''}:\n${SURVEY_URL}`
   }
 
   const abrirWhatsApp = (alumno) => {
     const tel = normalizarTelefono(alumno.telefono)
     if (!tel) return
-    const msg = encodeURIComponent(buildMsg(alumno.nombre))
+    const msg = encodeURIComponent(buildMsg(alumno))
     window.open(`https://wa.me/${tel}?text=${msg}`, '_blank')
     setEnviados(prev => new Set([...prev, alumno.matricula]))
+  }
+
+  const enviarATodos = async () => {
+    const lista = pendientesEnvio
+    if (!lista.length) return
+    const ok = window.confirm(`Se abrirán ${lista.length} ventanas de WhatsApp, una cada 2 segundos.\n\nDeberás enviar el mensaje manualmente en cada ventana.\n\n¿Continuar?`)
+    if (!ok) return
+    setEnviandoTodos(true)
+    envioRef.current = true
+    for (let i = 0; i < lista.length; i++) {
+      if (!envioRef.current) break
+      setEnvioIdx(i)
+      abrirWhatsApp(lista[i])
+      if (i < lista.length - 1) await new Promise(r => setTimeout(r, 2000))
+    }
+    setEnviandoTodos(false)
+    setEnvioIdx(-1)
+    envioRef.current = false
+  }
+
+  const detenerEnvio = () => { envioRef.current = false }
+
+  const estadoBadge = (al) => {
+    const activa = tieneEncuestaEstado(al, 'activa')
+    const vencida = tieneEncuestaEstado(al, 'vencida')
+    if (activa) return { bg: '#fef3c7', color: '#92400e', label: `Sem. ${al.semanaActual} - Pendiente` }
+    if (vencida) return { bg: '#fecaca', color: '#991b1b', label: `${al.vencidas} vencida${al.vencidas > 1 ? 's' : ''}` }
+    return null
   }
 
   const inp = {
@@ -1355,13 +1398,15 @@ function WhatsAppModal({ alumnos, onClose }) {
     background: '#fff', color: '#334155',
   }
 
+  const WA_ICON = <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+
   return (
-    <div onClick={e => { if (e.target === e.currentTarget) onClose() }} style={{
+    <div onClick={e => { if (e.target === e.currentTarget && !enviandoTodos) onClose() }} style={{
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
     }}>
       <div style={{
-        background: '#fff', borderRadius: 16, width: '100%', maxWidth: 720,
+        background: '#fff', borderRadius: 16, width: '100%', maxWidth: 760,
         maxHeight: '85vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
       }}>
@@ -1382,16 +1427,22 @@ function WhatsAppModal({ alumnos, onClose }) {
               <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>Envía el link de la encuesta de seguimiento a los alumnos OPT</p>
             </div>
           </div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} disabled={enviandoTodos} style={{
             background: 'none', border: 'none', fontSize: 22, color: '#94a3b8', cursor: 'pointer',
             width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: 8, transition: 'background 0.15s',
+            borderRadius: 8, transition: 'background 0.15s', opacity: enviandoTodos ? 0.4 : 1,
           }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
              onMouseLeave={e => e.currentTarget.style.background = 'none'}>×</button>
         </div>
 
         {/* Filtros */}
         <div style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={filtroEncuesta} onChange={e => setFiltroEncuesta(e.target.value)} style={{ ...inp, fontWeight: 600 }}>
+            <option value="">Todos los alumnos</option>
+            <option value="activa">Con encuesta activa (esta semana)</option>
+            <option value="vencida">Con encuestas vencidas</option>
+            <option value="pendiente">Activa o vencida</option>
+          </select>
           <select value={filtroEmp} onChange={e => { setFiltroEmp(e.target.value); setFiltroGen('') }} style={inp}>
             <option value="">Todas las empresas</option>
             {empresasDisp.map(e => <option key={e} value={e}>{e}</option>)}
@@ -1400,12 +1451,41 @@ function WhatsAppModal({ alumnos, onClose }) {
             <option value="">Todas las generaciones</option>
             {generacionesDisp.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
-          <input value={busq} onChange={e => setBusq(e.target.value)} placeholder="Buscar alumno..." style={{ ...inp, minWidth: 160 }} />
-          <div style={{ marginLeft: 'auto', fontSize: 12, color: '#64748b' }}>
+          <input value={busq} onChange={e => setBusq(e.target.value)} placeholder="Buscar alumno..." style={{ ...inp, minWidth: 140 }} />
+        </div>
+
+        {/* Barra de acciones */}
+        <div style={{
+          padding: '12px 24px', borderBottom: '1px solid #f1f5f9',
+          display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap',
+        }}>
+          <div style={{ fontSize: 12, color: '#64748b', flex: 1 }}>
             <span style={{ fontWeight: 600, color: '#25d366' }}>{conTelefono.length}</span> con teléfono
             {sinTelefono.length > 0 && <> · <span style={{ fontWeight: 600, color: '#ef4444' }}>{sinTelefono.length}</span> sin teléfono</>}
             {enviados.size > 0 && <> · <span style={{ fontWeight: 600, color: '#3b82f6' }}>{enviados.size}</span> enviados</>}
           </div>
+          {enviandoTodos ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, color: '#3b82f6', fontWeight: 600 }}>
+                Enviando {envioIdx + 1} de {pendientesEnvio.length + enviados.size - (conTelefono.length - pendientesEnvio.length)}...
+              </span>
+              <button onClick={detenerEnvio} style={{
+                background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8,
+                padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}>Detener</button>
+            </div>
+          ) : (
+            <button onClick={enviarATodos} disabled={pendientesEnvio.length === 0} style={{
+              background: pendientesEnvio.length > 0 ? '#25d366' : '#e2e8f0',
+              color: pendientesEnvio.length > 0 ? '#fff' : '#94a3b8',
+              border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700,
+              cursor: pendientesEnvio.length > 0 ? 'pointer' : 'default',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              {WA_ICON}
+              Enviar a todos ({pendientesEnvio.length})
+            </button>
+          )}
         </div>
 
         {/* Lista */}
@@ -1413,30 +1493,41 @@ function WhatsAppModal({ alumnos, onClose }) {
           {conTelefono.length === 0 && sinTelefono.length === 0 && (
             <div style={{ textAlign: 'center', padding: 32, color: '#94a3b8' }}>No se encontraron alumnos OPT con los filtros seleccionados</div>
           )}
-          {conTelefono.map(al => {
-            const tel = normalizarTelefono(al.telefono)
+          {conTelefono.map((al, idx) => {
             const yaEnviado = enviados.has(al.matricula)
+            const badge = estadoBadge(al)
+            const esActual = enviandoTodos && envioIdx >= 0 && pendientesEnvio[envioIdx]?.matricula === al.matricula
             return (
               <div key={al.matricula} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
                 borderBottom: '1px solid #f1f5f9',
+                background: esActual ? '#f0fdf4' : 'transparent',
+                transition: 'background 0.2s',
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{al.nombre}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{al.nombre}</span>
+                    {badge && (
+                      <span style={{
+                        padding: '1px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600,
+                        background: badge.bg, color: badge.color,
+                      }}>{badge.label}</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 11, color: '#94a3b8' }}>
                     {al.matricula} · {al.empresa || '—'} · {al.generacion || '—'}
                     {al.telefono && <> · <span style={{ color: '#64748b' }}>{al.telefono}</span></>}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                   {yaEnviado && <span style={{ fontSize: 11, color: '#22c55e', fontWeight: 600 }}>Enviado</span>}
-                  <button onClick={() => abrirWhatsApp(al)} style={{
+                  <button onClick={() => abrirWhatsApp(al)} disabled={enviandoTodos} style={{
                     background: yaEnviado ? '#86efac' : '#25d366', color: '#fff', border: 'none',
                     borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
-                    transition: 'background 0.15s',
+                    cursor: enviandoTodos ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                    opacity: enviandoTodos ? 0.5 : 1,
                   }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    {WA_ICON}
                     Enviar
                   </button>
                 </div>
@@ -1448,20 +1539,31 @@ function WhatsAppModal({ alumnos, onClose }) {
               <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', padding: '16px 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Sin teléfono registrado ({sinTelefono.length})
               </div>
-              {sinTelefono.map(al => (
-                <div key={al.matricula} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0',
-                  borderBottom: '1px solid #f8fafc', opacity: 0.6,
-                }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{al.nombre}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                      {al.matricula} · {al.empresa || '—'} · {al.generacion || '—'}
+              {sinTelefono.map(al => {
+                const badge = estadoBadge(al)
+                return (
+                  <div key={al.matricula} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0',
+                    borderBottom: '1px solid #f8fafc', opacity: 0.6,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{al.nombre}</span>
+                        {badge && (
+                          <span style={{
+                            padding: '1px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600,
+                            background: badge.bg, color: badge.color,
+                          }}>{badge.label}</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                        {al.matricula} · {al.empresa || '—'} · {al.generacion || '—'}
+                      </div>
                     </div>
+                    <span style={{ fontSize: 11, color: '#ef4444', fontWeight: 500 }}>Sin teléfono</span>
                   </div>
-                  <span style={{ fontSize: 11, color: '#ef4444', fontWeight: 500 }}>Sin teléfono</span>
-                </div>
-              ))}
+                )
+              })}
             </>
           )}
         </div>
