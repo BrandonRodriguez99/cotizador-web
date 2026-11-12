@@ -299,8 +299,7 @@ function EvaluacionCard({ ev, defaultOpen, fechaEgreso }) {
 
 function TimelineCard({ enc, cfg, evalData }) {
   const [open, setOpen] = useState(false)
-  const hasData = !!evalData
-  const canExpand = enc.estado === 'completada' && hasData
+  const canExpand = enc.estado === 'completada'
 
   return (
     <div style={{
@@ -339,21 +338,29 @@ function TimelineCard({ enc, cfg, evalData }) {
         <Badge estado={enc.estado} />
         {canExpand && <span style={{ fontSize: 16, color: '#94a3b8', transform: open ? 'rotate(180deg)' : '', transition: 'transform 0.2s', marginLeft: 4 }}>▾</span>}
       </div>
-      {open && evalData && (
+      {open && (
         <div style={{ padding: '0 18px 16px', borderTop: '1px solid #f1f5f9' }}>
-          <div style={{ fontSize: 12, color: '#64748b', padding: '10px 0 6px' }}>
-            Respondido por: <strong>{evalData.operador}</strong> · {new Date(evalData.fecha).toLocaleDateString('es-MX')}
-          </div>
-          <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
-            <tbody>
-              {evalData.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor' && v.tipo !== 'opt').map((v, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
-                  <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
-                  <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} severity={v.severity} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {evalData ? (
+            <>
+              <div style={{ fontSize: 12, color: '#64748b', padding: '10px 0 6px' }}>
+                Respondido por: <strong>{evalData.operador}</strong> · {new Date(evalData.fecha).toLocaleDateString('es-MX')}
+              </div>
+              <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+                <tbody>
+                  {evalData.valores.filter(v => v.tipo !== 'alumno' && v.tipo !== 'operador_tutor' && v.tipo !== 'opt').map((v, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '8px 8px 8px 0', color: '#64748b', fontWeight: 500, verticalAlign: 'top', width: '40%' }}>{v.pregunta}</td>
+                      <td style={{ padding: '8px 0', color: '#0f172a' }}><ValorDisplay valor={v.valor} tipo={v.tipo} severity={v.severity} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: '#94a3b8', padding: '12px 0' }}>
+              Encuesta respondida{enc.fechaRespuesta ? ` el ${new Date(enc.fechaRespuesta).toLocaleDateString('es-MX')}` : ''}. Cargando detalle de respuestas...
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -363,6 +370,7 @@ function TimelineCard({ enc, cfg, evalData }) {
 function AlumnoDetalle({ alumno, onBack }) {
   const [evaluaciones, setEvaluaciones] = useState([])
   const [loadingEvals, setLoadingEvals] = useState(true)
+  const [errorEvals, setErrorEvals] = useState('')
   const [practicas, setPracticas] = useState(null)
   const [loadingPracticas, setLoadingPracticas] = useState(true)
   const [tabDetalle, setTabDetalle] = useState('timeline')
@@ -370,18 +378,19 @@ function AlumnoDetalle({ alumno, onBack }) {
 
   useEffect(() => {
     setLoadingEvals(true)
+    setErrorEvals('')
     fetch(`${API}/seguimiento-opt/${encodeURIComponent(alumno.matricula)}/evaluaciones`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(`Error ${r.status}`); return r.json() })
       .then(d => { setEvaluaciones(Array.isArray(d) ? d : []); setLoadingEvals(false) })
-      .catch(() => setLoadingEvals(false))
+      .catch(e => { setErrorEvals(e.message); setLoadingEvals(false) })
 
     setLoadingPracticas(true)
     fetch(`${API}/seguimiento-opt/${encodeURIComponent(alumno.matricula)}/practicas`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(`Error ${r.status}`); return r.json() })
       .then(d => { setPracticas(d); setLoadingPracticas(false) })
       .catch(() => setLoadingPracticas(false))
   }, [alumno.matricula])
@@ -716,6 +725,7 @@ function AlumnoDetalle({ alumno, onBack }) {
             })}
           </div>
           {loadingEvals && <div style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Cargando respuestas...</div>}
+          {errorEvals && <div style={{ padding: 16, color: '#ef4444', fontSize: 13 }}>Error al cargar respuestas: {errorEvals}</div>}
         </>
       )}
 
