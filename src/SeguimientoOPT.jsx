@@ -1363,8 +1363,12 @@ function WhatsAppModal({ alumnos, onClose }) {
   const SURVEY_URL = 'https://cotizador-web-coral.vercel.app/p/seguimientopt'
   const buildMsg = (alumno) => {
     const nombre = alumno.nombre.split(' ')[0]
-    const sem = alumno.semanaActual || ''
-    return `Hola ${nombre}, te compartimos el link para contestar tu encuesta de seguimiento OPT${sem ? ` (Semana ${sem})` : ''}:\n${SURVEY_URL}`
+    const pendientes = getEncuestasPendientes(alumno)
+    const nombreEnc = pendientes.length > 0 ? pendientes[0].formularioNombre : null
+    if (nombreEnc) {
+      return `Hola ${nombre}, te compartimos el link para contestar tu encuesta "${nombreEnc}":\n${SURVEY_URL}`
+    }
+    return `Hola ${nombre}, te compartimos el link para contestar tu encuesta de seguimiento OPT:\n${SURVEY_URL}`
   }
 
   const abrirWhatsApp = (alumno) => {
@@ -1401,12 +1405,17 @@ function WhatsAppModal({ alumnos, onClose }) {
     }
   }
 
+  const getEncuestasPendientes = (al) => {
+    if (!al.encuestas || !al.encuestas.length) return []
+    return al.encuestas.filter(e => e.estado === 'activa' || e.estado === 'vencida')
+  }
+
   const estadoBadge = (al) => {
-    const activa = tieneEncuestaEstado(al, 'activa')
-    const vencida = tieneEncuestaEstado(al, 'vencida')
-    if (activa) return { bg: '#fef3c7', color: '#92400e', label: `Sem. ${al.semanaActual} - Pendiente` }
-    if (vencida) return { bg: '#fecaca', color: '#991b1b', label: `${al.vencidas} vencida${al.vencidas > 1 ? 's' : ''}` }
-    return null
+    const pendientes = getEncuestasPendientes(al)
+    if (!pendientes.length) return null
+    const activa = pendientes.find(e => e.estado === 'activa')
+    if (activa) return { bg: '#fef3c7', color: '#92400e', label: `${activa.formularioNombre || 'Encuesta'} - Pendiente` }
+    return { bg: '#fecaca', color: '#991b1b', label: `${pendientes[0].formularioNombre || 'Encuesta'} - Vencida${pendientes.length > 1 ? ` (+${pendientes.length - 1})` : ''}` }
   }
 
   const inp = {
