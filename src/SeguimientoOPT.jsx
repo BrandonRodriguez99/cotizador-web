@@ -338,6 +338,10 @@ function AlumnoDetalle({ alumno, onBack }) {
 
   const evalsAlumno = evaluaciones.filter(e => e.tipo === 'alumno')
   const evalsEncargado = evaluaciones.filter(e => e.tipo === 'encargado')
+  const evalsConCalif = evalsEncargado.filter(e => e.calificacion != null)
+  const promedioEvalsDetalle = evalsConCalif.length > 0
+    ? Math.round(evalsConCalif.reduce((s, e) => s + e.calificacion, 0) / evalsConCalif.length)
+    : null
 
   const dtab = (active) => ({
     padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -568,15 +572,36 @@ function AlumnoDetalle({ alumno, onBack }) {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 36, fontWeight: 800, color: alumno.porcentaje >= 80 ? '#22c55e' : alumno.porcentaje >= 50 ? '#f59e0b' : '#ef4444' }}>
-              {alumno.porcentaje}%
+            <div style={{ fontSize: 36, fontWeight: 800, color: promedioEvalsDetalle != null ? (promedioEvalsDetalle >= 80 ? '#22c55e' : promedioEvalsDetalle >= 60 ? '#f59e0b' : '#ef4444') : '#94a3b8' }}>
+              {promedioEvalsDetalle != null ? promedioEvalsDetalle : '—'}
             </div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>avance encuestas</div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>eval. semanales</div>
+            {promedioEvalsDetalle != null && <div style={{ fontSize: 10, color: '#94a3b8' }}>Promedio de {evalsConCalif.length} eval.</div>}
           </div>
         </div>
-        {/* Barras Km / Hrs siempre visibles */}
+
+        {/* Barra Evaluaciones Semanales OPT */}
+        {!loadingEvals && evalsConCalif.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
+              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Evaluaciones Semanales OPT</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: promedioEvalsDetalle >= 80 ? '#16a34a' : promedioEvalsDetalle >= 60 ? '#d97706' : '#dc2626' }}>
+                {promedioEvalsDetalle} / 100 ({evalsConCalif.length} eval.)
+              </span>
+            </div>
+            <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                width: `${Math.min(100, promedioEvalsDetalle)}%`, height: '100%', borderRadius: 4,
+                background: promedioEvalsDetalle >= 80 ? '#16a34a' : promedioEvalsDetalle >= 60 ? '#d97706' : '#dc2626',
+                transition: 'width 0.5s ease',
+              }} />
+            </div>
+          </div>
+        )}
+
+        {/* Barras Km / Hrs */}
         {!loadingPracticas && practicas && practicas.registros > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
             {[
               { label: 'Kilómetros', actual: practicas.totalKm.toLocaleString('es-MX'), meta: practicas.meta?.km, pct: practicas.pctKm, unit: 'km' },
               { label: 'Horas', actual: practicas.totalHrs, meta: practicas.meta?.hrs, pct: practicas.pctHrs, unit: 'hrs' },
@@ -604,6 +629,9 @@ function AlumnoDetalle({ alumno, onBack }) {
         <div style={{ marginTop: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
             <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Encuestas</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: alumno.porcentaje >= 80 ? '#16a34a' : alumno.porcentaje >= 50 ? '#d97706' : '#dc2626' }}>
+              {alumno.completadas}/{alumno.totalEncuestas} ({alumno.porcentaje}%)
+            </span>
           </div>
           <ProgressBar porcentaje={alumno.porcentaje} />
         </div>
