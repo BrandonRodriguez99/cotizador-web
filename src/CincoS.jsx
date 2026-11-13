@@ -183,7 +183,7 @@ function SetupProyecto({ onCreated, editProyectoId }) {
                   ts[ti].areas[ai].champion = user ? user.Nombre : ''
                   setTerminales(ts)
                 }}>
-                <option value="">Sin Champion</option>
+                <option value="">Sin Sponsor</option>
                 {usuarios.map(u => (
                   <option key={u.UsuarioId} value={u.UsuarioId}>{u.Nombre}</option>
                 ))}
@@ -403,10 +403,10 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
                   </div>
                 )}
 
-                {/* Acción del Champion (obligatoria) */}
+                {/* Acción del Sponsor (obligatoria) */}
                 {canRecommend && (
                   <div>
-                    <label style={labelStyle}>Acción del Champion *</label>
+                    <label style={labelStyle}>Acción del Sponsor *</label>
                     <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Seleccione a dónde destinar este elemento:</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {[
@@ -538,7 +538,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
           {filtered.length > 0 && (
             <div style={{ marginTop: 20 }}>
               <button onClick={onDone} style={{ ...btnPrimary, background: '#16a34a' }}>
-                Continuar a Acciones del Champion →
+                Continuar a Acciones del Sponsor →
               </button>
             </div>
           )}
@@ -549,7 +549,7 @@ function RegistroElementos({ proyectoId, areas, onBack, onDone }) {
   )
 }
 
-// ─── Vista Acciones del Champion ────────────────────────────────────────────
+// ─── Vista Acciones del Sponsor ─────────────────────────────────────────────
 function AccionesChampion({ proyectoId, areas, onBack }) {
   const [tab, setTab] = useState('eliminar')
   const [acciones, setAcciones] = useState([])
@@ -652,7 +652,7 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
           {areas.filter(a => !terminalFiltro || a.Terminal === terminalFiltro).map(a => <option key={a.AreaId} value={a.AreaId}>{a.Terminal} — {a.Area}</option>)}
         </select>
         <select style={{ ...inputStyle, maxWidth: 200 }} value={championFiltro} onChange={e => setChampionFiltro(e.target.value)}>
-          <option value="">Todos los Champions</option>
+          <option value="">Todos los Sponsors</option>
           {champions.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -722,6 +722,49 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
             </>
           )}
 
+          {/* Ranking de Sponsors */}
+          {dashboard?.porArea?.length > 0 && (() => {
+            const sponsorMap = {}
+            dashboard.porArea.forEach(a => {
+              const name = a.Champion || 'Sin Sponsor'
+              if (!sponsorMap[name]) sponsorMap[name] = { total: 0, done: 0 }
+              sponsorMap[name].total += (a.eliminar || 0) + (a.reparar || 0) + (a.redTag || 0)
+              sponsorMap[name].done += (a.eliminarOk || 0) + (a.repararOk || 0) + (a.redTagOk || 0)
+            })
+            const ranking = Object.entries(sponsorMap)
+              .map(([name, v]) => ({ name, ...v, pct: v.total ? Math.round(v.done / v.total * 100) : 0 }))
+              .sort((a, b) => b.pct - a.pct || b.done - a.done)
+            const medals = ['🥇', '🥈', '🥉']
+            const pctColor = p => p >= 75 ? '#16a34a' : p >= 40 ? '#d97706' : '#dc2626'
+            return (
+              <div style={{ marginTop: 24, marginBottom: 24 }}>
+                <h4 style={{ margin: '0 0 12px', fontSize: 14 }}>🏆 Ranking de Sponsors</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {ranking.map((s, i) => (
+                    <div key={s.name} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 16px', borderRadius: 10,
+                      background: i === 0 ? '#fefce8' : '#f8fafc',
+                      border: `1px solid ${i === 0 ? '#fde047' : '#e2e8f0'}`,
+                    }}>
+                      <span style={{ fontSize: 22, minWidth: 32, textAlign: 'center' }}>{medals[i] || `#${i + 1}`}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{s.name}</div>
+                        <div style={{ fontSize: 12, color: '#6b7280' }}>{s.done}/{s.total} acciones completadas</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 80, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                          <div style={{ width: `${s.pct}%`, height: '100%', background: pctColor(s.pct), transition: 'width .3s' }} />
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: pctColor(s.pct), minWidth: 40, textAlign: 'right' }}>{s.pct}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Avance por área */}
           {dashboard?.porArea?.length > 0 && (
             <div style={{ marginTop: 24 }}>
@@ -731,7 +774,7 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
                   <thead>
                     <tr>
                       <th style={thStyle}>Área</th>
-                      <th style={thStyle}>Champion</th>
+                      <th style={thStyle}>Sponsor</th>
                       <th style={thStyle}>Eliminar</th>
                       <th style={thStyle}>Reparar</th>
                       <th style={thStyle}>Red Tags</th>
@@ -1168,7 +1211,7 @@ export default function CincoS({ usuario }) {
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="17" x2="8" y2="11"/><line x1="12" y1="17" x2="12" y2="7"/><line x1="16" y1="17" x2="16" y2="13"/></svg>
             </div>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Seguimiento / Dashboard</div>
-            <div style={{ fontSize: 13, opacity: 0.9 }}>Progreso del Champion y tablero de indicadores</div>
+            <div style={{ fontSize: 13, opacity: 0.9 }}>Progreso del Sponsor y tablero de indicadores</div>
           </div>
         </div>
 
@@ -1180,7 +1223,7 @@ export default function CincoS({ usuario }) {
               <div key={a.AreaId} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{a.Area}</div>
                 <div style={{ fontSize: 12, color: '#6b7280' }}>{a.Terminal}</div>
-                {a.Champion && <div style={{ fontSize: 12, color: '#3b82f6', marginTop: 4 }}>Champion: {a.Champion}</div>}
+                {a.Champion && <div style={{ fontSize: 12, color: '#3b82f6', marginTop: 4 }}>Sponsor: {a.Champion}</div>}
               </div>
             ))}
           </div>
