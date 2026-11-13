@@ -667,6 +667,49 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
         </div>
       )}
 
+      {/* Ranking de Sponsors */}
+      {dashboard?.porArea?.length > 0 && (() => {
+        const sponsorMap = {}
+        dashboard.porArea.forEach(a => {
+          const name = a.Champion || 'Sin Sponsor'
+          if (!sponsorMap[name]) sponsorMap[name] = { total: 0, done: 0 }
+          sponsorMap[name].total += (a.eliminar || 0) + (a.reparar || 0) + (a.redTag || 0)
+          sponsorMap[name].done += (a.eliminarOk || 0) + (a.repararOk || 0) + (a.redTagOk || 0)
+        })
+        const ranking = Object.entries(sponsorMap)
+          .map(([name, v]) => ({ name, ...v, pct: v.total ? Math.round(v.done / v.total * 100) : 0 }))
+          .sort((a, b) => b.pct - a.pct || b.done - a.done)
+        const medals = ['🥇', '🥈', '🥉']
+        const pctColor = p => p >= 75 ? '#16a34a' : p >= 40 ? '#d97706' : '#dc2626'
+        return (
+          <div style={{ marginBottom: 20 }}>
+            <h4 style={{ margin: '0 0 10px', fontSize: 14 }}>🏆 Ranking de Sponsors</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {ranking.map((s, i) => (
+                <div key={s.name} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 16px', borderRadius: 10,
+                  background: i === 0 ? '#fefce8' : '#f8fafc',
+                  border: `1px solid ${i === 0 ? '#fde047' : '#e2e8f0'}`,
+                }}>
+                  <span style={{ fontSize: 22, minWidth: 32, textAlign: 'center' }}>{medals[i] || `#${i + 1}`}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{s.name}</div>
+                    <div style={{ fontSize: 12, color: '#6b7280' }}>{s.done}/{s.total} acciones completadas</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 80, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ width: `${s.pct}%`, height: '100%', background: pctColor(s.pct), transition: 'width .3s' }} />
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: pctColor(s.pct), minWidth: 40, textAlign: 'right' }}>{s.pct}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid #e2e8f0' }}>
         {tabs.map(t => (
@@ -721,49 +764,6 @@ function AccionesChampion({ proyectoId, areas, onBack }) {
               ))}
             </>
           )}
-
-          {/* Ranking de Sponsors */}
-          {dashboard?.porArea?.length > 0 && (() => {
-            const sponsorMap = {}
-            dashboard.porArea.forEach(a => {
-              const name = a.Champion || 'Sin Sponsor'
-              if (!sponsorMap[name]) sponsorMap[name] = { total: 0, done: 0 }
-              sponsorMap[name].total += (a.eliminar || 0) + (a.reparar || 0) + (a.redTag || 0)
-              sponsorMap[name].done += (a.eliminarOk || 0) + (a.repararOk || 0) + (a.redTagOk || 0)
-            })
-            const ranking = Object.entries(sponsorMap)
-              .map(([name, v]) => ({ name, ...v, pct: v.total ? Math.round(v.done / v.total * 100) : 0 }))
-              .sort((a, b) => b.pct - a.pct || b.done - a.done)
-            const medals = ['🥇', '🥈', '🥉']
-            const pctColor = p => p >= 75 ? '#16a34a' : p >= 40 ? '#d97706' : '#dc2626'
-            return (
-              <div style={{ marginTop: 24, marginBottom: 24 }}>
-                <h4 style={{ margin: '0 0 12px', fontSize: 14 }}>🏆 Ranking de Sponsors</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {ranking.map((s, i) => (
-                    <div key={s.name} style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '10px 16px', borderRadius: 10,
-                      background: i === 0 ? '#fefce8' : '#f8fafc',
-                      border: `1px solid ${i === 0 ? '#fde047' : '#e2e8f0'}`,
-                    }}>
-                      <span style={{ fontSize: 22, minWidth: 32, textAlign: 'center' }}>{medals[i] || `#${i + 1}`}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>{s.name}</div>
-                        <div style={{ fontSize: 12, color: '#6b7280' }}>{s.done}/{s.total} acciones completadas</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 80, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-                          <div style={{ width: `${s.pct}%`, height: '100%', background: pctColor(s.pct), transition: 'width .3s' }} />
-                        </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: pctColor(s.pct), minWidth: 40, textAlign: 'right' }}>{s.pct}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
 
           {/* Avance por área */}
           {dashboard?.porArea?.length > 0 && (
