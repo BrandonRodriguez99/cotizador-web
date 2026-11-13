@@ -106,7 +106,9 @@ function ProgressBar({ porcentaje }) {
 
 function SummaryCards({ alumnos }) {
   const total = alumnos.length
-  const now = new Date()
+  const alDia = alumnos.filter(a => a.vencidas === 0 && a.completadas > 0).length
+  const conVencidas = alumnos.filter(a => a.vencidas > 0).length
+  const sinIniciar = alumnos.filter(a => a.completadas === 0).length
 
   const totalKm = alumnos.reduce((s, a) => s + (a.totalKm || 0), 0)
   const totalMetaKm = alumnos.reduce((s, a) => s + (a.metaKm || 0), 0)
@@ -116,6 +118,12 @@ function SummaryCards({ alumnos }) {
   const totalMetaHrs = alumnos.reduce((s, a) => s + (a.metaHrs || 0), 0)
   const promPctHrs = totalMetaHrs > 0 ? Math.round(totalHrs / totalMetaHrs * 100) : null
 
+  const promedioEncuestas = total ? Math.round(alumnos.reduce((s, a) => s + a.porcentaje, 0) / total) : 0
+
+  const conEvals = alumnos.filter(a => a.promedioEvals != null)
+  const promedioEvals = conEvals.length ? Math.round(conEvals.reduce((s, a) => s + a.promedioEvals, 0) / conEvals.length) : null
+
+  const now = new Date()
   let conduciendo = 0, dias3a6 = 0, dias7plus = 0, nuncaConducido = 0
   let totalDiasConducidos = 0, totalDiasPosibles = 0
   for (const a of alumnos) {
@@ -136,49 +144,70 @@ function SummaryCards({ alumnos }) {
   }
   const pctCumplimiento = totalDiasPosibles > 0 ? Math.round(totalDiasConducidos / totalDiasPosibles * 100) : 0
 
-  const cardBase = { borderRadius: 12, padding: '14px 18px', border: '1px solid #1e293b', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }
-  const labelStyle = { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }
-  const numStyle = { fontSize: 28, fontWeight: 800, marginTop: 4 }
-  const subStyle = { fontSize: 11, marginTop: 4 }
+  const cardStyle = { background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }
+  const darkCard = { borderRadius: 12, padding: '12px 16px', border: '1px solid #1e293b', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', background: '#0f172a' }
+  const darkLabel = { fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }
+  const darkNum = { fontSize: 22, fontWeight: 800, marginTop: 2 }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-        <div style={{ ...cardBase, background: '#0f172a' }}>
-          <div style={{ ...labelStyle, color: '#94a3b8' }}>Alumnos en OPT</div>
-          <div style={{ ...numStyle, color: '#3b82f6' }}>{total}</div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
+      {/* Tarjeta Alumnos con sub-tarjetas de conducción */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={cardStyle}>
+          <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alumnos en OPT</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>{total}</div>
         </div>
-        <div style={{ ...cardBase, background: '#0f172a' }}>
-          <div style={{ ...labelStyle, color: '#94a3b8' }}>Conduciendo / Meta Cumplida</div>
-          <div style={{ ...numStyle, color: '#e2e8f0' }}>{conduciendo}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <div style={darkCard}>
+            <div style={{ ...darkLabel, color: '#94a3b8' }}>Conduciendo</div>
+            <div style={{ ...darkNum, color: '#e2e8f0' }}>{conduciendo}</div>
+          </div>
+          <div style={darkCard}>
+            <div style={{ ...darkLabel, color: '#fb923c' }}>7+ días sin</div>
+            <div style={{ ...darkNum, color: '#fb923c' }}>{dias7plus}</div>
+          </div>
+          <div style={darkCard}>
+            <div style={{ ...darkLabel, color: '#fbbf24' }}>3-6 días sin</div>
+            <div style={{ ...darkNum, color: '#fbbf24' }}>{dias3a6}</div>
+          </div>
+          <div style={darkCard}>
+            <div style={{ ...darkLabel, color: '#f87171' }}>Nunca</div>
+            <div style={{ ...darkNum, color: '#f87171' }}>{nuncaConducido}</div>
+          </div>
         </div>
-        <div style={{ ...cardBase, background: '#0f172a' }}>
-          <div style={{ ...labelStyle, color: '#fb923c' }}>7+ Días sin conducir</div>
-          <div style={{ ...numStyle, color: '#fb923c' }}>{dias7plus}</div>
-        </div>
-        <div style={{ ...cardBase, background: '#0f172a' }}>
-          <div style={{ ...labelStyle, color: '#f87171' }}>Nunca han conducido</div>
-          <div style={{ ...numStyle, color: '#f87171' }}>{nuncaConducido}</div>
+        <div style={darkCard}>
+          <div style={{ ...darkLabel, color: '#94a3b8' }}>Cumplimiento registro</div>
+          <div style={{ ...darkNum, color: '#e2e8f0' }}>{pctCumplimiento}%</div>
+          <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{totalDiasConducidos.toLocaleString('es-MX')} de {totalDiasPosibles.toLocaleString('es-MX')} días</div>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 12 }}>
-        <div style={{ ...cardBase, background: '#0f172a' }}>
-          <div style={{ ...labelStyle, color: '#fbbf24' }}>3 a 6 días sin conducir</div>
-          <div style={{ ...numStyle, color: '#fbbf24' }}>{dias3a6}</div>
+      {/* Tarjetas originales */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eval. Semanales</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: promedioEvals != null ? (promedioEvals >= 80 ? '#16a34a' : promedioEvals >= 60 ? '#d97706' : '#dc2626') : '#94a3b8', marginTop: 4 }}>
+          {promedioEvals != null ? promedioEvals : '—'}
         </div>
-        <div style={{ ...cardBase, background: '#0f172a' }}>
-          <div style={{ ...labelStyle, color: '#94a3b8' }}>Cumplimiento de registro</div>
-          <div style={{ ...numStyle, color: '#e2e8f0' }}>{pctCumplimiento}%</div>
-          <div style={{ ...subStyle, color: '#64748b' }}>{totalDiasConducidos.toLocaleString('es-MX')} de {totalDiasPosibles.toLocaleString('es-MX')} días</div>
+        {promedioEvals != null && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Promedio de {conEvals.length} alumno{conEvals.length !== 1 ? 's' : ''}</div>}
+      </div>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kilómetros</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: promPctKm != null ? semaforoColor(promPctKm) : '#94a3b8', marginTop: 4 }}>
+          {totalKm > 0 ? totalKm.toLocaleString('es-MX') : '—'}
         </div>
-        <div style={{ ...cardBase, background: '#0f172a' }}>
-          <div style={{ ...labelStyle, color: '#94a3b8' }}>Avance General</div>
-          <div style={{ ...numStyle, color: '#e2e8f0' }}>
-            {promPctKm != null ? `${promPctKm}%` : '—'} KM / {promPctHrs != null ? `${promPctHrs}%` : '—'} HRS
-          </div>
-          <div style={{ ...subStyle, color: '#64748b' }}>
-            {totalKm.toLocaleString('es-MX')} de {totalMetaKm.toLocaleString('es-MX')} km · {totalHrs.toLocaleString('es-MX')} de {totalMetaHrs.toLocaleString('es-MX')} h
-          </div>
+        {totalMetaKm > 0 && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Meta: {totalMetaKm.toLocaleString('es-MX')} km · Avance: <span style={{ fontWeight: 700, color: semaforoColor(promPctKm) }}>{promPctKm}%</span></div>}
+      </div>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horas</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: promPctHrs != null ? semaforoColor(promPctHrs) : '#94a3b8', marginTop: 4 }}>
+          {totalHrs > 0 ? totalHrs.toLocaleString('es-MX') : '—'}
+        </div>
+        {totalMetaHrs > 0 && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Meta: {totalMetaHrs.toLocaleString('es-MX')} hrs · Avance: <span style={{ fontWeight: 700, color: semaforoColor(promPctHrs) }}>{promPctHrs}%</span></div>}
+      </div>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avance Encuestas</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: semaforoColor(promedioEncuestas), marginTop: 4 }}>{promedioEncuestas}%</div>
+        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+          <span style={{ color: '#22c55e' }}>{alDia} al día</span> · <span style={{ color: '#ef4444' }}>{conVencidas} vencidas</span> · <span style={{ color: '#f59e0b' }}>{sinIniciar} sin iniciar</span>
         </div>
       </div>
     </div>
