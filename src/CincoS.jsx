@@ -1086,11 +1086,12 @@ export default function CincoS({ usuario }) {
   const [proyectoActivo, setProyectoActivo] = useState(null)
   const [areas, setAreas] = useState([])
   const [vista, setVista] = useState('inicio') // inicio | setup | edit | registro | acciones
+  const isAdmin = ['admin', 'administrador', 'lean'].includes(usuario?.rol?.toLowerCase())
 
   const loadProyectos = async () => {
     setLoading(true)
     try {
-      const data = await getCincoSProyectos(true)
+      const data = await getCincoSProyectos(isAdmin)
       setProyectos(data)
     } catch (e) { console.error(e) }
     setLoading(false)
@@ -1183,11 +1184,11 @@ export default function CincoS({ usuario }) {
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
           <button onClick={() => { setProyectoActivo(null); setVista('inicio') }}
             style={{ ...btnSmall, background: '#f1f5f9' }}>← Proyectos</button>
-          <button onClick={() => setVista('edit')}
+          {isAdmin && <button onClick={() => setVista('edit')}
             style={{ ...btnSmall, background: '#dbeafe', color: '#1d4ed8', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar Proyecto
-          </button>
+          </button>}
           <div style={{ marginLeft: 'auto' }}><NotificacionesBell /></div>
         </div>
         <div style={{ marginBottom: 20 }}>
@@ -1259,7 +1260,7 @@ export default function CincoS({ usuario }) {
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <NotificacionesBell />
-          <button onClick={() => setVista('setup')} style={btnPrimary}>+ Nuevo Proyecto</button>
+          {isAdmin && <button onClick={() => setVista('setup')} style={btnPrimary}>+ Nuevo Proyecto</button>}
         </div>
       </div>
 
@@ -1297,7 +1298,7 @@ export default function CincoS({ usuario }) {
                 <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 8 }}>
                   Creado: {new Date(p.FechaCreacion).toLocaleDateString('es-MX')}
                 </div>
-                <div style={{ display: 'flex', gap: 6, marginTop: 12, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                {isAdmin && <div style={{ display: 'flex', gap: 6, marginTop: 12, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
                   <button onClick={(e) => handleToggleProyecto(e, p.ProyectoId)}
                     style={{ ...btnSmall, background: activo ? '#fef3c7' : '#dcfce7', color: activo ? '#92400e' : '#166534', fontSize: 12 }}>
                     {activo ? '⏸ Desactivar' : '▶ Activar'}
@@ -1306,7 +1307,7 @@ export default function CincoS({ usuario }) {
                     style={{ ...btnSmall, background: '#fee2e2', color: '#dc2626', fontSize: 12 }}>
                     🗑 Eliminar
                   </button>
-                </div>
+                </div>}
               </div>
             )
           })}
