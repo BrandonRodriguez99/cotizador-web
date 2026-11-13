@@ -1936,6 +1936,22 @@ Pestaña de reporte con tabla agrupada por generación y exportación PDF.
 - **Columnas Estado y Sin conducir** — En la tabla principal después de Eval., con badge de estado y días sin conducir, ambas ordenables; también incluidas en el CSV
 - **Tabla con scroll interno** — maxHeight según viewport y thead sticky: filtros y tarjetas quedan fijos, solo la tabla se desplaza
 
+#### Nuevo: Visibilidad de formularios en app móvil (UDAT DVIR)
+- Columna `VisibleEnApp BIT DEFAULT 1` en `dbo.Formularios` (migración automática al iniciar el servidor)
+- Los formularios creados para portales OPT aparecían en la app UDAT DVIR; ahora solo se muestran los marcados como visibles
+- Nuevo endpoint `PATCH /api/formularios/:id/visible-app` (solo admin) con body `{ visibleEnApp }`
+- `GET /api/formularios/activos` filtra por `Activo=1 AND VisibleEnApp=1`
+- Módulo Formularios web: badge azul "App" en cada tarjeta y botón "Ocultar en app" / "Mostrar en app" (admin), independiente del toggle Activo
+- App Android: `getFormulariosActivos()` en `DatabaseRepository.kt` filtra `WHERE Activo=1 AND VisibleEnApp=1`
+
+#### Nuevo: Tema claro/oscuro en app UDAT DVIR (Android)
+- Todos los colores hardcodeados de layouts y drawables (`bg_input`, `bg_radio`, `bg_circle`) migrados a recursos semánticos: `bg_main`, `bg_card`, `bg_input`, `border`, `text_title`, `text_body`, `text_soft`, `text_label`, `text_muted`, `text_hint`, `primary`, `accent`, `accent_soft`, `chip_bg`, `error`, `success`
+- `values/colors.xml` define el tema claro; `values-night/colors.xml` conserva la apariencia oscura original
+- Botón de tema (icono de contraste, `ic_theme.xml`) en el header del Home, junto a "Cerrar sesión"
+- Preferencia guardada en SharedPreferences separadas (`udat_dvir_theme`) para que sobreviva al logout; default: oscuro
+- `MainActivity` aplica `AppCompatDelegate.setDefaultNightMode()` antes de `setContentView` según la preferencia
+- Los colores programáticos de estados en Kotlin (verde/rojo/azul de PuntosAdapter y pasos DVIR) se mantienen, funcionan en ambos temas
+
 ---
 
 ### v5.0 — Noviembre 2026
