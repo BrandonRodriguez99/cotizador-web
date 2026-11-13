@@ -832,10 +832,12 @@ export function getFormularioRespuestas(id) { return fetchJson(`formularios/${id
 export function deleteRespuesta(rid) { return fetchJson(`formularios/respuestas/${rid}`, { method: 'DELETE', headers: authHeaders() }) }
 
 // ── 5S ──
-export function getCincoSProyectos() { return fetchJson('cincos/proyectos', { headers: authHeaders() }) }
+export function getCincoSProyectos(todos) { return fetchJson(`cincos/proyectos${todos ? '?todos=1' : ''}`, { headers: authHeaders() }) }
 export function getCincoSProyecto(id) { return fetchJson(`cincos/proyectos/${id}`, { headers: authHeaders() }) }
 export function createCincoSProyecto(data) { return fetchJson('cincos/proyectos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function updateCincoSProyecto(id, data) { return fetchJson(`cincos/proyectos/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function toggleCincoSProyecto(id) { return fetchJson(`cincos/proyectos/${id}/toggle`, { method: 'PATCH', headers: authHeaders() }) }
+export function deleteCincoSProyecto(id) { return fetchJson(`cincos/proyectos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function getCincoSAreas(proyectoId) { return fetchJson(`cincos/proyectos/${proyectoId}/areas`, { headers: authHeaders() }) }
 export function getCincoSUsuarios() { return fetchJson('cincos/usuarios', { headers: authHeaders() }) }
 export function getCincoSElementos(params) { const qs = new URLSearchParams(params).toString(); return fetchJson(`cincos/elementos?${qs}`, { headers: authHeaders() }) }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  getCincoSProyectos, getCincoSProyecto, createCincoSProyecto, updateCincoSProyecto,
+  getCincoSProyectos, getCincoSProyecto, createCincoSProyecto, updateCincoSProyecto, toggleCincoSProyecto, deleteCincoSProyecto,
   getCincoSAreas, getCincoSElementos, createCincoSElemento, updateCincoSElemento, deleteCincoSElemento,
   getCincoSAcciones, updateCincoSAccion, getCincoSDashboard, uploadFoto5S, getCincoSUsuarios,
   getCincoSNotificaciones, marcarNotificacionLeida, marcarTodasNotificacionesLeidas
@@ -1090,10 +1090,27 @@ export default function CincoS({ usuario }) {
   const loadProyectos = async () => {
     setLoading(true)
     try {
-      const data = await getCincoSProyectos()
+      const data = await getCincoSProyectos(true)
       setProyectos(data)
     } catch (e) { console.error(e) }
     setLoading(false)
+  }
+
+  const handleToggleProyecto = async (e, id) => {
+    e.stopPropagation()
+    try {
+      await toggleCincoSProyecto(id)
+      await loadProyectos()
+    } catch (err) { alert(err.message) }
+  }
+
+  const handleDeleteProyecto = async (e, id, nombre) => {
+    e.stopPropagation()
+    if (!confirm(`¿Eliminar el proyecto "${nombre}"?\nEsta acción desactivará el proyecto y todos sus datos asociados.`)) return
+    try {
+      await deleteCincoSProyecto(id)
+      await loadProyectos()
+    } catch (err) { alert(err.message) }
   }
 
   useEffect(() => { loadProyectos() }, [])
@@ -1254,25 +1271,45 @@ export default function CincoS({ usuario }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-          {proyectos.map(p => (
-            <div key={p.ProyectoId} onClick={() => selectProyecto(p.ProyectoId)}
-              style={{
-                background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, cursor: 'pointer',
-                transition: 'box-shadow .15s, transform .15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.1)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)' }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{p.Empresa}</div>
-              <div style={{ fontSize: 13, color: '#6b7280' }}>
-                {p.Gerente && <>Gerente: {p.Gerente}<br /></>}
-                {p.Encargado && <>Encargado: {p.Encargado}</>}
+          {proyectos.map(p => {
+            const activo = p.Activo !== false && p.Activo !== 0
+            return (
+              <div key={p.ProyectoId} onClick={() => activo ? selectProyecto(p.ProyectoId) : null}
+                style={{
+                  background: activo ? '#fff' : '#f8fafc', border: `1px solid ${activo ? '#e2e8f0' : '#e2e8f0'}`, borderRadius: 10, padding: 20,
+                  cursor: activo ? 'pointer' : 'default', transition: 'box-shadow .15s, transform .15s',
+                  opacity: activo ? 1 : 0.6, position: 'relative',
+                }}
+                onMouseEnter={e => { if (activo) { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.1)'; e.currentTarget.style.transform = 'translateY(-2px)' } }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16 }}>{p.Empresa}</div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                    background: activo ? '#dcfce7' : '#fee2e2', color: activo ? '#16a34a' : '#dc2626',
+                  }}>{activo ? 'Activo' : 'Inactivo'}</span>
+                </div>
+                <div style={{ fontSize: 13, color: '#6b7280' }}>
+                  {p.Gerente && <>Gerente: {p.Gerente}<br /></>}
+                  {p.Encargado && <>Encargado: {p.Encargado}</>}
+                </div>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 8 }}>
+                  Creado: {new Date(p.FechaCreacion).toLocaleDateString('es-MX')}
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 12, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                  <button onClick={(e) => handleToggleProyecto(e, p.ProyectoId)}
+                    style={{ ...btnSmall, background: activo ? '#fef3c7' : '#dcfce7', color: activo ? '#92400e' : '#166534', fontSize: 12 }}>
+                    {activo ? '⏸ Desactivar' : '▶ Activar'}
+                  </button>
+                  <button onClick={(e) => handleDeleteProyecto(e, p.ProyectoId, p.Empresa)}
+                    style={{ ...btnSmall, background: '#fee2e2', color: '#dc2626', fontSize: 12 }}>
+                    🗑 Eliminar
+                  </button>
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 8 }}>
-                Creado: {new Date(p.FechaCreacion).toLocaleDateString('es-MX')}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
