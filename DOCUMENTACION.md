@@ -1848,7 +1848,30 @@ Generado con `html2pdf.js` (mismo patrón que el Kardex de Academia).
 **Botón CSV:**
 - Ubicado después del botón WhatsApp
 - Exporta tabla filtrada con BOM UTF-8 para compatibilidad con Excel
-- Columnas: Alumno, Matrícula, Generación, Perfil, Empresa, Unidad Negocio, Unidad Operativa, Semana, Completadas, Total Encuestas, Eval. Promedio, Km, Meta Km, % Km, Hrs, Meta Hrs, % Hrs
+- Columnas: Alumno, Matrícula, Generación, Perfil, Empresa, Unidad Negocio, Unidad Operativa, Semana, Completadas, Total Encuestas, Eval. Promedio, Estado Conducción, Días Sin Conducir, Última Conducción, Km, Meta Km, % Km, Hrs, Meta Hrs, % Hrs
+
+**Tarjetas de estado de conducción (fila 2 del resumen):**
+
+Debajo de las 5 tarjetas originales hay una fila de 5 tarjetas oscuras (`#0f172a`) con acento de color en el borde superior:
+
+| Tarjeta | Criterio | Color |
+|---------|----------|-------|
+| Conduciendo / Meta cumplida | Última conducción ≤ 2 días | Azul |
+| 3 a 6 días sin conducir | Última conducción hace 3-6 días | Amarillo |
+| 7+ días sin conducir | Última conducción hace ≥ 7 días | Naranja |
+| Nunca han conducido | Sin registros en PracticaTractorOPT | Rojo |
+| Cumplimiento de registro | Días con registro / días desde egreso (agregado) | — |
+
+Los datos vienen del endpoint principal: el batch query de `PracticaTractorOPT` incluye `MAX(FechaHoraInicio) AS UltimaFecha` y `COUNT(DISTINCT CAST(FechaHoraInicio AS DATE)) AS DiasConducidos`, devueltos como `ultimaFechaConduccion` y `diasConducidos` por alumno.
+
+**Columnas Estado y Sin conducir (después de Eval.):**
+- **Estado:** badge según `estadoConduccion(al)` — Conduciendo (verde), 3-6 días (amarillo), 7+ días (naranja), Nunca ha conducido (rojo). Ordenable por gravedad (`estadoConduccionOrden`)
+- **Sin conducir:** días desde la última práctica con subtítulo "últ. dd-mmm"; para quien nunca ha conducido, días desde egreso con "sin registros". Ordenable por `diasSinConducir`
+- Los campos derivados se calculan en el memo `alumnosFiltrados` para permitir ordenamiento
+
+**Scroll interno de la tabla:**
+- El contenedor de la tabla tiene `maxHeight: calc(100vh - 160px)` con `overflow: auto`
+- El `thead` es sticky (`position: sticky, top: 0`), de modo que filtros y tarjetas de resumen permanecen fijos y solo la tabla se desplaza
 
 ---
 
@@ -1908,6 +1931,10 @@ Pestaña de reporte con tabla agrupada por generación y exportación PDF.
 - **Panel Alertas simplificado** — Eliminada tarjeta "Sin alertas" (solo mostraba alumnos no-OPT). Solo se muestran 3 niveles: alto, medio, bajo
 - **Análisis de riesgo ampliado** — Ahora incluye evaluaciones semanales (promedio < 60% = alto, < 80% = medio, sin evals sem≥3 = medio) y progreso Km/Hrs vs esperado lineal (< 50% = alto, < 75% = medio)
 - **totalSemanasOPT dinámico** — Calculado por alumno desde reglas de PortalCalendario (perfil + empresa), fallback a 9 semanas. Usado en cálculo de progreso esperado lineal
+- **Tarjetas de conducción** — Fila de 5 tarjetas oscuras bajo el resumen: Conduciendo/Meta cumplida (≤2 días), 3-6 días sin conducir, 7+ días sin conducir, Nunca han conducido, Cumplimiento de registro (días con registro vs días desde egreso)
+- **Backend conducción** — `ultimaFechaConduccion` (MAX FechaHoraInicio) y `diasConducidos` (COUNT DISTINCT fecha) agregados al batch query de PracticaTractorOPT
+- **Columnas Estado y Sin conducir** — En la tabla principal después de Eval., con badge de estado y días sin conducir, ambas ordenables; también incluidas en el CSV
+- **Tabla con scroll interno** — maxHeight según viewport y thead sticky: filtros y tarjetas quedan fijos, solo la tabla se desplaza
 
 ---
 
@@ -2024,4 +2051,4 @@ Pestaña de reporte con tabla agrupada por generación y exportación PDF.
 
 ---
 
-*Documentación actualizada el 12 de noviembre de 2026. Versión 5.1.*
+*Documentación actualizada el 13 de noviembre de 2026. Versión 5.1.*
