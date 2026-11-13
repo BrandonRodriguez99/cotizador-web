@@ -1086,6 +1086,7 @@ export default function CincoS({ usuario }) {
   const [proyectoActivo, setProyectoActivo] = useState(null)
   const [areas, setAreas] = useState([])
   const [vista, setVista] = useState('inicio') // inicio | setup | edit | registro | acciones
+  const [menuAbierto, setMenuAbierto] = useState(null)
   const isAdmin = ['admin', 'administrador', 'lean'].includes(usuario?.rol?.toLowerCase())
 
   const loadProyectos = async () => {
@@ -1277,7 +1278,7 @@ export default function CincoS({ usuario }) {
             return (
               <div key={p.ProyectoId} onClick={() => activo ? selectProyecto(p.ProyectoId) : null}
                 style={{
-                  background: activo ? '#fff' : '#f8fafc', border: `1px solid ${activo ? '#e2e8f0' : '#e2e8f0'}`, borderRadius: 10, padding: 20,
+                  background: activo ? '#fff' : '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 20,
                   cursor: activo ? 'pointer' : 'default', transition: 'box-shadow .15s, transform .15s',
                   opacity: activo ? 1 : 0.6, position: 'relative',
                 }}
@@ -1286,10 +1287,53 @@ export default function CincoS({ usuario }) {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                   <div style={{ fontWeight: 700, fontSize: 16 }}>{p.Empresa}</div>
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-                    background: activo ? '#dcfce7' : '#fee2e2', color: activo ? '#16a34a' : '#dc2626',
-                  }}>{activo ? 'Activo' : 'Inactivo'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                      background: activo ? '#dcfce7' : '#fee2e2', color: activo ? '#16a34a' : '#dc2626',
+                    }}>{activo ? 'Activo' : 'Inactivo'}</span>
+                    {isAdmin && <div style={{ position: 'relative' }}>
+                      <button onClick={(e) => { e.stopPropagation(); setMenuAbierto(menuAbierto === p.ProyectoId ? null : p.ProyectoId) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                        title="Opciones">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                      </button>
+                      {menuAbierto === p.ProyectoId && <>
+                        <div onClick={(e) => { e.stopPropagation(); setMenuAbierto(null) }}
+                          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }} />
+                        <div style={{
+                          position: 'absolute', right: 0, top: '100%', marginTop: 4, background: '#fff',
+                          border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.12)',
+                          zIndex: 100, minWidth: 160, overflow: 'hidden',
+                        }}>
+                          <button onClick={(e) => { handleToggleProyecto(e, p.ProyectoId); setMenuAbierto(null) }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#374151', textAlign: 'left' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={activo ? '#d97706' : '#16a34a'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              {activo
+                                ? <><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></>
+                                : <polygon points="5 3 19 12 5 21 5 3"/>}
+                            </svg>
+                            {activo ? 'Desactivar' : 'Activar'}
+                          </button>
+                          <button onClick={(e) => { handleDeleteProyecto(e, p.ProyectoId, p.Empresa); setMenuAbierto(null) }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#dc2626', textAlign: 'left' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                            Eliminar
+                          </button>
+                        </div>
+                      </>}
+                    </div>}
+                  </div>
                 </div>
                 <div style={{ fontSize: 13, color: '#6b7280' }}>
                   {p.Gerente && <>Gerente: {p.Gerente}<br /></>}
@@ -1298,16 +1342,6 @@ export default function CincoS({ usuario }) {
                 <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 8 }}>
                   Creado: {new Date(p.FechaCreacion).toLocaleDateString('es-MX')}
                 </div>
-                {isAdmin && <div style={{ display: 'flex', gap: 6, marginTop: 12, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
-                  <button onClick={(e) => handleToggleProyecto(e, p.ProyectoId)}
-                    style={{ ...btnSmall, background: activo ? '#fef3c7' : '#dcfce7', color: activo ? '#92400e' : '#166534', fontSize: 12 }}>
-                    {activo ? '⏸ Desactivar' : '▶ Activar'}
-                  </button>
-                  <button onClick={(e) => handleDeleteProyecto(e, p.ProyectoId, p.Empresa)}
-                    style={{ ...btnSmall, background: '#fee2e2', color: '#dc2626', fontSize: 12 }}>
-                    🗑 Eliminar
-                  </button>
-                </div>}
               </div>
             )
           })}
