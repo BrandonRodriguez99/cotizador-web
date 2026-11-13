@@ -1976,10 +1976,10 @@ export default function SeguimientoOPT({ usuario }) {
       <SummaryCards alumnos={alumnosFiltrados} />
 
       {/* Tabla */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'auto' }}>
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'auto', maxHeight: 'calc(100vh - 160px)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
-          <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+            <tr style={{ background: '#f8fafc', boxShadow: 'inset 0 -2px 0 #e2e8f0' }}>
               {[
                 { field: 'nombre', label: 'Alumno', width: '15%' },
                 { field: 'generacion', label: 'Gen.', width: '5%' },
