@@ -1943,14 +1943,20 @@ export default function SeguimientoOPT({ usuario }) {
         <button onClick={() => {
           const headers = ['Alumno', 'Matrícula', 'Generación', 'Perfil', 'Empresa', 'Unidad Negocio', 'Unidad Operativa',
             ...(tabEtapa === 'todos' ? ['Etapa'] : []), 'Semana', 'Completadas', 'Total Encuestas', 'Eval. Promedio',
+            'Estado Conducción', 'Días Sin Conducir', 'Última Conducción',
             'Km', 'Meta Km', '% Km', 'Hrs', 'Meta Hrs', '% Hrs']
           const esc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s }
-          const rows = alumnosFiltrados.map(al => [
+          const rows = alumnosFiltrados.map(al => {
+            const ec = estadoConduccion(al)
+            return [
             al.nombre, al.matricula, al.generacion, al.perfil, al.empresa, al.unidadNegocio, al.unidadOperativa,
             ...(tabEtapa === 'todos' ? [al.etapa] : []), al.semanaActual, al.completadas, al.totalEncuestas,
-            al.promedioEvals != null ? al.promedioEvals + '%' : '', al.totalKm, al.metaKm, al.pctKm != null ? al.pctKm + '%' : '',
+            al.promedioEvals != null ? al.promedioEvals + '%' : '',
+            ec.label, ec.dias != null ? ec.dias : '',
+            al.ultimaFechaConduccion ? new Date(al.ultimaFechaConduccion).toLocaleDateString('es-MX') : 'Sin registros',
+            al.totalKm, al.metaKm, al.pctKm != null ? al.pctKm + '%' : '',
             al.totalHrs, al.metaHrs, al.pctHrs != null ? al.pctHrs + '%' : ''
-          ].map(esc).join(','))
+          ].map(esc).join(',')})
           const bom = '﻿'
           const blob = new Blob([bom + headers.map(esc).join(',') + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' })
           const url = URL.createObjectURL(blob)
