@@ -826,6 +826,7 @@ export function getFormulario(id) { return fetchJson(`formularios/${id}`, { head
 export function createFormulario(body) { return fetchJson('formularios', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }) }
 export function updateFormulario(id, body) { return fetchJson(`formularios/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) }) }
 export function toggleFormularioActivo(id, activo) { return fetchJson(`formularios/${id}/activo`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activo }) }) }
+export function toggleFormularioVisibleApp(id, visibleEnApp) { return fetchJson(`formularios/${id}/visible-app`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ visibleEnApp }) }) }
 export function deleteFormulario(id) { return fetchJson(`formularios/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function getFormularioRespuestas(id) { return fetchJson(`formularios/${id}/respuestas`, { headers: authHeaders() }) }
 export function deleteRespuesta(rid) { return fetchJson(`formularios/respuestas/${rid}`, { method: 'DELETE', headers: authHeaders() }) }

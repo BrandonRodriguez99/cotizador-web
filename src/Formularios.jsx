@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   getFormularios, getFormulario, createFormulario, updateFormulario,
-  toggleFormularioActivo, deleteFormulario, getFormularioRespuestas, deleteRespuesta,
+  toggleFormularioActivo, toggleFormularioVisibleApp, deleteFormulario, getFormularioRespuestas, deleteRespuesta,
   getPortales, createPortal, updatePortal, deletePortal, getPerfilesOpt,
 } from './api'
 
@@ -900,6 +900,14 @@ export default function Formularios({ usuario }) {
     } catch (e) { setError(e.message) }
   }
 
+  async function toggleVisibleApp(id, visible, e) {
+    e.stopPropagation()
+    try {
+      await toggleFormularioVisibleApp(id, !visible)
+      cargarLista()
+    } catch (e) { setError(e.message) }
+  }
+
   async function eliminar(id, e) {
     e.stopPropagation()
     if (!window.confirm('¿Eliminar este formulario y todas sus respuestas?')) return
@@ -976,13 +984,22 @@ export default function Formularios({ usuario }) {
             }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', flex: 1 }}>{f.Nombre}</span>
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 10,
-                background: f.Activo ? '#dcfce7' : '#f1f5f9',
-                color: f.Activo ? '#15803d' : '#64748b',
-                flexShrink: 0, marginLeft: 6,
-              }}>
-                {f.Activo ? 'Activo' : 'Inactivo'}
+              <span style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 6 }}>
+                {!!f.VisibleEnApp && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 10,
+                    background: '#dbeafe', color: '#1d4ed8',
+                  }}>
+                    App
+                  </span>
+                )}
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 10,
+                  background: f.Activo ? '#dcfce7' : '#f1f5f9',
+                  color: f.Activo ? '#15803d' : '#64748b',
+                }}>
+                  {f.Activo ? 'Activo' : 'Inactivo'}
+                </span>
               </span>
             </div>
             {f.Descripcion && (
@@ -999,6 +1016,15 @@ export default function Formularios({ usuario }) {
                     background: '#fff', cursor: 'pointer', color: f.Activo ? '#dc2626' : '#16a34a',
                   }}>
                   {f.Activo ? 'Desactivar' : 'Activar'}
+                </button>
+                <button type="button"
+                  onClick={e => toggleVisibleApp(f.FormularioId, f.VisibleEnApp, e)}
+                  style={{
+                    fontSize: 11, padding: '3px 8px', borderRadius: 5, border: '1px solid #93c5fd',
+                    background: f.VisibleEnApp ? '#fff' : '#eff6ff', cursor: 'pointer',
+                    color: f.VisibleEnApp ? '#64748b' : '#1d4ed8',
+                  }}>
+                  {f.VisibleEnApp ? 'Ocultar en app' : 'Mostrar en app'}
                 </button>
                 <button type="button"
                   onClick={e => eliminar(f.FormularioId, e)}
