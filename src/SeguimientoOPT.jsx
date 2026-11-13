@@ -145,43 +145,18 @@ function SummaryCards({ alumnos }) {
   const pctCumplimiento = totalDiasPosibles > 0 ? Math.round(totalDiasConducidos / totalDiasPosibles * 100) : 0
 
   const cardStyle = { background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }
-  const darkCard = { borderRadius: 12, padding: '12px 16px', border: '1px solid #1e293b', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', background: '#0f172a' }
-  const darkLabel = { fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }
-  const darkNum = { fontSize: 22, fontWeight: 800, marginTop: 2 }
+  const darkCard = { borderRadius: 12, padding: '12px 16px', borderTop: '3px solid', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', background: '#0f172a' }
+  const darkLabel = { fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+  const darkNum = { fontSize: 24, fontWeight: 800, marginTop: 2 }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
-      {/* Tarjeta Alumnos con sub-tarjetas de conducción */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={cardStyle}>
-          <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alumnos en OPT</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>{total}</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <div style={darkCard}>
-            <div style={{ ...darkLabel, color: '#94a3b8' }}>Conduciendo</div>
-            <div style={{ ...darkNum, color: '#e2e8f0' }}>{conduciendo}</div>
-          </div>
-          <div style={darkCard}>
-            <div style={{ ...darkLabel, color: '#fb923c' }}>7+ días sin</div>
-            <div style={{ ...darkNum, color: '#fb923c' }}>{dias7plus}</div>
-          </div>
-          <div style={darkCard}>
-            <div style={{ ...darkLabel, color: '#fbbf24' }}>3-6 días sin</div>
-            <div style={{ ...darkNum, color: '#fbbf24' }}>{dias3a6}</div>
-          </div>
-          <div style={darkCard}>
-            <div style={{ ...darkLabel, color: '#f87171' }}>Nunca</div>
-            <div style={{ ...darkNum, color: '#f87171' }}>{nuncaConducido}</div>
-          </div>
-        </div>
-        <div style={darkCard}>
-          <div style={{ ...darkLabel, color: '#94a3b8' }}>Cumplimiento registro</div>
-          <div style={{ ...darkNum, color: '#e2e8f0' }}>{pctCumplimiento}%</div>
-          <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{totalDiasConducidos.toLocaleString('es-MX')} de {totalDiasPosibles.toLocaleString('es-MX')} días</div>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+    {/* Fila 1: tarjetas originales */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alumnos en OPT</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>{total}</div>
       </div>
-      {/* Tarjetas originales */}
       <div style={cardStyle}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eval. Semanales</div>
         <div style={{ fontSize: 28, fontWeight: 800, color: promedioEvals != null ? (promedioEvals >= 80 ? '#16a34a' : promedioEvals >= 60 ? '#d97706' : '#dc2626') : '#94a3b8', marginTop: 4 }}>
@@ -210,6 +185,31 @@ function SummaryCards({ alumnos }) {
           <span style={{ color: '#22c55e' }}>{alDia} al día</span> · <span style={{ color: '#ef4444' }}>{conVencidas} vencidas</span> · <span style={{ color: '#f59e0b' }}>{sinIniciar} sin iniciar</span>
         </div>
       </div>
+    </div>
+    {/* Fila 2: estado de conducción */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+      <div style={{ ...darkCard, borderTopColor: '#3b82f6' }}>
+        <div style={{ ...darkLabel, color: '#94a3b8' }} title="Conduciendo / Meta cumplida">Conduciendo / Meta cumplida</div>
+        <div style={{ ...darkNum, color: '#e2e8f0' }}>{conduciendo}</div>
+      </div>
+      <div style={{ ...darkCard, borderTopColor: '#fbbf24' }}>
+        <div style={{ ...darkLabel, color: '#fbbf24' }} title="3 a 6 días sin conducir">3 a 6 días sin conducir</div>
+        <div style={{ ...darkNum, color: '#fbbf24' }}>{dias3a6}</div>
+      </div>
+      <div style={{ ...darkCard, borderTopColor: '#fb923c' }}>
+        <div style={{ ...darkLabel, color: '#fb923c' }} title="7+ días sin conducir">7+ días sin conducir</div>
+        <div style={{ ...darkNum, color: '#fb923c' }}>{dias7plus}</div>
+      </div>
+      <div style={{ ...darkCard, borderTopColor: '#f87171' }}>
+        <div style={{ ...darkLabel, color: '#f87171' }} title="Nunca han conducido">Nunca han conducido</div>
+        <div style={{ ...darkNum, color: '#f87171' }}>{nuncaConducido}</div>
+      </div>
+      <div style={{ ...darkCard, borderTopColor: '#60a5fa' }}>
+        <div style={{ ...darkLabel, color: '#94a3b8' }} title="Cumplimiento de registro">Cumplimiento de registro</div>
+        <div style={{ ...darkNum, color: '#e2e8f0' }}>{pctCumplimiento}%</div>
+        <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{totalDiasConducidos.toLocaleString('es-MX')} de {totalDiasPosibles.toLocaleString('es-MX')} días</div>
+      </div>
+    </div>
     </div>
   )
 }
