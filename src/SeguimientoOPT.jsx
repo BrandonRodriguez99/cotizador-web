@@ -71,6 +71,19 @@ function semaforoColor(pct) {
   return '#ef4444'
 }
 
+function estadoConduccion(al) {
+  const now = Date.now()
+  if (!al.ultimaFechaConduccion) {
+    const dias = al.fechaEgreso ? Math.max(0, Math.floor((now - new Date(al.fechaEgreso)) / 86400000)) : null
+    return { orden: 3, label: 'Nunca ha conducido', dias, sub: 'sin registros', bg: '#fef2f2', color: '#dc2626' }
+  }
+  const dias = Math.max(0, Math.floor((now - new Date(al.ultimaFechaConduccion)) / 86400000))
+  const sub = `últ. ${new Date(al.ultimaFechaConduccion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}`
+  if (dias <= 2) return { orden: 0, label: 'Conduciendo', dias, sub, bg: '#f0fdf4', color: '#16a34a' }
+  if (dias <= 6) return { orden: 1, label: '3-6 días sin conducir', dias, sub, bg: '#fffbeb', color: '#d97706' }
+  return { orden: 2, label: '7+ días sin conducir', dias, sub, bg: '#fff7ed', color: '#ea580c' }
+}
+
 const ESTADO_CONFIG = {
   completada: { bg: '#dcfce7', color: '#166534', label: 'Completada', icon: '✓' },
   activa:     { bg: '#fef3c7', color: '#92400e', label: 'Pendiente',  icon: '●' },
@@ -1794,7 +1807,10 @@ export default function SeguimientoOPT({ usuario }) {
   useEffect(() => { setFiltroUO(prev => prev.filter(u => uOperativas.includes(u))) }, [uOperativas])
 
   const alumnosFiltrados = useMemo(() => {
-    let arr = data.alumnos
+    let arr = data.alumnos.map(a => {
+      const ec = estadoConduccion(a)
+      return { ...a, estadoConduccionOrden: ec.orden, diasSinConducir: ec.dias ?? -1 }
+    })
     if (tabEtapa === 'opt') arr = arr.filter(a => (a.etapa || '').toUpperCase().includes('OPT'))
     if (filtroGeneracion.length) arr = arr.filter(a => filtroGeneracion.includes(a.generacion))
     if (filtroPerfil.length) arr = arr.filter(a => filtroPerfil.includes(a.perfil))
@@ -1959,15 +1975,17 @@ export default function SeguimientoOPT({ usuario }) {
           <thead>
             <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
               {[
-                { field: 'nombre', label: 'Alumno', width: '18%' },
-                { field: 'generacion', label: 'Gen.', width: '6%' },
-                { field: 'perfil', label: 'Perfil', width: '8%' },
-                { field: 'empresa', label: 'Empresa', width: '7%' },
-                ...(tabEtapa === 'todos' ? [{ field: 'etapa', label: 'Etapa', width: '7%' }] : []),
-                { field: 'semanaActual', label: 'Sem.', width: '5%' },
-                { field: 'completadas', label: 'Compl.', width: '8%' },
-                { field: 'promedioEvals', label: 'Eval.', width: '7%' },
-                { field: 'totalKm', label: 'Km', width: '12%' },
+                { field: 'nombre', label: 'Alumno', width: '15%' },
+                { field: 'generacion', label: 'Gen.', width: '5%' },
+                { field: 'perfil', label: 'Perfil', width: '7%' },
+                { field: 'empresa', label: 'Empresa', width: '6%' },
+                ...(tabEtapa === 'todos' ? [{ field: 'etapa', label: 'Etapa', width: '6%' }] : []),
+                { field: 'semanaActual', label: 'Sem.', width: '4%' },
+                { field: 'completadas', label: 'Compl.', width: '6%' },
+                { field: 'promedioEvals', label: 'Eval.', width: '6%' },
+                { field: 'estadoConduccionOrden', label: 'Estado', width: '11%' },
+                { field: 'diasSinConducir', label: 'Sin conducir', width: '8%' },
+                { field: 'totalKm', label: 'Km', width: '11%' },
                 { field: 'totalHrs', label: 'Hrs', width: '10%' },
               ].map(col => (
                 <th key={col.field}
@@ -1986,7 +2004,7 @@ export default function SeguimientoOPT({ usuario }) {
           <tbody>
             {alumnosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={tabEtapa === 'todos' ? 10 : 9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
+                <td colSpan={tabEtapa === 'todos' ? 12 : 11} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
                   No se encontraron alumnos con los filtros seleccionados
                 </td>
               </tr>
@@ -2027,6 +2045,26 @@ export default function SeguimientoOPT({ usuario }) {
                       </span>
                     ) : <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>}
                   </td>
+                  {(() => {
+                    const ec = estadoConduccion(al)
+                    return (
+                      <>
+                        <td style={{ padding: '10px 14px' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: ec.bg, color: ec.color, whiteSpace: 'nowrap' }}>
+                            {ec.label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                          {ec.dias != null ? (
+                            <div>
+                              <span style={{ fontWeight: 700, color: ec.color }}>{ec.dias} d</span>
+                              <div style={{ fontSize: 10, color: '#94a3b8' }}>{ec.sub}</div>
+                            </div>
+                          ) : <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>}
+                        </td>
+                      </>
+                    )
+                  })()}
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     {al.totalKm > 0 ? (
                       <div>
