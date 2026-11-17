@@ -554,7 +554,7 @@ export default function Academia({ usuario, activeTab }) {
 
           {/* Table */}
           {menuCurso && <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setMenuCurso(null)} />}
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ overflow: menuCurso ? 'visible' : undefined, minHeight: 300 }}>
             <table className="participants-table">
               <thead>
                 <tr>
