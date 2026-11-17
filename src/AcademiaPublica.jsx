@@ -14,6 +14,13 @@ const MODALIDAD_ICONS = {
   Mixto: { icon: '🔄', color: '#7c3aed', bg: '#f5f3ff' },
 }
 
+const PLACEHOLDER_IMAGES = {
+  Presencial: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&h=300&fit=crop',
+  'En línea': 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&h=300&fit=crop',
+  Mixto: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=300&fit=crop',
+  default: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600&h=300&fit=crop',
+}
+
 export default function AcademiaPublica() {
   const [cursos, setCursos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -75,9 +82,9 @@ export default function AcademiaPublica() {
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #0d2137 100%)', color: '#fff', padding: '40px 24px 32px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Academia UDAT</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+            <img src="/logo-udat.png" alt="UDAT" style={{ height: 40, objectFit: 'contain' }} />
+            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#ffffff' }}>Academia</h1>
           </div>
           <p style={{ fontSize: 15, color: '#94a3b8', margin: 0 }}>Cursos disponibles para tu desarrollo profesional</p>
         </div>
@@ -135,17 +142,28 @@ export default function AcademiaPublica() {
                   border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column',
                   transition: 'transform 0.15s, box-shadow 0.15s',
                 }}>
-                  {/* Card header con color */}
-                  <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)', padding: '20px 20px 16px', position: 'relative' }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px',
-                      borderRadius: 20, fontSize: 11, fontWeight: 700,
-                      background: mod.bg, color: mod.color,
-                    }}>
-                      {mod.icon} {c.Modalidad || 'Presencial'}
-                    </span>
-                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: '10px 0 4px' }}>{c.Nombre}</h3>
-                    {c.Generacion && <span style={{ fontSize: 12, color: '#94a3b8' }}>{c.Generacion}</span>}
+                  {/* Card header con imagen */}
+                  <div style={{ position: 'relative', height: 160, overflow: 'hidden' }}>
+                    <img
+                      src={c.ImagenURL || PLACEHOLDER_IMAGES[c.Modalidad] || PLACEHOLDER_IMAGES.default}
+                      alt={c.Nombre}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={e => { e.target.src = PLACEHOLDER_IMAGES.default }}
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.2) 100%)' }} />
+                    <div style={{ position: 'absolute', top: 12, left: 14 }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px',
+                        borderRadius: 20, fontSize: 11, fontWeight: 700,
+                        background: mod.bg, color: mod.color,
+                      }}>
+                        {mod.icon} {c.Modalidad || 'Presencial'}
+                      </span>
+                    </div>
+                    <div style={{ position: 'absolute', bottom: 14, left: 14, right: 14 }}>
+                      <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: '0 0 2px', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>{c.Nombre}</h3>
+                      {c.Generacion && <span style={{ fontSize: 12, color: '#cbd5e1' }}>{c.Generacion}</span>}
+                    </div>
                   </div>
                   {/* Card body */}
                   <div style={{ padding: '16px 20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
