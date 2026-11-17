@@ -1435,7 +1435,8 @@ function WhatsAppModal({ alumnos, onClose }) {
   const buildMsg = (alumno) => {
     const nombre = alumno.nombre.split(' ')[0]
     const pendientes = getEncuestasPendientes(alumno)
-    const nombreEnc = pendientes.length > 0 ? pendientes[0].formularioNombre : null
+    const enc = pendientes.find(e => e.estado === 'activa') || pendientes[0]
+    const nombreEnc = enc ? enc.formularioNombre : null
     if (nombreEnc) {
       return `Hola ${nombre}, te compartimos el link para contestar tu encuesta "${nombreEnc}":\n${SURVEY_URL}`
     }
