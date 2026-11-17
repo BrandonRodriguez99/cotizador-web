@@ -2953,7 +2953,10 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280' }}>✕</button>
         </div>
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'grid', gap: 16 }}>
+            {/* ── Información del curso ── */}
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', paddingBottom: 4, borderBottom: '1px solid #f3f4f6' }}>Información del curso</div>
             <div style={{ position: 'relative' }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Curso (del catálogo) *</label>
               {!isEdit && catalogCursos.length > 0 ? (
@@ -3063,6 +3066,10 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                 </select>
               </div>
             </div>
+            </div>
+            {/* ── Configuración ── */}
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', paddingBottom: 4, borderBottom: '1px solid #f3f4f6' }}>Configuración</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Ubicación</label>
@@ -3133,10 +3140,11 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
               </>
             )}
 
-            {/* Sesiones */}
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label style={{ fontSize: 13, fontWeight: 600 }}>Sesiones ({sesiones.length})</label>
+            </div>
+            {/* ── Sesiones ── */}
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4, borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af' }}>Sesiones ({sesiones.length})</span>
                 <button type="button" className="ghost-button" style={{ fontSize: 12 }} onClick={addSesion}>+ Agregar sesión</button>
               </div>
               {sesiones.map((s, idx) => (
