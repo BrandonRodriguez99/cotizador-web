@@ -820,6 +820,7 @@ export function aprobarSolicitudCatalogo(id, data) { return fetchJson(`academia/
 export function rechazarSolicitudCatalogo(id, data) { return fetchJson(`academia/solicitudes-catalogo/${id}/rechazar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data || {}) }) }
 export function eliminarSolicitudCatalogo(id) { return fetchJson(`academia/solicitudes-catalogo/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function convocarCursoAcademia(cursoId) { return fetchJson(`academia/cursos/${cursoId}/convocar`, { method: 'POST', headers: authHeaders() }) }
+export function uploadFotoAcademia(base64) { return fetchJson('upload/foto-academia', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) }) }
 
 export function getFormularios() { return fetchJson('formularios', { headers: authHeaders() }) }
 export function getFormulario(id) { return fetchJson(`formularios/${id}`, { headers: authHeaders() }) }
