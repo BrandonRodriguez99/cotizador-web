@@ -29,7 +29,6 @@ import {
   rechazarSolicitudCatalogo,
   eliminarSolicitudCatalogo,
   getAcademiaUbits,
-  uploadFotoAcademia,
 } from './api'
 import { generarListaAsistenciaPDF } from './generarListaAsistencia'
 
@@ -2903,7 +2902,6 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   const [estado, setEstado] = useState(cursoInicial?.Estado || 'Activo')
   const [habilitado, setHabilitado] = useState(cursoInicial?.Habilitado !== false)
   const [imagenURL, setImagenURL] = useState(cursoInicial?.ImagenURL || '')
-  const [subiendoImagen, setSubiendoImagen] = useState(false)
   const [sesiones, setSesiones] = useState([])
   const [saving, setSaving] = useState(false)
 
@@ -3182,44 +3180,17 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
               </>
             )}
 
-            {/* Imagen del curso */}
+            {/* Imagen del curso (opcional) */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 6 }}>Imagen del curso</label>
-              {imagenURL ? (
-                <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb', height: 120 }}>
-                  <img src={imagenURL} alt="Curso" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button type="button" onClick={() => setImagenURL('')} style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✕</button>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Imagen del curso <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opcional — URL de imagen)</span></label>
+              <input className="form-control" value={imagenURL} onChange={e => setImagenURL(e.target.value)} placeholder="https://..." style={{ width: '100%' }} />
+              {imagenURL && (
+                <div style={{ marginTop: 8, position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb', height: 100 }}>
+                  <img src={imagenURL} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                  <button type="button" onClick={() => setImagenURL('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✕</button>
                 </div>
-              ) : (
-                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 20, border: '2px dashed #d1d5db', borderRadius: 8, cursor: subiendoImagen ? 'default' : 'pointer', background: '#fafafa', transition: 'border-color 0.2s' }}>
-                  {subiendoImagen ? (
-                    <span style={{ fontSize: 13, color: '#6b7280' }}>Subiendo imagen...</span>
-                  ) : (
-                    <>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                      <span style={{ fontSize: 13, color: '#6b7280' }}>Click para subir imagen</span>
-                      <span style={{ fontSize: 11, color: '#9ca3af' }}>JPG, PNG — máx 5 MB</span>
-                    </>
-                  )}
-                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={subiendoImagen} onChange={async e => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    if (file.size > 5 * 1024 * 1024) { window.alert('La imagen no debe superar 5 MB'); return }
-                    setSubiendoImagen(true)
-                    try {
-                      const reader = new FileReader()
-                      reader.onload = async ev => {
-                        try {
-                          const { url } = await uploadFotoAcademia(ev.target.result)
-                          setImagenURL(url)
-                        } catch (err) { window.alert('Error al subir imagen: ' + err.message) }
-                        finally { setSubiendoImagen(false) }
-                      }
-                      reader.readAsDataURL(file)
-                    } catch { setSubiendoImagen(false) }
-                  }} />
-                </label>
               )}
+              {!imagenURL && <p style={{ fontSize: 11, color: '#9ca3af', margin: '4px 0 0' }}>Si no agregas imagen, se usará una imagen por defecto según la modalidad.</p>}
             </div>
             </div>
             {/* ── Sesiones ── */}
