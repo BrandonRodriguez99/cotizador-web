@@ -184,6 +184,7 @@ export default function Academia({ usuario, activeTab }) {
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroModalidad, setFiltroModalidad] = useState('')
   const [filtroBuscar, setFiltroBuscar] = useState('')
+  const [menuCurso, setMenuCurso] = useState(null)
 
   const loadCursos = useCallback(async () => {
     try {
@@ -505,16 +506,25 @@ export default function Academia({ usuario, activeTab }) {
         <div style={{ padding: '16px 0' }}>
           {/* Stats */}
           {dashboard && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
               {[
-                { label: 'Cursos activos', value: dashboard.cursosActivos, color: '#16a34a' },
-                { label: 'Total cursos', value: dashboard.cursosTotal, color: '#2563eb' },
-                { label: 'Participantes activos', value: dashboard.participantesActivos, color: '#d97706' },
-                { label: 'Sesiones esta semana', value: dashboard.sesionesEstaSemana, color: '#7c3aed' },
+                { label: 'Cursos activos', value: dashboard.cursosActivos, color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0',
+                  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg> },
+                { label: 'Total cursos', value: dashboard.cursosTotal, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe',
+                  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
+                { label: 'Participantes', value: dashboard.participantesActivos, color: '#d97706', bg: '#fffbeb', border: '#fde68a',
+                  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+                { label: 'Sesiones esta semana', value: dashboard.sesionesEstaSemana, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe',
+                  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
               ].map(s => (
-                <div key={s.label} style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 8, padding: '12px 16px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 26, fontWeight: 700, color: s.color, fontFamily: 'monospace', lineHeight: 1 }}>{s.value ?? 0}</div>
+                <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 10, background: '#fff', border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {s.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', marginBottom: 2 }}>{s.label}</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value ?? 0}</div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -543,6 +553,7 @@ export default function Academia({ usuario, activeTab }) {
           {loading && <p style={{ color: '#6b7280' }}>Cargando...</p>}
 
           {/* Table */}
+          {menuCurso && <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setMenuCurso(null)} />}
           <div className="table-wrap">
             <table className="participants-table">
               <thead>
@@ -553,110 +564,129 @@ export default function Academia({ usuario, activeTab }) {
                   <th>Fechas</th>
                   <th>Capacidad</th>
                   <th>Estado</th>
-                  <th>Acciones</th>
+                  <th style={{ width: 50, textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {cursosFiltrados.length === 0 ? (
-                  <tr><td colSpan={7} style={{ padding: 24, color: '#6b7280', textAlign: 'center' }}>
-                    {loading ? 'Cargando...' : 'No hay cursos registrados.'}
+                  <tr><td colSpan={7} style={{ padding: 40, color: '#9ca3af', textAlign: 'center', fontSize: 14 }}>
+                    {loading ? 'Cargando...' : 'No hay cursos registrados'}
                   </td></tr>
-                ) : cursosFiltrados.map(c => (
+                ) : cursosFiltrados.map(c => {
+                  const cursoPasado = c.FechaFin && new Date(c.FechaFin) < new Date(new Date().toDateString())
+                  const estaAbierto = c.Habilitado !== false && !cursoPasado
+                  const pctCap = Math.min(100, ((c.Inscritos || 0) / (c.Capacidad || 1)) * 100)
+                  const capColor = (c.Inscritos || 0) >= c.Capacidad ? '#dc2626' : (c.Inscritos || 0) >= c.Capacidad * 0.8 ? '#d97706' : '#16a34a'
+                  return (
                   <tr key={c.CursoAcademiaId} style={{ cursor: 'pointer' }} onClick={() => openDetalle(c.CursoAcademiaId)}>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{cursoLabel(c)}</div>
-                      <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.Instructor || 'Sin instructor'}</div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{cursoLabel(c)}</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{c.Instructor || 'Sin instructor'}</div>
                     </td>
                     <td>
                       <span style={{
-                        display: 'inline-block', padding: '2px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+                        display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600,
                         background: c.Modalidad === 'Presencial' ? '#fef3c7' : c.Modalidad === 'En línea' ? '#eff6ff' : '#f3f4f6',
                         color: c.Modalidad === 'Presencial' ? '#d97706' : c.Modalidad === 'En línea' ? '#2563eb' : '#6b7280',
                       }}>{c.Modalidad}</span>
                     </td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                      {c.TotalSesiones || 0} {(c.TotalSesiones || 0) === 1 ? 'sesión' : 'sesiones'}
-                      {c.HorasPorSesion > 0 && <span style={{ color: '#2563eb', fontWeight: 600, marginLeft: 6 }}>· {fmtHoras(c.HorasPorSesion * 60 * (c.TotalSesiones || 0))}</span>}
+                    <td style={{ fontSize: 12 }}>
+                      <span style={{ fontWeight: 600 }}>{c.TotalSesiones || 0}</span> {(c.TotalSesiones || 0) === 1 ? 'sesión' : 'sesiones'}
+                      {c.HorasPorSesion > 0 && <span style={{ color: '#6b7280', marginLeft: 4 }}>· {fmtHoras(c.HorasPorSesion * 60 * (c.TotalSesiones || 0))}</span>}
                     </td>
-                    <td style={{ fontSize: 12 }}>{fmtFecha(c.FechaInicio)}{c.FechaFin ? ` — ${fmtFecha(c.FechaFin)}` : ''}</td>
+                    <td style={{ fontSize: 12, color: '#374151' }}>{fmtFecha(c.FechaInicio)}{c.FechaFin ? ` — ${fmtFecha(c.FechaFin)}` : ''}</td>
                     <td>
-                      <div style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: (c.Inscritos || 0) >= c.Capacidad ? '#dc2626' : (c.Inscritos || 0) >= c.Capacidad * 0.8 ? '#d97706' : '#16a34a' }}>
-                        {c.Inscritos || 0} / {c.Capacidad}
-                      </div>
-                      <div style={{ width: '100%', height: 4, background: '#e5e7eb', borderRadius: 2, marginTop: 3 }}>
-                        <div style={{ height: '100%', borderRadius: 2, width: `${Math.min(100, ((c.Inscritos || 0) / c.Capacidad) * 100)}%`, background: (c.Inscritos || 0) >= c.Capacidad ? '#dc2626' : '#16a34a', transition: 'width 0.3s' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 60 }}>
+                          <div style={{ width: '100%', height: 6, background: '#f3f4f6', borderRadius: 3 }}>
+                            <div style={{ height: '100%', borderRadius: 3, width: `${pctCap}%`, background: capColor, transition: 'width 0.3s' }} />
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: capColor, whiteSpace: 'nowrap' }}>
+                          {c.Inscritos || 0}/{c.Capacidad}
+                        </span>
                       </div>
                     </td>
                     <td>
-                      <span style={{
-                        display: 'inline-block', padding: '2px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600,
-                        background: c.Estado === 'Activo' ? '#f0fdf4' : c.Estado === 'Próximo' ? '#eff6ff' : '#f3f4f6',
-                        color: c.Estado === 'Activo' ? '#16a34a' : c.Estado === 'Próximo' ? '#2563eb' : '#6b7280',
-                        border: '1px solid currentColor', opacity: 0.85,
-                      }}>{c.Estado}</span>
-                      {!esCapacitacion && (() => {
-                        const cursoPasado = c.FechaFin && new Date(c.FechaFin) < new Date(new Date().toDateString())
-                        const estaAbierto = c.Habilitado !== false && !cursoPasado
-                        return (
-                          <button
-                            onClick={e => !cursoPasado && handleToggleHabilitado(e, c)}
-                            title={cursoPasado ? 'El curso ya finalizó' : estaAbierto ? 'Deshabilitar inscripciones' : 'Habilitar inscripciones'}
-                            style={{
-                              display: 'block', marginTop: 4, fontSize: 10, padding: '1px 8px', borderRadius: 999,
-                              cursor: cursoPasado ? 'default' : 'pointer',
-                              border: '1px solid', fontWeight: 700,
-                              background: estaAbierto ? '#eff6ff' : '#fef2f2',
-                              borderColor: estaAbierto ? '#93c5fd' : '#fca5a5',
-                              color: estaAbierto ? '#2563eb' : '#dc2626',
-                              opacity: cursoPasado ? 0.7 : 1,
-                            }}
-                          >
-                            {estaAbierto ? 'Abierto' : 'Cerrado'}
-                          </button>
-                        )
-                      })()}
-                      {esCapacitacion && c.Habilitado === false && (
-                        <span style={{ display: 'block', marginTop: 4, fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Sin inscripciones</span>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+                          background: c.Estado === 'Activo' ? '#f0fdf4' : c.Estado === 'Próximo' ? '#eff6ff' : '#f3f4f6',
+                          color: c.Estado === 'Activo' ? '#16a34a' : c.Estado === 'Próximo' ? '#2563eb' : '#6b7280',
+                        }}>{c.Estado}</span>
+                        {!estaAbierto && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', background: '#fef2f2', padding: '2px 6px', borderRadius: 999 }}>Cerrado</span>
+                        )}
+                        {esCapacitacion && c.Habilitado === false && (
+                          <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Sin inscripciones</span>
+                        )}
+                      </div>
+                    </td>
+                    <td onClick={e => e.stopPropagation()} style={{ textAlign: 'center', position: 'relative' }}>
+                      <button
+                        onClick={() => setMenuCurso(menuCurso === c.CursoAcademiaId ? null : c.CursoAcademiaId)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: '#6b7280', display: 'inline-flex' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                        </svg>
+                      </button>
+                      {menuCurso === c.CursoAcademiaId && (
+                        <div style={{
+                          position: 'absolute', right: 0, top: '100%', zIndex: 100,
+                          background: '#fff', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.12)', border: '1px solid #e5e7eb',
+                          minWidth: 180, padding: '4px 0', marginTop: 2,
+                        }}>
+                          {(c.Inscritos || 0) > 0 && (
+                            <button onClick={e => { setMenuCurso(null); convocarCurso(e, c) }} style={{
+                              display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 14px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#374151', textAlign: 'left',
+                            }} onMouseEnter={e => e.currentTarget.style.background='#f3f4f6'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                              Convocar
+                            </button>
+                          )}
+                          {!esCapacitacion && (
+                            <>
+                              <button onClick={() => { setMenuCurso(null); !cursoPasado && handleToggleHabilitado({ stopPropagation: () => {} }, c) }} disabled={cursoPasado} style={{
+                                display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 14px', border: 'none', background: 'none', cursor: cursoPasado ? 'default' : 'pointer', fontSize: 13, color: cursoPasado ? '#d1d5db' : '#374151', textAlign: 'left',
+                              }} onMouseEnter={e => { if (!cursoPasado) e.currentTarget.style.background='#f3f4f6' }} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                                {estaAbierto ? (
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                                ) : (
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                )}
+                                {estaAbierto ? 'Cerrar inscripciones' : 'Abrir inscripciones'}
+                              </button>
+                              <button onClick={() => { setMenuCurso(null); setEditandoCurso(c); setShowNuevoCurso(true) }} style={{
+                                display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 14px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#374151', textAlign: 'left',
+                              }} onMouseEnter={e => e.currentTarget.style.background='#f3f4f6'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                Editar
+                              </button>
+                              <div style={{ height: 1, background: '#f3f4f6', margin: '4px 0' }} />
+                              <button onClick={async () => {
+                                setMenuCurso(null)
+                                if (!window.confirm(`¿Eliminar el curso "${cursoLabel(c)}"?`)) return
+                                try { await deleteAcademiaCurso(c.CursoAcademiaId); loadCursos() } catch (err) { window.alert(err.message) }
+                              }} style={{
+                                display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 14px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#dc2626', textAlign: 'left',
+                              }} onMouseEnter={e => e.currentTarget.style.background='#fef2f2'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                Eliminar
+                              </button>
+                            </>
+                          )}
+                        </div>
                       )}
                     </td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {(c.Inscritos || 0) > 0 && (
-                          <button
-                            title={`Abrir correo para ${c.Inscritos} participante(s)`}
-                            onClick={e => convocarCurso(e, c)}
-                            disabled={convocandoCurso === c.CursoAcademiaId}
-                            style={{
-                              fontSize: 12, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
-                              border: `1px solid ${(c.Inscritos || 0) >= c.Capacidad ? '#f59e0b' : '#d1d5db'}`,
-                              background: (c.Inscritos || 0) >= c.Capacidad ? '#fffbeb' : '#f9fafb',
-                              color: (c.Inscritos || 0) >= c.Capacidad ? '#d97706' : '#6b7280',
-                              fontWeight: (c.Inscritos || 0) >= c.Capacidad ? 700 : 400,
-                              display: 'flex', alignItems: 'center', gap: 4,
-                            }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                            </svg>
-                            {convocandoCurso === c.CursoAcademiaId ? '...' : 'Convocar'}
-                          </button>
-                        )}
-                        {!esCapacitacion && (
-                          <>
-                            <button className="ghost-button" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => { setEditandoCurso(c); setShowNuevoCurso(true) }}>Editar</button>
-                            <button className="secondary-button" style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626', borderColor: '#fca5a5' }} onClick={async () => {
-                              if (!window.confirm(`¿Eliminar el curso "${cursoLabel(c)}"?`)) return
-                              try { await deleteAcademiaCurso(c.CursoAcademiaId); loadCursos() } catch (err) { window.alert(err.message) }
-                            }}>Eliminar</button>
-                          </>
-                        )}
-                      </div>
-                    </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
-          <div className="table-footer">Total: {cursosFiltrados.length} curso(s)</div>
+          <div className="table-footer" style={{ color: '#9ca3af', fontSize: 12, padding: '8px 0' }}>{cursosFiltrados.length} curso{cursosFiltrados.length !== 1 ? 's' : ''}</div>
         </div>
       )}
 
