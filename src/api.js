@@ -820,7 +820,16 @@ export function aprobarSolicitudCatalogo(id, data) { return fetchJson(`academia/
 export function rechazarSolicitudCatalogo(id, data) { return fetchJson(`academia/solicitudes-catalogo/${id}/rechazar`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data || {}) }) }
 export function eliminarSolicitudCatalogo(id) { return fetchJson(`academia/solicitudes-catalogo/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function convocarCursoAcademia(cursoId) { return fetchJson(`academia/cursos/${cursoId}/convocar`, { method: 'POST', headers: authHeaders() }) }
-export function uploadFotoAcademia(base64) { return fetchJson('upload/foto-5s', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ base64 }) }) }
+export async function uploadFotoAcademia(base64) {
+  const fd = new FormData()
+  fd.append('file', base64)
+  fd.append('upload_preset', 'ml_default')
+  fd.append('folder', 'academia')
+  const res = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', { method: 'POST', body: fd })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error?.message || 'Error al subir imagen')
+  return { url: data.secure_url }
+}
 
 export function getFormularios() { return fetchJson('formularios', { headers: authHeaders() }) }
 export function getFormulario(id) { return fetchJson(`formularios/${id}`, { headers: authHeaders() }) }
