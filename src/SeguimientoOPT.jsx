@@ -1435,8 +1435,9 @@ function WhatsAppModal({ alumnos, onClose }) {
   const buildMsg = (alumno) => {
     const nombre = alumno.nombre.split(' ')[0]
     const pendientes = getEncuestasPendientes(alumno)
-    const nombreEnc = pendientes.length > 0 ? pendientes[0].formularioNombre : null
-    if (nombreEnc) {
+    const enc = pendientes.length > 0 ? pendientes[0] : null
+    if (enc) {
+      const nombreEnc = `Encuesta Seguimiento OPT – Semana ${enc.semanaInicio}`
       return `Hola ${nombre}, te compartimos el link para contestar tu encuesta "${nombreEnc}":\n${SURVEY_URL}`
     }
     return `Hola ${nombre}, te compartimos el link para contestar tu encuesta de seguimiento OPT:\n${SURVEY_URL}`
@@ -1485,8 +1486,8 @@ function WhatsAppModal({ alumnos, onClose }) {
     const pendientes = getEncuestasPendientes(al)
     if (!pendientes.length) return null
     const activa = pendientes.find(e => e.estado === 'activa')
-    if (activa) return { bg: '#fef3c7', color: '#92400e', label: `${activa.formularioNombre || 'Encuesta'} - Pendiente` }
-    return { bg: '#fecaca', color: '#991b1b', label: `${pendientes[0].formularioNombre || 'Encuesta'} - Vencida${pendientes.length > 1 ? ` (+${pendientes.length - 1})` : ''}` }
+    if (activa) return { bg: '#fef3c7', color: '#92400e', label: `Semana ${activa.semanaInicio} - Pendiente` }
+    return { bg: '#fecaca', color: '#991b1b', label: `Semana ${pendientes[0].semanaInicio} - Vencida${pendientes.length > 1 ? ` (+${pendientes.length - 1})` : ''}` }
   }
 
   const inp = {
