@@ -751,28 +751,46 @@ export default function Academia({ usuario, activeTab }) {
               {cursoInscripcion && (
                 <button
                   type="button"
-                  className="secondary-button btn-with-icon"
-                  style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end' }}
+                  className="secondary-button"
+                  style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
                   onClick={() => setModalParticipantesOpen(true)}
                 >
-                  <span className="btn-icon" aria-hidden>✎</span>
-                  Seleccionar Participantes
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                  Agregar Participantes
                 </button>
               )}
             </div>
 
             {cursoInscripcion && (
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: empleadosSeleccionados.length > 0 ? '#2563eb' : '#6b7280' }}>
-                {empleadosSeleccionados.length > 0
-                  ? `${empleadosSeleccionados.length} colaborador(es) listo(s) para inscribir`
-                  : `${inscritosActuales} de ${capacidadTotal} cupos ocupados — ${lugaresDisponibles} disponible(s)`}
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
+                <div style={{ flex: 1, maxWidth: 220 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginBottom: 3 }}>
+                    <span>{inscritosActuales + empleadosSeleccionados.length} / {capacidadTotal}</span>
+                    <span>{lugaresDisponibles - empleadosSeleccionados.length} disponible{(lugaresDisponibles - empleadosSeleccionados.length) !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div style={{ width: '100%', height: 6, background: '#f3f4f6', borderRadius: 3 }}>
+                    <div style={{
+                      height: '100%', borderRadius: 3, transition: 'width 0.3s',
+                      width: `${Math.min(100, ((inscritosActuales + empleadosSeleccionados.length) / (capacidadTotal || 1)) * 100)}%`,
+                      background: (inscritosActuales + empleadosSeleccionados.length) >= capacidadTotal ? '#dc2626' : (inscritosActuales + empleadosSeleccionados.length) >= capacidadTotal * 0.8 ? '#d97706' : '#2563eb',
+                    }} />
+                  </div>
+                </div>
+                {empleadosSeleccionados.length > 0 && (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#2563eb' }}>
+                    {empleadosSeleccionados.length} por inscribir
+                  </span>
+                )}
+              </div>
             )}
 
             {cursoInscripcion && empleadosSeleccionados.length > 0 && (
               <div style={{ marginTop: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 0 10px' }}>
-                  <button className="primary-button" style={{ fontSize: 13 }} onClick={handleInscribir}>Inscribir {empleadosSeleccionados.length} participante(s)</button>
+                  <button className="primary-button" style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }} onClick={handleInscribir}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Inscribir {empleadosSeleccionados.length} participante{empleadosSeleccionados.length !== 1 ? 's' : ''}
+                  </button>
                 </div>
                 <div className="table-wrap">
                   <table className="participants-table" style={{ fontSize: 13 }}>
@@ -784,12 +802,21 @@ export default function Academia({ usuario, activeTab }) {
                         const k = getParticipanteKey(p)
                         return (
                           <tr key={k || index}>
-                            <td>{index + 1}</td>
-                            <td style={{ fontWeight: 600 }}>{p.NombreCompleto || '-'}</td>
+                            <td style={{ width: 30, textAlign: 'center', color: '#9ca3af' }}>{index + 1}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+                                  {(p.NombreCompleto || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                                </div>
+                                <span style={{ fontWeight: 600 }}>{p.NombreCompleto || '-'}</span>
+                              </div>
+                            </td>
                             <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{p.NumeroEmpleado || '-'}</td>
                             <td>{p.Empresa || '-'}</td>
                             <td>
-                              <button type="button" className="icon-button" title="Quitar participante" onClick={() => quitarParticipante(k)}>✕</button>
+                              <button type="button" onClick={() => quitarParticipante(k)} title="Quitar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 15, padding: 4, display: 'flex' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              </button>
                             </td>
                           </tr>
                         )
@@ -883,11 +910,16 @@ export default function Academia({ usuario, activeTab }) {
                                     }}
                                     onClick={() => !isSelected && !yaInscrito && agregarParticipante(participante)}
                                   >
-                                    <div>
-                                      <div style={{ fontWeight: '500', fontSize: '13px' }}>{participante.NombreCompleto}</div>
-                                      <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                                        {participante.Empresa && `${participante.Empresa}`}
-                                        {participante.NumeroEmpleado && ` · Emp: ${participante.NumeroEmpleado}`}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: yaInscrito ? '#f3f4f6' : isSelected ? '#dcfce7' : '#eff6ff', color: yaInscrito ? '#9ca3af' : isSelected ? '#16a34a' : '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+                                        {(participante.NombreCompleto || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <div style={{ fontWeight: '500', fontSize: '13px' }}>{participante.NombreCompleto}</div>
+                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                                          {participante.Empresa && `${participante.Empresa}`}
+                                          {participante.NumeroEmpleado && ` · Emp: ${participante.NumeroEmpleado}`}
+                                        </div>
                                       </div>
                                     </div>
                                     {yaInscrito
@@ -933,8 +965,15 @@ export default function Academia({ usuario, activeTab }) {
                                   fontSize: '13px',
                                 }}
                               >
-                                <span><strong style={{ color: '#6b7280', marginRight: '6px' }}>{index + 1}.</strong>{p.NombreCompleto}</span>
-                                <button type="button" className="icon-button" onClick={() => quitarParticipante(k)} title="Quitar">✕</button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 10, flexShrink: 0 }}>
+                                    {(p.NombreCompleto || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <span>{p.NombreCompleto}</span>
+                                </div>
+                                <button type="button" onClick={() => quitarParticipante(k)} title="Quitar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 4, display: 'flex' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
                               </div>
                             )
                           })}
