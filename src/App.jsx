@@ -54,6 +54,7 @@ import FormularioPublico from './FormularioPublico'
 import FormulariosPublico from './FormulariosPublico'
 import CargaDieselPublica from './CargaDieselPublica'
 import AsistenciaAcademiaPublica from './AsistenciaAcademiaPublica'
+import AcademiaPublica from './AcademiaPublica'
 import SeguimientoOPT from './SeguimientoOPT'
 
 const NAV_ICONS = {
@@ -919,6 +920,7 @@ function App() {
   if (window.location.pathname.startsWith('/formulario/')) return <FormularioPublico />
   if (window.location.pathname === '/carga-diesel') return <CargaDieselPublica />
   if (window.location.pathname === '/asistencia-academia') return <AsistenciaAcademiaPublica />
+  if (window.location.pathname === '/academia') return <AcademiaPublica />
 
   if (checkingAuth) {
     return (
