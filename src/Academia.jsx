@@ -2901,6 +2901,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
   const [tipoCurso, setTipoCurso] = useState(cursoInicial?.TipoCurso || '')
   const [estado, setEstado] = useState(cursoInicial?.Estado || 'Activo')
   const [habilitado, setHabilitado] = useState(cursoInicial?.Habilitado !== false)
+  const [imagenURL, setImagenURL] = useState(cursoInicial?.ImagenURL || '')
   const [sesiones, setSesiones] = useState([])
   const [saving, setSaving] = useState(false)
 
@@ -2967,7 +2968,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
     setSaving(true)
     try {
       if (isEdit) {
-        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, TipoCurso: tipoCurso || null, Habilitado: habilitado })
+        await updateAcademiaCurso(cursoInicial.CursoAcademiaId, { Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Estado: estado, Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, TipoCurso: tipoCurso || null, Habilitado: habilitado, ImagenURL: imagenURL || null })
         for (const s of sesiones) {
           if (s.SesionId) {
             await updateAcademiaSesion(s.SesionId, { Fecha: s.Fecha, HoraInicio: s.HoraInicio, HoraFin: s.HoraFin, Ubicacion: s.Ubicacion })
@@ -2977,7 +2978,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
         }
       } else {
         const sesionesValidas = sesiones.filter(s => s.Fecha)
-        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, TipoCurso: tipoCurso || null, sesiones: sesionesValidas })
+        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, TipoCurso: tipoCurso || null, ImagenURL: imagenURL || null, sesiones: sesionesValidas })
       }
       onSaved()
     } catch (err) { window.alert('Error: ' + err.message) } finally { setSaving(false) }
@@ -3179,6 +3180,16 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
               </>
             )}
 
+            {/* Imagen del curso */}
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Imagen del curso (URL)</label>
+              <input className="form-control" value={imagenURL} onChange={e => setImagenURL(e.target.value)} placeholder="https://ejemplo.com/imagen.jpg" style={{ width: '100%' }} />
+              {imagenURL && (
+                <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb', height: 100 }}>
+                  <img src={imagenURL} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                </div>
+              )}
+            </div>
             </div>
             {/* ── Sesiones ── */}
             <div style={{ display: 'grid', gap: 12 }}>
