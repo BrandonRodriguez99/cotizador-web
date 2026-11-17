@@ -823,7 +823,7 @@ export function convocarCursoAcademia(cursoId) { return fetchJson(`academia/curs
 export async function uploadFotoAcademia(base64) {
   const fd = new FormData()
   fd.append('file', base64)
-  fd.append('upload_preset', 'ml_default')
+  fd.append('upload_preset', 'academia_unsigned')
   fd.append('folder', 'academia')
   const res = await fetch('https://api.cloudinary.com/v1_1/kcj1hrdy/image/upload', { method: 'POST', body: fd })
   const data = await res.json()
