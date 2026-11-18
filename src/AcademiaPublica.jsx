@@ -27,6 +27,7 @@ export default function AcademiaPublica() {
   const [cursoDetalle, setCursoDetalle] = useState(null)
   const [showExternos, setShowExternos] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [nivelFiltro, setNivelFiltro] = useState(null)
 
   useEffect(() => {
     fetch(`${API}/academia/catalogo-publico`)
@@ -41,7 +42,17 @@ export default function AcademiaPublica() {
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
-  const internos = useMemo(() => cursos.filter(c => c.TipoCurso !== 'Proveedor Externo'), [cursos])
+  function cursoMatchNivel(c, nivel) {
+    if (!nivel || !c.Niveles) return !nivel
+    const nums = c.Niveles.match(/\d+/g) || []
+    return nums.includes(String(nivel))
+  }
+
+  const internos = useMemo(() => {
+    let arr = cursos.filter(c => c.TipoCurso !== 'Proveedor Externo')
+    if (nivelFiltro) arr = arr.filter(c => cursoMatchNivel(c, nivelFiltro))
+    return arr
+  }, [cursos, nivelFiltro])
   const externos = useMemo(() => cursos.filter(c => c.TipoCurso === 'Proveedor Externo'), [cursos])
 
   const ramasConCursos = useMemo(() => {
@@ -136,17 +147,42 @@ export default function AcademiaPublica() {
           Conoce las diferentes opciones de formación de acuerdo con tu nivel organizacional dentro de Trayecto.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-          {NIVELES.map((n, i) => (
-            <div key={i} style={{ background: n.bg, borderRadius: 14, padding: '28px 24px', position: 'relative', overflow: 'hidden', transition: 'transform 0.2s', cursor: 'default' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Nivel {n.n}</div>
-              <h3 style={{ fontSize: 20, fontWeight: 800, color: C.white, minHeight: 48 }}>{n.titulo}</h3>
-              <div style={{ position: 'absolute', bottom: 12, right: 16, fontSize: 72, fontWeight: 900, color: 'rgba(255,255,255,0.08)', lineHeight: 1 }}>{i + 1}</div>
-            </div>
-          ))}
+          {NIVELES.map((n, i) => {
+            const lvl = i + 1
+            const activo = nivelFiltro === lvl
+            return (
+              <div key={i} onClick={() => { setNivelFiltro(activo ? null : lvl); if (!activo) setTimeout(() => scrollTo('catalogo'), 100) }}
+                style={{
+                  background: n.bg, borderRadius: 14, padding: '28px 24px', position: 'relative', overflow: 'hidden',
+                  transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer',
+                  transform: activo ? 'translateY(-4px)' : 'none',
+                  boxShadow: activo ? '0 8px 24px rgba(0,0,0,0.3)' : 'none',
+                  outline: activo ? '3px solid ' + C.orange : 'none', outlineOffset: -3,
+                }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Nivel {n.n}</div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: C.white, minHeight: 48 }}>{n.titulo}</h3>
+                <div style={{ position: 'absolute', bottom: 12, right: 16, fontSize: 72, fontWeight: 900, color: 'rgba(255,255,255,0.08)', lineHeight: 1 }}>{lvl}</div>
+                {activo && <div style={{ position: 'absolute', top: 10, right: 12, background: C.orange, borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>}
+              </div>
+            )
+          })}
         </div>
-        <p style={{ marginTop: 16, fontSize: 13, color: C.g500 }}>
-          <span style={{ color: C.orange }}>⚡</span> Selecciona un nivel para consultar los cursos dirigidos a ese nivel.
-        </p>
+        {nivelFiltro ? (
+          <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 13, color: C.g500 }}>
+              <span style={{ color: C.orange, fontWeight: 700 }}>Filtrando:</span> Nivel {nivelFiltro} — {NIVELES[nivelFiltro - 1]?.titulo}
+            </span>
+            <button onClick={() => setNivelFiltro(null)} style={{ background: C.g100, border: 'none', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 600, color: C.g600, cursor: 'pointer' }}>
+              Quitar filtro ✕
+            </button>
+          </div>
+        ) : (
+          <p style={{ marginTop: 16, fontSize: 13, color: C.g500 }}>
+            <span style={{ color: C.orange }}>⚡</span> Selecciona un nivel para filtrar los cursos dirigidos a ese nivel.
+          </p>
+        )}
       </section>
 
       {/* CATÁLOGO */}
