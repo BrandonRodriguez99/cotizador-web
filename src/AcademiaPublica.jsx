@@ -123,7 +123,7 @@ export default function AcademiaPublica() {
       {/* HERO */}
       <section id="inicio" style={{
         position: 'relative', minHeight: 520, display: 'flex', alignItems: 'center',
-        background: `linear-gradient(135deg, rgba(15,31,48,0.85) 0%, rgba(26,46,68,0.75) 100%), url("${HERO_BG}") center/cover no-repeat`,
+        background: `linear-gradient(135deg, rgba(15,31,48,0.45) 0%, rgba(26,46,68,0.35) 100%), url("${HERO_BG}") center/cover no-repeat`,
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '100px 24px 60px', zIndex: 1 }}>
           <div style={{ display: 'inline-block', padding: '6px 20px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 700, color: C.white, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 24 }}>
