@@ -33,30 +33,33 @@ const PLANTA_BAJA_MUJERES = [
 ]
 
 const HX = 700, HY1 = 10, HY2 = 10 + RH + 30, HY3 = 10 + 2 * (RH + 30)
+const HS = RW + GAP
+const LAVW = 120
+const HRX = HX + LAVW + 10
 const PLANTA_BAJA_HOMBRES = [
-  // Fila superior (3 cuartos): H-01, H-02, H-03
-  { codigo: 'DR-H-01', x: HX + 40, y: HY1, w: RW, h: RH },
-  { codigo: 'DR-H-02', x: HX + 40 + (RW + GAP) * 2, y: HY1, w: RW, h: RH },
-  { codigo: 'DR-H-03', x: HX + 40 + (RW + GAP) * 4, y: HY1, w: RW, h: RH },
+  // Fila superior (3 cuartos espaciados como en plano): H-01, H-02, H-03
+  { codigo: 'DR-H-01', x: HRX, y: HY1, w: RW, h: RH },
+  { codigo: 'DR-H-02', x: HRX + HS * 2, y: HY1, w: RW, h: RH },
+  { codigo: 'DR-H-03', x: HRX + HS * 4, y: HY1, w: RW, h: RH },
   // Fila media (7 cuartos consecutivos): H-04..H-10
-  { codigo: 'DR-H-04', x: HX + 40, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-05', x: HX + 40 + 1 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-06', x: HX + 40 + 2 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-07', x: HX + 40 + 3 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-08', x: HX + 40 + 4 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-09', x: HX + 40 + 5 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-10', x: HX + 40 + 6 * (RW + GAP), y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-04', x: HRX, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-05', x: HRX + HS, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-06', x: HRX + HS * 2, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-07', x: HRX + HS * 3, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-08', x: HRX + HS * 4, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-09', x: HRX + HS * 5, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-10', x: HRX + HS * 6, y: HY2, w: RW, h: RH },
   // Fila inferior (10 cuartos, der a izq): H-20..H-11
   { codigo: 'DR-H-20', x: HX, y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-19', x: HX + (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-18', x: HX + 2 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-17', x: HX + 3 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-16', x: HX + 4 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-15', x: HX + 5 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-14', x: HX + 6 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-13', x: HX + 7 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-12', x: HX + 8 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-11', x: HX + 9 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-19', x: HX + HS, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-18', x: HX + HS * 2, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-17', x: HX + HS * 3, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-16', x: HX + HS * 4, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-15', x: HX + HS * 5, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-14', x: HX + HS * 6, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-13', x: HX + HS * 7, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-12', x: HX + HS * 8, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-11', x: HX + HS * 9, y: HY3, w: RW, h: RH },
 ]
 
 const PLANTA_ALTA = []
@@ -227,7 +230,7 @@ export default function Dormitorios() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.g500 }}>Cargando dormitorios...</div>
 
   const plantaRooms = planta === 'Baja' ? [...PLANTA_BAJA_MUJERES, ...PLANTA_BAJA_HOMBRES] : PLANTA_ALTA
-  const svgW = planta === 'Baja' ? 1420 : 880
+  const svgW = planta === 'Baja' ? 1460 : 880
   const svgH = planta === 'Baja' ? 280 : 220
 
   return (
@@ -325,12 +328,13 @@ export default function Dormitorios() {
               <rect x={10} y={10} width={180} height={52} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
               <text x={100} y={40} textAnchor="middle" fontSize={10} fill={C.g500}>BAÑOS MUJERES</text>
               {/* Facilities hombres */}
-              <rect x={700} y={HY1} width={30} height={52} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
-              <text x={715} y={HY1 + 30} textAnchor="middle" fontSize={7} fill={C.g500}>ESC</text>
-              <rect x={HX} y={HY2} width={30} height={52} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
-              <text x={715} y={HY2 + 30} textAnchor="middle" fontSize={7} fill={C.g500}>LAV</text>
-              <rect x={HX + 40 + 9 * (RW + GAP)} y={HY1} width={80} height={52} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
-              <text x={HX + 40 + 9 * (RW + GAP) + 40} y={HY1 + 30} textAnchor="middle" fontSize={8} fill={C.g500}>BAÑOS H.</text>
+              <rect x={HX} y={HY1} width={50} height={RH} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <text x={HX + 25} y={HY1 + 20} textAnchor="middle" fontSize={8} fill={C.g500}>CTO.</text>
+              <text x={HX + 25} y={HY1 + 32} textAnchor="middle" fontSize={7} fill={C.g500}>ELÉCT.</text>
+              <rect x={HX} y={HY2} width={LAVW} height={RH} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <text x={HX + LAVW / 2} y={HY2 + 30} textAnchor="middle" fontSize={9} fill={C.g500}>LAVANDERÍA</text>
+              <rect x={HRX + HS * 5 + RW + GAP} y={HY1} width={HS * 2 + RW} height={RH} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <text x={HRX + HS * 5 + RW + GAP + (HS * 2 + RW) / 2} y={HY1 + 30} textAnchor="middle" fontSize={9} fill={C.g500}>BAÑOS HOMBRES</text>
             </>
           )}
           {planta === 'Alta' && (
