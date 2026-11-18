@@ -37,10 +37,10 @@ const HS = RW + GAP
 const LAVW = 120
 const HRX = HX + LAVW + 10
 const PLANTA_BAJA_HOMBRES = [
-  // Fila superior (3 cuartos espaciados como en plano): H-01, H-02, H-03
-  { codigo: 'DR-H-01', x: HRX, y: HY1, w: RW, h: RH },
-  { codigo: 'DR-H-02', x: HRX + HS * 2, y: HY1, w: RW, h: RH },
-  { codigo: 'DR-H-03', x: HRX + HS * 4, y: HY1, w: RW, h: RH },
+  // Fila superior (3 cuartos, cada uno centrado sobre un par de la fila media)
+  { codigo: 'DR-H-01', x: HRX + HS * 0.5 - RW / 2, y: HY1, w: RW, h: RH },
+  { codigo: 'DR-H-02', x: HRX + HS * 2.5 - RW / 2, y: HY1, w: RW, h: RH },
+  { codigo: 'DR-H-03', x: HRX + HS * 4.5 - RW / 2, y: HY1, w: RW, h: RH },
   // Fila media (7 cuartos consecutivos): H-04..H-10
   { codigo: 'DR-H-04', x: HRX, y: HY2, w: RW, h: RH },
   { codigo: 'DR-H-05', x: HRX + HS, y: HY2, w: RW, h: RH },
