@@ -37,18 +37,18 @@ const HS = RW + GAP
 const LAVW = 120
 const HRX = HX + LAVW + 10
 const PLANTA_BAJA_HOMBRES = [
-  // Fila superior (alternando: H-01, H-03, H-05 arriba de H-02, H-04)
+  // Fila superior (3 cuartos espaciados sobre la fila media)
   { codigo: 'DR-H-01', x: HRX, y: HY1, w: RW, h: RH },
   { codigo: 'DR-H-03', x: HRX + HS * 2, y: HY1, w: RW, h: RH },
   { codigo: 'DR-H-05', x: HRX + HS * 4, y: HY1, w: RW, h: RH },
-  // Fila media: H-02, H-04 (debajo de impares), luego H-06..H-10 consecutivos
-  { codigo: 'DR-H-02', x: HRX + HS, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-04', x: HRX + HS * 3, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-06', x: HRX + HS * 5, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-07', x: HRX + HS * 6, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-08', x: HRX + HS * 7, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-09', x: HRX + HS * 8, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-10', x: HRX + HS * 9, y: HY2, w: RW, h: RH },
+  // Fila media: H-02, H-04, H-06..H-10 todos consecutivos
+  { codigo: 'DR-H-02', x: HRX, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-04', x: HRX + HS, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-06', x: HRX + HS * 2, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-07', x: HRX + HS * 3, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-08', x: HRX + HS * 4, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-09', x: HRX + HS * 5, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-10', x: HRX + HS * 6, y: HY2, w: RW, h: RH },
   // Fila inferior (10 cuartos, der a izq): H-20..H-11
   { codigo: 'DR-H-20', x: HX, y: HY3, w: RW, h: RH },
   { codigo: 'DR-H-19', x: HX + HS, y: HY3, w: RW, h: RH },
@@ -230,7 +230,7 @@ export default function Dormitorios() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.g500 }}>Cargando dormitorios...</div>
 
   const plantaRooms = planta === 'Baja' ? [...PLANTA_BAJA_MUJERES, ...PLANTA_BAJA_HOMBRES] : PLANTA_ALTA
-  const svgW = planta === 'Baja' ? 1600 : 880
+  const svgW = planta === 'Baja' ? 1440 : 880
   const svgH = planta === 'Baja' ? 280 : 220
 
   return (
@@ -333,8 +333,8 @@ export default function Dormitorios() {
               <text x={HX + 25} y={HY1 + 32} textAnchor="middle" fontSize={7} fill={C.g500}>ELÉCT.</text>
               <rect x={HX} y={HY2} width={LAVW} height={RH} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
               <text x={HX + LAVW / 2} y={HY2 + 30} textAnchor="middle" fontSize={9} fill={C.g500}>LAVANDERÍA</text>
-              <rect x={HRX + HS * 5 + RW + 10} y={HY1} width={HS * 3} height={RH} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
-              <text x={HRX + HS * 5 + RW + 10 + HS * 1.5} y={HY1 + 30} textAnchor="middle" fontSize={9} fill={C.g500}>BAÑOS HOMBRES</text>
+              <rect x={HRX + HS * 5 + RW + 10} y={HY1} width={HS * 2} height={RH} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <text x={HRX + HS * 5 + RW + 10 + HS} y={HY1 + 30} textAnchor="middle" fontSize={9} fill={C.g500}>BAÑOS HOMBRES</text>
             </>
           )}
           {planta === 'Alta' && (
