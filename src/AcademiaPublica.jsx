@@ -106,9 +106,9 @@ export default function AcademiaPublica() {
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <img src={scrolled ? 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795031679/UDAT_Wordmark-04_1_ksme9b.png' : 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795031512/udat_arxu5i.png'} alt="UDAT" style={{ height: 28, objectFit: 'contain' }} />
-            <div style={{ width: 1, height: 32, background: scrolled ? C.g200 : 'rgba(255,255,255,0.3)' }} />
-            <img src={scrolled ? 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795031690/Logotipos_Trayecto_2025_sin_baseline_-04_h5kfpj.png' : 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795031522/Logotipos_Trayecto_2025_sin_baseline_-06_jck73o.png'} alt="Trayecto" style={{ height: 44, objectFit: 'contain' }} />
+            <img src={scrolled ? 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795031679/UDAT_Wordmark-04_1_ksme9b.png' : 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795031512/udat_arxu5i.png'} alt="UDAT" style={{ height: 32, objectFit: 'contain' }} />
+            <div style={{ width: 1, height: 36, background: scrolled ? C.g200 : 'rgba(255,255,255,0.3)' }} />
+            <img src={scrolled ? 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795031690/Logotipos_Trayecto_2025_sin_baseline_-04_h5kfpj.png' : 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795031522/Logotipos_Trayecto_2025_sin_baseline_-06_jck73o.png'} alt="Trayecto" style={{ height: 52, objectFit: 'contain' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button className="nl" style={{ color: navColor }} onClick={() => scrollTo('inicio')}>Inicio</button>
