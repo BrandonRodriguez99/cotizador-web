@@ -42,6 +42,7 @@ const SECCIONES = [
     { id: 'academia', label: 'Academia' },
     { id: 'cincos', label: 'Lean 5S' },
     { id: 'seguimientoOpt', label: 'Seg. OPT' },
+    { id: 'dormitorios', label: 'Dormitorios' },
   ]},
   { titulo: 'Catálogos', vistas: [
     { id: 'cursos', label: 'Cursos' },
