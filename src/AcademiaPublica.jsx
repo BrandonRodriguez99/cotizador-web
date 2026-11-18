@@ -8,7 +8,7 @@ const C = {
   g500: '#6b7280', g600: '#4b5563', g700: '#374151', g800: '#1f2937', g900: '#111827',
 }
 
-const HERO_BG = 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=1600&h=600&fit=crop'
+const HERO_BG = 'https://res.cloudinary.com/kcj1hrdy/image/upload/v1795015192/Agregar_Un_T%C3%ADtulo_-_3_tu3twf.png'
 const FALLBACK_RAMA_IMG = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600&h=350&fit=crop'
 
 const NIVELES = [
