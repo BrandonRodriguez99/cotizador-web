@@ -94,7 +94,7 @@ export default function AcademiaPublica() {
         .nl:hover { opacity: 0.7; }
         .cta { background: ${C.orange}; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .cta:hover { background: ${C.orangeHover}; transform: translateY(-1px); }
-        .ch:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.12) !important; }
+        .ch:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(232,105,45,0.25) !important; outline: 2px solid #e8692d; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
