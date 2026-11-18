@@ -1,6 +1,6 @@
 # Cotizador Servicios UDAT — Documentación del Proyecto
 
-**Versión:** 5.0  
+**Versión:** 5.2  
 **Fecha:** Noviembre 2026  
 **Autor:** Brandon Rodriguez
 
@@ -24,7 +24,8 @@
 14. [Dependencias](#14-dependencias)
 15. [Módulo Lean 5S](#15-módulo-lean-5s)
 16. [Módulo Seguimiento OPT](#16-módulo-seguimiento-opt)
-17. [Historial de Cambios](#17-historial-de-cambios)
+17. [Módulo Academia y Catálogo Público](#17-módulo-academia-y-catálogo-público)
+18. [Historial de Cambios](#18-historial-de-cambios)
 
 ---
 
@@ -81,6 +82,7 @@
 │  /api/inventario          /api/seguridad             │
 │  /api/vehiculos           /api/solicitud-vehiculo    │
 │  /api/cincos              /api/seguimiento-opt        │
+│  /api/academia                                        │
 │                                                      │
 │  Nodemailer → Gmail SMTP (notificaciones)            │
 └────────────────────────┬─────────────────────────────┘
@@ -130,6 +132,8 @@ CotizadorServiciosUDAT/
 │   │   ├── Seguridad.jsx           # Módulo de seguridad: rondines, extintores, visitas, vehículos
 │   │   ├── SolicitudVehiculoPublica.jsx  # Formulario público (sin login) para solicitar vehículo
 │   │   ├── Usuarios.jsx            # Administración de usuarios (solo admin)
+│   │   ├── Academia.jsx             # Gestión de cursos, inscripciones, asistencias + catálogo
+│   │   ├── AcademiaPublica.jsx      # Página pública del catálogo de cursos (sin login)
 │   │   ├── SeguimientoOPT.jsx      # Seguimiento OPT: alumnos, evaluaciones, km/hrs, kardex
 │   │   │
 │   │   ├── CatalogFormModal.jsx        # Modal genérico para catálogos
@@ -623,7 +627,7 @@ El servidor Express corre en **Railway** y expone los siguientes grupos de endpo
 #### `App.jsx` — Componente Raíz
 Centraliza todo el estado de la aplicación:
 - **Autenticación:** `token`, `usuario` (persistidos en `localStorage` con claves `cotizador-token` y `cotizador-usuario`)
-- **Ruta pública:** antes de cualquier guardia de autenticación, si `window.location.pathname === '/solicitud-vehiculo'` se renderiza `SolicitudVehiculoPublica` directamente
+- **Rutas públicas:** antes de cualquier guardia de autenticación, si `window.location.pathname === '/solicitud-vehiculo'` se renderiza `SolicitudVehiculoPublica` y si es `/academia` se renderiza `AcademiaPublica` (ambas sin login)
 - **Navegación:** `activeView` controla qué vista se muestra
 - **Catálogos:** se cargan al iniciar sesión y se pasan como props
 - **Lógica de roles:** determina qué secciones son accesibles en el sidebar
@@ -1917,7 +1921,214 @@ Pestaña de reporte con tabla agrupada por generación y exportación PDF.
 
 ---
 
-## 17. Historial de Cambios
+## 17. Módulo Academia y Catálogo Público
+
+### 17.1 Descripción
+
+Sistema de gestión de cursos de capacitación con dos conceptos separados:
+
+| Concepto | Tabla | Propósito |
+|----------|-------|-----------|
+| **AcademiaCursos** | `AcademiaCursos` + `AcademiaSesiones` | Instancias reales de cursos con sesiones, inscripciones y asistencia |
+| **CatalogoCursos** | `CatalogoCursos` + `CatalogoRamas` | Catálogo de productos para la página pública (informativo, sin inscripción) |
+
+**Archivos principales:**
+
+| Capa | Archivo | Descripción |
+|------|---------|-------------|
+| Frontend Admin | `src/Academia.jsx` | Gestión de cursos, inscripciones, asistencias + tab Catálogo Público |
+| Frontend Público | `src/AcademiaPublica.jsx` | Página pública tipo landing page (sin login) |
+| Backend | `server.js` (endpoints `/api/academia/*`) | CRUD cursos, sesiones, catálogo |
+| API Client | `src/api.js` | 7 funciones de API para catálogo |
+
+---
+
+### 17.2 Página Pública — AcademiaPublica.jsx
+
+Página tipo landing page accesible en `/academia` sin requerir login. Solo muestra el catálogo de cursos, **NO tiene funcionalidad de registro/inscripción**.
+
+**Secciones:**
+
+| Sección | ID | Descripción |
+|---------|-----|-------------|
+| Nav | — | Fijo, transparente→blanco al scroll. Logos UDAT/Trayecto (blancos→color) |
+| Hero | `inicio` | Imagen de fondo (Cloudinary), título "Desarrollando talento, construyendo historias" |
+| Niveles Organizacionales | `niveles` | 4 tarjetas clickeables que filtran cursos por nivel |
+| Catálogo | `catalogo` | Ramas con imagen → expandir → lista de cursos internos |
+| Cursos Adicionales | `cursos-adicionales` | Toggle show/hide para cursos de proveedores externos |
+| Solicitar Capacitación | `solicitar` | Formulario con mailto a elena.morantes y fernanda.mata |
+| Footer | — | Copyright UDAT |
+
+**Constantes de diseño:**
+- Colores: navy `#1a2e44`, orange `#e8692d`
+- `HERO_BG`: URL de Cloudinary para imagen del hero
+- `FALLBACK_RAMA_IMG`: Imagen por defecto si la rama no tiene ImagenURL
+
+**Logos del nav (Cloudinary):**
+
+| Estado | UDAT | Trayecto |
+|--------|------|----------|
+| Transparente (hero) | Logo blanco 28px | Logo blanco 52px |
+| Scroll (fondo blanco) | Logo color 32px | Logo color 52px |
+
+**Filtro por Nivel Organizacional:**
+
+4 niveles definidos como constante `NIVELES`:
+
+| Nivel | Título | Color |
+|-------|--------|-------|
+| 01 | Directores | navy |
+| 02 | Gerentes | navy |
+| 03 | Jefes y Coordinadores | navy |
+| 04 | Auxiliares y Personal operativo | orange |
+
+Comportamiento:
+- Click en tarjeta → activa filtro por ese nivel
+- Click de nuevo en la misma tarjeta → quita filtro
+- Tarjeta activa: borde naranja + badge check
+- Texto "Filtrando: Nivel X — Título" con botón "Quitar filtro ✕"
+- El campo `Niveles` del curso es texto libre (ej. "2, 3 y 4"); se parsean números con regex `.match(/\d+/g)`
+- Función `cursoMatchNivel(c, nivel)`: extrae números del texto Niveles y verifica si contiene el nivel seleccionado
+
+**Tarjetas de ramas:**
+- Hover: sombra naranja `rgba(232,105,45,0.25)` + borde naranja 2px
+- Click: expande/contrae la lista de cursos de esa rama
+- Imágenes recomendadas: **600×360px** (contenedor 300px×180px con object-fit cover)
+
+**Modal de detalle de curso:**
+- Título, badge Niveles, descripción, info (Rama · sesiones · horas · Modalidad)
+- Temario como lista `<ul>` con items separados por `\n`
+
+**Formulario "Solicitar Capacitación":**
+- Campos: Empresa, Nombre, Puesto, Área, Participantes, Necesidad, Info adicional
+- Acción: `mailto:` a elena.morantes@udat.com.mx y fernanda.mata@udat.com.mx
+- Abre el cliente de correo del usuario con datos pre-llenados
+
+---
+
+### 17.3 Catálogo en SIGA — Tab "Catálogo Público"
+
+Accesible desde el sidebar de SIGA: **Academia → Catálogo Público**.
+
+**Gestión de Ramas:**
+- Grid de tarjetas con imagen, nombre, descripción
+- CRUD: crear, editar, eliminar rama
+- Campos: Nombre, Descripcion, ImagenURL (URL de Cloudinary), Orden, Habilitado
+
+**Gestión de Cursos del Catálogo:**
+- Tabla con todos los cursos del catálogo
+- CRUD: crear, editar, eliminar curso
+- Campos: Nombre, Descripcion, Rama (dropdown), Niveles (texto libre), Temario (textarea, un tema por línea), Modalidad, Horas, NumeroSesiones, TipoCurso (Interno/Proveedor Externo), Orden, Habilitado
+
+Los cursos con `Habilitado=1` aparecen automáticamente en la página pública.
+
+---
+
+### 17.4 Tablas de Base de Datos
+
+#### `CatalogoRamas`
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| RamaId | INT (PK) | Identificador |
+| Nombre | NVARCHAR | Nombre de la rama (ej. "Metodología Lean") |
+| Descripcion | NVARCHAR | Descripción para la tarjeta pública |
+| ImagenURL | NVARCHAR | URL de Cloudinary para la imagen de la tarjeta |
+| Orden | INT | Orden de aparición |
+| Habilitado | BIT | 1 = visible en página pública |
+
+#### `CatalogoCursos`
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| CatalogoCursoId | INT (PK) | Identificador |
+| Nombre | NVARCHAR | Nombre del curso |
+| Descripcion | NVARCHAR | Descripción del curso |
+| Rama | NVARCHAR | Nombre de la rama a la que pertenece |
+| Niveles | NVARCHAR | Niveles organizacionales (texto libre, ej. "2, 3 y 4") |
+| Temario | NVARCHAR(MAX) | Temas del curso, separados por salto de línea |
+| Modalidad | NVARCHAR | Presencial / Virtual / Híbrido |
+| Horas | INT | Horas totales del curso |
+| NumeroSesiones | INT | Número de sesiones |
+| TipoCurso | NVARCHAR | `Interno` o `Proveedor Externo` |
+| Habilitado | BIT | 1 = visible en página pública |
+| Orden | INT | Orden de aparición dentro de la rama |
+
+---
+
+### 17.5 Endpoints API
+
+**Públicos (sin autenticación):**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/academia/catalogo-publico` | Ramas y cursos habilitados para la página pública |
+
+**Admin (requiere JWT):**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/academia/catalogo` | Todas las ramas y cursos (incluye deshabilitados) |
+| POST | `/api/academia/catalogo/ramas` | Crear rama |
+| PUT | `/api/academia/catalogo/ramas/:id` | Editar rama |
+| DELETE | `/api/academia/catalogo/ramas/:id` | Eliminar rama |
+| POST | `/api/academia/catalogo/cursos` | Crear curso del catálogo |
+| PUT | `/api/academia/catalogo/cursos/:id` | Editar curso del catálogo |
+| DELETE | `/api/academia/catalogo/cursos/:id` | Eliminar curso del catálogo |
+
+---
+
+### 17.6 Funciones API (api.js)
+
+```javascript
+getCatalogoAcademia()              // GET academia/catalogo
+createCatalogoRama(data)           // POST academia/catalogo/ramas
+updateCatalogoRama(id, data)       // PUT academia/catalogo/ramas/:id
+deleteCatalogoRama(id)             // DELETE academia/catalogo/ramas/:id
+createCatalogoCurso(data)          // POST academia/catalogo/cursos
+updateCatalogoCurso(id, data)      // PUT academia/catalogo/cursos/:id
+deleteCatalogoCurso(id)            // DELETE academia/catalogo/cursos/:id
+```
+
+---
+
+### 17.7 Fix: Desfase de fechas por timezone
+
+Las fechas de SQL Server llegan como `"2026-11-18"` (sin timezone). `new Date("2026-11-18")` las interpreta como UTC medianoche, y al convertir a hora local de México (UTC-6) se restan un día.
+
+**Solución:** `fmtFecha()` y todas las comparaciones de fecha agregan `T00:00:00` para forzar interpretación en hora local:
+```javascript
+new Date(String(d).slice(0, 10) + 'T00:00:00')
+```
+
+---
+
+## 18. Historial de Cambios
+
+### v5.2 — Noviembre 2026
+
+#### Nuevo: Catálogo Público de Academia
+- **Página pública** `AcademiaPublica.jsx` tipo landing page en `/academia` sin login — solo informativa, sin registro/inscripción
+- Secciones: Nav con logos UDAT/Trayecto (Cloudinary), Hero con imagen personalizable, Niveles Organizacionales, Catálogo por ramas, Cursos adicionales (proveedores externos), Formulario "Solicitar capacitación" (mailto)
+- **Logos dinámicos** en nav: versión blanca sobre hero transparente, versión a color al hacer scroll (fondo blanco)
+- **Filtro por nivel organizacional**: click en tarjeta de nivel filtra cursos por número extraído del campo Niveles (texto libre) con regex
+- **Tarjetas de ramas** con sombra naranja en hover, imágenes de Cloudinary (600×360px recomendado)
+- **Modal detalle** de curso con temario como lista de bullets (separado por `\n`)
+
+#### Nuevo: Sistema de Catálogo en SIGA
+- Tab **"Catálogo Público"** en módulo Academia del sidebar
+- Tablas `CatalogoRamas` y `CatalogoCursos` separadas de `AcademiaCursos` (instancias reales vs catálogo de productos)
+- CRUD completo para ramas (Nombre, Descripcion, ImagenURL, Orden, Habilitado) y cursos (Nombre, Descripcion, Rama, Niveles, Temario, Modalidad, Horas, NumeroSesiones, TipoCurso, Orden, Habilitado)
+- Endpoint público `GET /api/academia/catalogo-publico` sin autenticación
+- 7 endpoints admin con autenticación para gestión de ramas y cursos
+- Cursos habilitados aparecen automáticamente en la página pública
+
+#### Fix: Desfase de fechas por timezone en Academia
+- `new Date("2026-11-18")` interpretaba fechas como UTC, restando un día en hora local de México
+- Corregido agregando `T00:00:00` en `fmtFecha()` y todas las comparaciones de `FechaFin`
+
+#### Fix: Error `imagenURL is not defined` al crear curso en Academia
+- Referencia residual a variable `imagenURL` en `createAcademiaCurso` que nunca se declaró; eliminada
+
+---
 
 ### v5.1 — Noviembre 2026
 
@@ -2067,4 +2278,4 @@ Pestaña de reporte con tabla agrupada por generación y exportación PDF.
 
 ---
 
-*Documentación actualizada el 13 de noviembre de 2026. Versión 5.1.*
+*Documentación actualizada el 18 de noviembre de 2026. Versión 5.2.*
