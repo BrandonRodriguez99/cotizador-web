@@ -34,29 +34,29 @@ const PLANTA_BAJA_MUJERES = [
 
 const HX = 700, HY1 = 10, HY2 = 10 + RH + 30, HY3 = 10 + 2 * (RH + 30)
 const PLANTA_BAJA_HOMBRES = [
-  // Fila superior (3 cuartos, escaleras/eléctrico a la izq, baños a la der): H-01, H-03, H-05
+  // Fila superior (3 cuartos): H-01, H-02, H-03
   { codigo: 'DR-H-01', x: HX + 40, y: HY1, w: RW, h: RH },
-  { codigo: 'DR-H-03', x: HX + 40 + (RW + GAP) * 2, y: HY1, w: RW, h: RH },
-  { codigo: 'DR-H-05', x: HX + 40 + (RW + GAP) * 4, y: HY1, w: RW, h: RH },
-  // Fila media (7 cuartos, lavandería a la izq, bodega a la der): H-02, H-04, H-06, H-08, H-10, H-11, H-12
-  { codigo: 'DR-H-02', x: HX + 40, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-04', x: HX + 40 + (RW + GAP), y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-02', x: HX + 40 + (RW + GAP) * 2, y: HY1, w: RW, h: RH },
+  { codigo: 'DR-H-03', x: HX + 40 + (RW + GAP) * 4, y: HY1, w: RW, h: RH },
+  // Fila media (7 cuartos): H-04..H-10
+  { codigo: 'DR-H-04', x: HX + 40, y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-05', x: HX + 40 + (RW + GAP), y: HY2, w: RW, h: RH },
   { codigo: 'DR-H-06', x: HX + 40 + 2 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-08', x: HX + 40 + 3 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-10', x: HX + 40 + 4 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-11', x: HX + 40 + 5 * (RW + GAP), y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-12', x: HX + 40 + 6 * (RW + GAP), y: HY2, w: RW, h: RH },
-  // Fila inferior (10 cuartos, der a izq en plano): H-22..H-13
-  { codigo: 'DR-H-22', x: HX, y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-21', x: HX + (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-20', x: HX + 2 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-19', x: HX + 3 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-18', x: HX + 4 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-17', x: HX + 5 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-16', x: HX + 6 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-15', x: HX + 7 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-14', x: HX + 8 * (RW + GAP), y: HY3, w: RW, h: RH },
-  { codigo: 'DR-H-13', x: HX + 9 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-07', x: HX + 40 + 3 * (RW + GAP), y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-08', x: HX + 40 + 4 * (RW + GAP), y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-09', x: HX + 40 + 5 * (RW + GAP), y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-10', x: HX + 40 + 6 * (RW + GAP), y: HY2, w: RW, h: RH },
+  // Fila inferior (10 cuartos, der a izq): H-20..H-11
+  { codigo: 'DR-H-20', x: HX, y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-19', x: HX + (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-18', x: HX + 2 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-17', x: HX + 3 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-16', x: HX + 4 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-15', x: HX + 5 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-14', x: HX + 6 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-13', x: HX + 7 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-12', x: HX + 8 * (RW + GAP), y: HY3, w: RW, h: RH },
+  { codigo: 'DR-H-11', x: HX + 9 * (RW + GAP), y: HY3, w: RW, h: RH },
 ]
 
 const PLANTA_ALTA = []
