@@ -85,7 +85,8 @@ function fmtHora(h) {
 
 function fmtFecha(d) {
   if (!d) return '-'
-  return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+  const s = String(d).slice(0, 10)
+  return new Date(s + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function cursoLabel(c) {
@@ -604,7 +605,7 @@ export default function Academia({ usuario, activeTab }) {
                     {loading ? 'Cargando...' : 'No hay cursos registrados'}
                   </td></tr>
                 ) : cursosFiltrados.map(c => {
-                  const cursoPasado = c.FechaFin && new Date(c.FechaFin) < new Date(new Date().toDateString())
+                  const cursoPasado = c.FechaFin && new Date(String(c.FechaFin).slice(0,10) + 'T00:00:00') < new Date(new Date().toDateString())
                   const estaAbierto = c.Habilitado !== false && !cursoPasado
                   const pctCap = Math.min(100, ((c.Inscritos || 0) / (c.Capacidad || 1)) * 100)
                   const capColor = (c.Inscritos || 0) >= c.Capacidad ? '#dc2626' : (c.Inscritos || 0) >= c.Capacidad * 0.8 ? '#d97706' : '#16a34a'
@@ -727,7 +728,7 @@ export default function Academia({ usuario, activeTab }) {
         const cursosDisponibles = cursos.filter(c =>
           c.Habilitado !== false &&
           (c.Estado === 'Activo' || c.Estado === 'Próximo') &&
-          !(c.FechaFin && new Date(c.FechaFin) < hoy)
+          !(c.FechaFin && new Date(String(c.FechaFin).slice(0,10) + 'T00:00:00') < hoy)
         )
         const nombresUnicosInsc = [...new Set(cursosDisponibles.map(c => c.Nombre))].sort()
         const cursosDelNombreInsc = filtroNombreCursoInsc ? cursosDisponibles.filter(c => c.Nombre === filtroNombreCursoInsc) : []
@@ -3291,7 +3292,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
                   </select>
                 </div>
                 {(() => {
-                  const cursoPasadoEdit = cursoInicial?.FechaFin && new Date(cursoInicial.FechaFin) < new Date(new Date().toDateString())
+                  const cursoPasadoEdit = cursoInicial?.FechaFin && new Date(String(cursoInicial.FechaFin).slice(0,10) + 'T00:00:00') < new Date(new Date().toDateString())
                   return cursoPasadoEdit ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fca5a5' }}>
                       <div style={{ width: 40, height: 22, borderRadius: 11, background: '#d1d5db', position: 'relative', flexShrink: 0, opacity: 0.6 }}>
