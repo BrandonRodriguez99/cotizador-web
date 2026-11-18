@@ -10,47 +10,55 @@ const C = {
   mujeres: '#ec4899', hombres: '#3b82f6',
 }
 
+const RW = 58, RH = 52, GAP = 6
 const PLANTA_BAJA_MUJERES = [
-  { codigo: 'DR-M-01', x: 580, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-M-02', x: 520, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-M-03', x: 460, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-M-04', x: 400, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-M-05', x: 340, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-M-06', x: 400, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-M-07', x: 340, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-M-08', x: 280, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-M-09', x: 220, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-M-10', x: 220, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-M-11', x: 280, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-M-12', x: 340, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-M-13', x: 400, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-M-14', x: 460, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-M-15', x: 520, y: 230, w: 54, h: 50 },
+  // Fila superior (junto a baños): M-06, M-04, M-02 (derecha a izquierda en plano, aquí izq a der)
+  { codigo: 'DR-M-06', x: 200, y: 10, w: RW, h: RH },
+  { codigo: 'DR-M-04', x: 200 + (RW + GAP), y: 10, w: RW, h: RH },
+  { codigo: 'DR-M-02', x: 200 + 2 * (RW + GAP), y: 10, w: RW, h: RH },
+  // Fila media: M-09, M-08, M-07, M-05, M-03, M-01
+  { codigo: 'DR-M-09', x: 200, y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-M-08', x: 200 + (RW + GAP), y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-M-07', x: 200 + 2 * (RW + GAP), y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-M-05', x: 200 + 3 * (RW + GAP) + 20, y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-M-03', x: 200 + 4 * (RW + GAP) + 20, y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-M-01', x: 200 + 5 * (RW + GAP) + 20, y: 10 + RH + 30, w: RW, h: RH },
+  // Fila inferior: M-10, M-11, M-12, M-13, M-14, M-15
+  { codigo: 'DR-M-10', x: 200, y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-M-11', x: 200 + (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-M-12', x: 200 + 2 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-M-13', x: 200 + 3 * (RW + GAP) + 20, y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-M-14', x: 200 + 4 * (RW + GAP) + 20, y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-M-15', x: 200 + 5 * (RW + GAP) + 20, y: 10 + 2 * (RH + 30), w: RW, h: RH },
 ]
 
+const HX = 700
 const PLANTA_BAJA_HOMBRES = [
-  { codigo: 'DR-H-01', x: 780, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-H-02', x: 840, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-H-03', x: 900, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-H-04', x: 960, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-H-05', x: 1020, y: 10, w: 54, h: 50 },
-  { codigo: 'DR-H-06', x: 960, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-H-07', x: 900, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-H-08', x: 840, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-H-09', x: 1020, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-H-10', x: 1080, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-H-11', x: 1140, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-H-12', x: 1200, y: 130, w: 54, h: 50 },
-  { codigo: 'DR-H-13', x: 1200, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-14', x: 1140, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-15', x: 1080, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-16', x: 1020, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-17', x: 960, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-18', x: 900, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-19', x: 840, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-20', x: 780, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-21', x: 720, y: 230, w: 54, h: 50 },
-  { codigo: 'DR-H-22', x: 660, y: 230, w: 54, h: 50 },
+  // Fila superior: H-01..H-05
+  { codigo: 'DR-H-01', x: HX, y: 10, w: RW, h: RH },
+  { codigo: 'DR-H-02', x: HX + (RW + GAP), y: 10, w: RW, h: RH },
+  { codigo: 'DR-H-03', x: HX + 2 * (RW + GAP), y: 10, w: RW, h: RH },
+  { codigo: 'DR-H-04', x: HX + 3 * (RW + GAP), y: 10, w: RW, h: RH },
+  { codigo: 'DR-H-05', x: HX + 4 * (RW + GAP), y: 10, w: RW, h: RH },
+  // Fila media: H-06..H-12
+  { codigo: 'DR-H-06', x: HX, y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-H-07', x: HX + (RW + GAP), y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-H-08', x: HX + 2 * (RW + GAP), y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-H-09', x: HX + 3 * (RW + GAP), y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-H-10', x: HX + 4 * (RW + GAP), y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-H-11', x: HX + 5 * (RW + GAP), y: 10 + RH + 30, w: RW, h: RH },
+  { codigo: 'DR-H-12', x: HX + 6 * (RW + GAP), y: 10 + RH + 30, w: RW, h: RH },
+  // Fila inferior: H-13..H-22
+  { codigo: 'DR-H-13', x: HX, y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-14', x: HX + (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-15', x: HX + 2 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-16', x: HX + 3 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-17', x: HX + 4 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-18', x: HX + 5 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-19', x: HX + 6 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-20', x: HX + 7 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-21', x: HX + 8 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
+  { codigo: 'DR-H-22', x: HX + 9 * (RW + GAP), y: 10 + 2 * (RH + 30), w: RW, h: RH },
 ]
 
 const PLANTA_ALTA = []
@@ -221,8 +229,8 @@ export default function Dormitorios() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.g500 }}>Cargando dormitorios...</div>
 
   const plantaRooms = planta === 'Baja' ? [...PLANTA_BAJA_MUJERES, ...PLANTA_BAJA_HOMBRES] : PLANTA_ALTA
-  const svgW = planta === 'Baja' ? 1300 : 880
-  const svgH = planta === 'Baja' ? 300 : 220
+  const svgW = planta === 'Baja' ? 1360 : 880
+  const svgH = planta === 'Baja' ? 280 : 220
 
   return (
     <div style={{ padding: '0 24px 40px' }}>
@@ -311,19 +319,13 @@ export default function Dormitorios() {
           {/* Background areas */}
           {planta === 'Baja' && (
             <>
-              <rect x={200} y={0} width={450} height={svgH} rx={10} fill="#fdf2f8" opacity={0.5} />
-              <text x={425} y={svgH - 8} textAnchor="middle" fontSize={11} fill={C.mujeres} fontWeight={600}>MUJERES</text>
-              <rect x={640} y={0} width={620} height={svgH} rx={10} fill="#eff6ff" opacity={0.5} />
-              <text x={950} y={svgH - 8} textAnchor="middle" fontSize={11} fill={C.hombres} fontWeight={600}>HOMBRES</text>
+              <rect x={0} y={0} width={680} height={svgH} rx={10} fill="#fdf2f8" opacity={0.4} />
+              <text x={340} y={svgH - 6} textAnchor="middle" fontSize={11} fill={C.mujeres} fontWeight={600}>MUJERES</text>
+              <rect x={688} y={0} width={svgW - 688} height={svgH} rx={10} fill="#eff6ff" opacity={0.4} />
+              <text x={1030} y={svgH - 6} textAnchor="middle" fontSize={11} fill={C.hombres} fontWeight={600}>HOMBRES</text>
               {/* Facilities */}
-              <rect x={10} y={10} width={180} height={50} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <rect x={10} y={10} width={180} height={52} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
               <text x={100} y={40} textAnchor="middle" fontSize={10} fill={C.g500}>BAÑOS MUJERES</text>
-              <rect x={10} y={130} width={180} height={50} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
-              <text x={100} y={160} textAnchor="middle" fontSize={10} fill={C.g500}>CIRCULACIÓN</text>
-              <rect x={660} y={10} width={80} height={50} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
-              <text x={700} y={40} textAnchor="middle" fontSize={10} fill={C.g500}>LAVANDERÍA</text>
-              <rect x={1100} y={10} width={160} height={50} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
-              <text x={1180} y={40} textAnchor="middle" fontSize={10} fill={C.g500}>BAÑOS HOMBRES</text>
             </>
           )}
           {planta === 'Alta' && (
