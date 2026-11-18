@@ -29,6 +29,13 @@ import {
   rechazarSolicitudCatalogo,
   eliminarSolicitudCatalogo,
   getAcademiaUbits,
+  getCatalogoAcademia,
+  createCatalogoRama,
+  updateCatalogoRama,
+  deleteCatalogoRama,
+  createCatalogoCurso,
+  updateCatalogoCurso,
+  deleteCatalogoCurso,
 } from './api'
 import { generarListaAsistenciaPDF } from './generarListaAsistencia'
 
@@ -42,9 +49,10 @@ const TABS_ALL = [
   { id: 'kardex',        label: 'Kardex' },
   { id: 'calendario',    label: 'Calendario' },
   { id: 'qr',            label: 'QR en Aula' },
+  { id: 'catalogo',      label: 'Catálogo Público' },
 ]
 
-const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'ubits', 'kardex', 'calendario', 'solicitudes'])
+const TABS_CAPACITACION = new Set(['cursos', 'inscripciones', 'asistencias', 'historico', 'ubits', 'kardex', 'calendario', 'solicitudes', 'catalogo'])
 
 // ── Calendario helpers ────────────────────────────────────────────────────────
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -238,6 +246,27 @@ export default function Academia({ usuario, activeTab }) {
     if (tab === 'solicitudes') loadSolicitudes()
   }, [tab])
 
+  // ── Catálogo Público ──
+  const [catRamas, setCatRamas] = useState([])
+  const [catCursos, setCatCursos] = useState([])
+  const [loadingCat2, setLoadingCat2] = useState(false)
+  const [catEditRama, setCatEditRama] = useState(null)
+  const [catEditCurso, setCatEditCurso] = useState(null)
+  const [catShowFormRama, setCatShowFormRama] = useState(false)
+  const [catShowFormCurso, setCatShowFormCurso] = useState(false)
+
+  function loadCatalogo() {
+    setLoadingCat2(true)
+    getCatalogoAcademia()
+      .then(d => { setCatRamas(d.ramas || []); setCatCursos(d.cursos || []) })
+      .catch(console.error)
+      .finally(() => setLoadingCat2(false))
+  }
+
+  useEffect(() => {
+    if (tab === 'catalogo') loadCatalogo()
+  }, [tab])
+
   function loadUbits() {
     setLoadingUbits(true)
     getAcademiaUbits()
@@ -266,6 +295,8 @@ export default function Academia({ usuario, activeTab }) {
     } else if (tab === 'ubits') {
       setUbitsData([])
       loadUbits()
+    } else if (tab === 'catalogo') {
+      loadCatalogo()
     }
   }
 
@@ -2837,6 +2868,117 @@ export default function Academia({ usuario, activeTab }) {
         </div>
       )}
 
+      {/* ═══ TAB: Catálogo Público ═══ */}
+      {tab === 'catalogo' && (
+        <div style={{ padding: '16px 0' }}>
+          {/* ── Ramas ── */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Ramas del catálogo</h3>
+            <button className="primary-button" onClick={() => { setCatEditRama(null); setCatShowFormRama(true) }}>+ Nueva rama</button>
+          </div>
+          {loadingCat2 ? <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando...</p> : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 32 }}>
+              {catRamas.map(r => (
+                <div key={r.RamaId} style={{ background: 'var(--surface, #f9fafb)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 10, padding: 16, opacity: r.Habilitado ? 1 : 0.5 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700 }}>{r.Nombre}</div>
+                      {r.Descripcion && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{r.Descripcion}</div>}
+                      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+                        {catCursos.filter(c => c.Rama === r.Nombre).length} cursos · Orden: {r.Orden}
+                        {!r.Habilitado && <span style={{ color: '#dc2626', marginLeft: 8 }}>Deshabilitada</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="ghost-button" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => { setCatEditRama(r); setCatShowFormRama(true) }}>Editar</button>
+                      <button className="ghost-button" style={{ padding: '4px 8px', fontSize: 11, color: '#dc2626' }} onClick={async () => {
+                        if (!confirm('¿Eliminar esta rama?')) return
+                        await deleteCatalogoRama(r.RamaId)
+                        loadCatalogo()
+                      }}>✕</button>
+                    </div>
+                  </div>
+                  {r.ImagenURL && <img src={r.ImagenURL} alt="" style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Cursos del catálogo ── */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Cursos del catálogo ({catCursos.length})</h3>
+            <button className="primary-button" onClick={() => { setCatEditCurso(null); setCatShowFormCurso(true) }}>+ Nuevo curso</button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
+                  <th style={{ padding: '8px 10px' }}>Nombre</th>
+                  <th style={{ padding: '8px 10px' }}>Rama</th>
+                  <th style={{ padding: '8px 10px' }}>Niveles</th>
+                  <th style={{ padding: '8px 10px' }}>Modalidad</th>
+                  <th style={{ padding: '8px 10px' }}>Horas</th>
+                  <th style={{ padding: '8px 10px' }}>Sesiones</th>
+                  <th style={{ padding: '8px 10px' }}>Tipo</th>
+                  <th style={{ padding: '8px 10px' }}>Estado</th>
+                  <th style={{ padding: '8px 10px' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {catCursos.map(c => (
+                  <tr key={c.CatalogoCursoId} style={{ borderBottom: '1px solid #f3f4f6', opacity: c.Habilitado ? 1 : 0.5 }}>
+                    <td style={{ padding: '8px 10px', fontWeight: 600 }}>{c.Nombre}</td>
+                    <td style={{ padding: '8px 10px' }}>{c.Rama || '—'}</td>
+                    <td style={{ padding: '8px 10px' }}>{c.Niveles || '—'}</td>
+                    <td style={{ padding: '8px 10px' }}>{c.Modalidad || '—'}</td>
+                    <td style={{ padding: '8px 10px' }}>{c.Horas || '—'}</td>
+                    <td style={{ padding: '8px 10px' }}>{c.NumeroSesiones || '—'}</td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 600,
+                        background: c.TipoCurso === 'Proveedor Externo' ? '#fff7ed' : '#eff6ff',
+                        color: c.TipoCurso === 'Proveedor Externo' ? '#c2410c' : '#1d4ed8',
+                      }}>{c.TipoCurso || 'Interno'}</span>
+                    </td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <span style={{ color: c.Habilitado ? '#059669' : '#dc2626', fontWeight: 600, fontSize: 11 }}>{c.Habilitado ? 'Activo' : 'Inactivo'}</span>
+                    </td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="ghost-button" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => { setCatEditCurso(c); setCatShowFormCurso(true) }}>Editar</button>
+                        <button className="ghost-button" style={{ padding: '4px 8px', fontSize: 11, color: '#dc2626' }} onClick={async () => {
+                          if (!confirm('¿Eliminar este curso del catálogo?')) return
+                          await deleteCatalogoCurso(c.CatalogoCursoId)
+                          loadCatalogo()
+                        }}>✕</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ── Modal Rama ── */}
+          {catShowFormRama && (
+            <CatalogoRamaModal
+              rama={catEditRama}
+              onClose={() => setCatShowFormRama(false)}
+              onSaved={() => { setCatShowFormRama(false); loadCatalogo() }}
+            />
+          )}
+
+          {/* ── Modal Curso ── */}
+          {catShowFormCurso && (
+            <CatalogoCursoModal
+              curso={catEditCurso}
+              ramas={catRamas}
+              onClose={() => setCatShowFormCurso(false)}
+              onSaved={() => { setCatShowFormCurso(false); loadCatalogo() }}
+            />
+          )}
+        </div>
+      )}
+
       {/* ═══ MODAL: Nueva Solicitud al Catálogo ═══ */}
       {showSolicitudModal && (
         <SolicitudCatalogoModal
@@ -3360,6 +3502,177 @@ function SolicitudCatalogoModal({ onClose, onSaved }) {
           <button type="submit" className="primary-button" disabled={saving} onClick={handleSubmit}>
             {saving ? 'Enviando...' : 'Enviar solicitud'}
           </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function CatalogoRamaModal({ rama, onClose, onSaved }) {
+  const [nombre, setNombre] = useState(rama?.Nombre || '')
+  const [descripcion, setDescripcion] = useState(rama?.Descripcion || '')
+  const [imagenURL, setImagenURL] = useState(rama?.ImagenURL || '')
+  const [orden, setOrden] = useState(rama?.Orden || 0)
+  const [habilitado, setHabilitado] = useState(rama?.Habilitado !== false && rama?.Habilitado !== 0)
+  const [saving, setSaving] = useState(false)
+  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }
+
+  async function handleSave() {
+    if (!nombre.trim()) return
+    setSaving(true)
+    try {
+      const data = { Nombre: nombre, Descripcion: descripcion, ImagenURL: imagenURL, Orden: Number(orden), Habilitado: habilitado }
+      if (rama?.RamaId) {
+        await updateCatalogoRama(rama.RamaId, data)
+      } else {
+        await createCatalogoRama(data)
+      }
+      onSaved()
+    } catch (e) { alert(e.message) } finally { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 50 }} onClick={onClose} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#fff', borderRadius: 12, width: 440, maxHeight: '85vh', overflow: 'auto', zIndex: 51, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{rama ? 'Editar rama' : 'Nueva rama'}</h3>
+        </div>
+        <div style={{ padding: '16px 24px', display: 'grid', gap: 14 }}>
+          <div>
+            <label style={labelStyle}>Nombre *</label>
+            <input className="form-control" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej. Metodología Lean" style={{ width: '100%' }} />
+          </div>
+          <div>
+            <label style={labelStyle}>Descripción</label>
+            <textarea className="form-control" value={descripcion} onChange={e => setDescripcion(e.target.value)} rows={2} placeholder="Breve descripción de la rama" style={{ width: '100%', resize: 'vertical' }} />
+          </div>
+          <div>
+            <label style={labelStyle}>URL de imagen</label>
+            <input className="form-control" value={imagenURL} onChange={e => setImagenURL(e.target.value)} placeholder="https://..." style={{ width: '100%' }} />
+            {imagenURL && <img src={imagenURL} alt="" style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 6, marginTop: 6 }} />}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Orden</label>
+              <input className="form-control" type="number" value={orden} onChange={e => setOrden(e.target.value)} style={{ width: '100%' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 20 }}>
+              <input type="checkbox" checked={habilitado} onChange={e => setHabilitado(e.target.checked)} />
+              <span style={{ fontSize: 13 }}>Habilitada</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button className="ghost-button" onClick={onClose}>Cancelar</button>
+          <button className="primary-button" disabled={saving || !nombre.trim()} onClick={handleSave}>{saving ? 'Guardando...' : 'Guardar'}</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function CatalogoCursoModal({ curso, ramas, onClose, onSaved }) {
+  const [nombre, setNombre] = useState(curso?.Nombre || '')
+  const [descripcion, setDescripcion] = useState(curso?.Descripcion || '')
+  const [rama, setRama] = useState(curso?.Rama || '')
+  const [niveles, setNiveles] = useState(curso?.Niveles || '')
+  const [temario, setTemario] = useState(curso?.Temario || '')
+  const [modalidad, setModalidad] = useState(curso?.Modalidad || 'Presencial')
+  const [horas, setHoras] = useState(curso?.Horas || '')
+  const [numSesiones, setNumSesiones] = useState(curso?.NumeroSesiones || '')
+  const [tipoCurso, setTipoCurso] = useState(curso?.TipoCurso || 'Interno')
+  const [orden, setOrden] = useState(curso?.Orden || 0)
+  const [habilitado, setHabilitado] = useState(curso?.Habilitado !== false && curso?.Habilitado !== 0)
+  const [saving, setSaving] = useState(false)
+  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }
+
+  async function handleSave() {
+    if (!nombre.trim()) return
+    setSaving(true)
+    try {
+      const data = { Nombre: nombre, Descripcion: descripcion, Rama: rama, Niveles: niveles, Temario: temario, Modalidad: modalidad, Horas: horas ? Number(horas) : null, NumeroSesiones: numSesiones ? Number(numSesiones) : null, TipoCurso: tipoCurso, Orden: Number(orden), Habilitado: habilitado }
+      if (curso?.CatalogoCursoId) {
+        await updateCatalogoCurso(curso.CatalogoCursoId, data)
+      } else {
+        await createCatalogoCurso(data)
+      }
+      onSaved()
+    } catch (e) { alert(e.message) } finally { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 50 }} onClick={onClose} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#fff', borderRadius: 12, width: 540, maxHeight: '90vh', overflow: 'auto', zIndex: 51, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{curso ? 'Editar curso' : 'Nuevo curso al catálogo'}</h3>
+        </div>
+        <div style={{ padding: '16px 24px', display: 'grid', gap: 14 }}>
+          <div>
+            <label style={labelStyle}>Nombre del curso *</label>
+            <input className="form-control" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej. Operación Impecable" style={{ width: '100%' }} />
+          </div>
+          <div>
+            <label style={labelStyle}>Descripción</label>
+            <textarea className="form-control" value={descripcion} onChange={e => setDescripcion(e.target.value)} rows={3} placeholder="Descripción del curso..." style={{ width: '100%', resize: 'vertical' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Rama</label>
+              <select className="form-control" value={rama} onChange={e => setRama(e.target.value)} style={{ width: '100%' }}>
+                <option value="">Sin rama</option>
+                {ramas.map(r => <option key={r.RamaId} value={r.Nombre}>{r.Nombre}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Niveles</label>
+              <input className="form-control" value={niveles} onChange={e => setNiveles(e.target.value)} placeholder="Ej. 2, 3 y 4" style={{ width: '100%' }} />
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Temario (un tema por línea)</label>
+            <textarea className="form-control" value={temario} onChange={e => setTemario(e.target.value)} rows={5} placeholder={"¿Qué es Lean y por qué es importante?\n¿Cómo actúa un líder Lean?\nDiferencia entre un líder tradicional y un líder Lean"} style={{ width: '100%', resize: 'vertical' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Modalidad</label>
+              <select className="form-control" value={modalidad} onChange={e => setModalidad(e.target.value)} style={{ width: '100%' }}>
+                <option value="Presencial">Presencial</option>
+                <option value="En línea">En línea</option>
+                <option value="Mixto">Mixto</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Horas</label>
+              <input className="form-control" type="number" value={horas} onChange={e => setHoras(e.target.value)} placeholder="Ej. 6" style={{ width: '100%' }} />
+            </div>
+            <div>
+              <label style={labelStyle}>Sesiones</label>
+              <input className="form-control" type="number" value={numSesiones} onChange={e => setNumSesiones(e.target.value)} placeholder="Ej. 3" style={{ width: '100%' }} />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Tipo de curso</label>
+              <select className="form-control" value={tipoCurso} onChange={e => setTipoCurso(e.target.value)} style={{ width: '100%' }}>
+                <option value="Interno">Interno (UDAT)</option>
+                <option value="Proveedor Externo">Proveedor Externo</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Orden</label>
+              <input className="form-control" type="number" value={orden} onChange={e => setOrden(e.target.value)} style={{ width: '100%' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 20 }}>
+              <input type="checkbox" checked={habilitado} onChange={e => setHabilitado(e.target.checked)} />
+              <span style={{ fontSize: 13 }}>Habilitado</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button className="ghost-button" onClick={onClose}>Cancelar</button>
+          <button className="primary-button" disabled={saving || !nombre.trim()} onClick={handleSave}>{saving ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </div>
     </>

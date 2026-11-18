@@ -821,6 +821,14 @@ export function rechazarSolicitudCatalogo(id, data) { return fetchJson(`academia
 export function eliminarSolicitudCatalogo(id) { return fetchJson(`academia/solicitudes-catalogo/${id}`, { method: 'DELETE', headers: authHeaders() }) }
 export function convocarCursoAcademia(cursoId) { return fetchJson(`academia/cursos/${cursoId}/convocar`, { method: 'POST', headers: authHeaders() }) }
 
+export function getCatalogoAcademia() { return fetchJson('academia/catalogo', { headers: authHeaders() }) }
+export function createCatalogoRama(data) { return fetchJson('academia/catalogo/ramas', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateCatalogoRama(id, data) { return fetchJson(`academia/catalogo/ramas/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteCatalogoRama(id) { return fetchJson(`academia/catalogo/ramas/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function createCatalogoCurso(data) { return fetchJson('academia/catalogo/cursos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateCatalogoCurso(id, data) { return fetchJson(`academia/catalogo/cursos/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteCatalogoCurso(id) { return fetchJson(`academia/catalogo/cursos/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+
 export function getFormularios() { return fetchJson('formularios', { headers: authHeaders() }) }
 export function getFormulario(id) { return fetchJson(`formularios/${id}`, { headers: authHeaders() }) }
 export function createFormulario(body) { return fetchJson('formularios', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }) }
