@@ -871,3 +871,14 @@ export async function getPerfilesOpt() {
   const d = await r.json()
   return Array.isArray(d) ? d : []
 }
+
+// ─── Dormitorios ───────────────────────────────────────────────────────────
+export function getDormitorios() { return fetchJson('dormitorios', { headers: authHeaders() }) }
+export function createDormitorio(data) { return fetchJson('dormitorios', { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function updateDormitorio(id, data) { return fetchJson(`dormitorios/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function deleteDormitorio(id) { return fetchJson(`dormitorios/${id}`, { method: 'DELETE', headers: authHeaders() }) }
+export function seedDormitorios() { return fetchJson('dormitorios/seed', { method: 'POST', headers: authHeaders() }) }
+export function checkinDormitorio(id, data) { return fetchJson(`dormitorios/${id}/checkin`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
+export function checkoutDormitorio(ocupanteId) { return fetchJson(`dormitorios/checkout/${ocupanteId}`, { method: 'POST', headers: authHeaders() }) }
+export function getHistorialDormitorio(id) { return fetchJson(`dormitorios/${id}/historial`, { headers: authHeaders() }) }
+export function buscarAlumnosDormitorio(q) { return fetchJson(`dormitorios/buscar-alumnos?q=${encodeURIComponent(q)}`, { headers: authHeaders() }) }

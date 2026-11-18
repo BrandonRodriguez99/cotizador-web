@@ -56,6 +56,7 @@ import CargaDieselPublica from './CargaDieselPublica'
 import AsistenciaAcademiaPublica from './AsistenciaAcademiaPublica'
 import AcademiaPublica from './AcademiaPublica'
 import SeguimientoOPT from './SeguimientoOPT'
+import Dormitorios from './Dormitorios'
 
 const NAV_ICONS = {
   dashboard:            <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
@@ -108,6 +109,7 @@ const NAV_ICONS = {
   // Lean 5S
   lean5s:               <><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="17" x2="7" y2="13"/><line x1="11" y1="17" x2="11" y2="10"/><line x1="15" y1="17" x2="15" y2="7"/><line x1="19" y1="17" x2="19" y2="11"/></>,
   cincos:               <><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="17" x2="7" y2="13"/><line x1="11" y1="17" x2="11" y2="10"/><line x1="15" y1="17" x2="15" y2="7"/><line x1="19" y1="17" x2="19" y2="11"/></>,
+  dormitorios:          <><path d="M3 21V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14"/><path d="M3 21h18"/><rect x="7" y="9" width="4" height="6" rx="1"/><rect x="13" y="9" width="4" height="6" rx="1"/><path d="M7 15v3M11 15v3M13 15v3M17 15v3"/></>,
 }
 
 const GRUPO_ICONS = {
@@ -174,6 +176,9 @@ const SIDEBAR_CONFIG = [
   ]},
   { titulo: 'Lean 5S', grupo: true, items: [
     { vista: 'cincos', label: 'Programa 5S', icon: 'lean5s' },
+  ]},
+  { titulo: 'Operaciones', items: [
+    { vista: 'dormitorios', label: 'Dormitorios', icon: 'dormitorios' },
   ]},
   { titulo: 'App Móvil', items: [
     { vista: 'formularios', label: 'Formularios' },
@@ -875,7 +880,9 @@ function App() {
                                         ? 'Academia'
                                         : activeView === 'cincos'
                                           ? 'Programa 5S'
-                                          : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
+                                          : activeView === 'dormitorios'
+                                            ? 'Dormitorios UDAT'
+                                            : (activeCatalogDefinition ? activeCatalogDefinition.title : '')
   const breadcrumb = activeView === 'inicio'
     ? 'Inicio'
     : activeView === 'dashboard'
@@ -910,7 +917,9 @@ function App() {
                                     ? 'Herramientas > Academia'
                                     : activeView === 'cincos'
                                       ? 'Lean 5S > Programa 5S'
-                                      : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
+                                      : activeView === 'dormitorios'
+                                        ? 'Operaciones > Dormitorios UDAT'
+                                        : (activeCatalogDefinition ? `Catálogos > ${activeCatalogDefinition.title}` : '')
 
   // Rutas públicas (sin autenticación)
   if (window.location.pathname === '/portal') return <PortalPublico />
@@ -1280,6 +1289,8 @@ function App() {
           </section>
         ) : activeView === 'academia' ? (
           <Academia usuario={usuario} activeTab={academiaTab} />
+        ) : activeView === 'dormitorios' ? (
+          <Dormitorios usuario={usuario} />
         ) : activeView === 'cincos' ? (
           <CincoS usuario={usuario} />
         ) : activeView === 'cotizacion' ? (
