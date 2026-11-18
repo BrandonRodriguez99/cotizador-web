@@ -3119,7 +3119,7 @@ function NuevoCursoModal({ cursoInicial, onClose, onSaved }) {
         }
       } else {
         const sesionesValidas = sesiones.filter(s => s.Fecha)
-        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, TipoCurso: tipoCurso || null, ImagenURL: imagenURL || null, sesiones: sesionesValidas })
+        await createAcademiaCurso({ Nombre: nombre, Descripcion: descripcion, Instructor: instructor, Modalidad: modalidad, Ubicacion: ubicacion, Capacidad: Number(capacidad), PorcentajeMinAsistencia: Number(pctMin), Generacion: generacion || null, HorasPorSesion: horasPorSesion !== '' ? Number(horasPorSesion) : null, TipoCurso: tipoCurso || null, sesiones: sesionesValidas })
       }
       onSaved()
     } catch (err) { window.alert('Error: ' + err.message) } finally { setSaving(false) }
