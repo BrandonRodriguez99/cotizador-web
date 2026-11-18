@@ -194,28 +194,29 @@ export default function Dormitorios() {
     load()
   }
 
-  const handleBuscar = async (q, gen) => {
-    if (q !== undefined) setBusqueda(q)
-    if (gen !== undefined) setFiltroGen(gen)
-    const qVal = q !== undefined ? q : busqueda
-    const gVal = gen !== undefined ? gen : filtroGen
-    if (!qVal && !gVal) { setResultados([]); return }
-    if (qVal && qVal.length < 2 && !gVal) { setResultados([]); return }
+  const cargarAlumnos = async (gen) => {
+    setFiltroGen(gen)
+    setBusqueda('')
+    if (!gen) { setResultados([]); return }
     setBuscando(true)
     try {
-      const r = await buscarAlumnosDormitorio(qVal, gVal)
+      const r = await buscarAlumnosDormitorio('', gen)
       setResultados(r)
     } catch (e) { console.error(e) }
     setBuscando(false)
   }
 
+  const alumnosFiltrados = useMemo(() => {
+    if (!busqueda) return resultados
+    const q = busqueda.toLowerCase()
+    return resultados.filter(a => a.NombreCompleto.toLowerCase().includes(q) || (a.Matricula || '').toLowerCase().includes(q))
+  }, [resultados, busqueda])
+
   const handleCheckin = async (alumno) => {
     if (!selected) return
     await checkinDormitorio(selected.DormitorioId, alumno)
-    setShowCheckin(false)
+    setResultados(prev => prev.filter(a => a.Id !== alumno.Id))
     setBusqueda('')
-    setResultados([])
-    setFiltroGen('')
     setShowModal(false)
     load()
   }
@@ -489,30 +490,39 @@ export default function Dormitorios() {
             {/* Check-in form */}
             {showCheckin && (
               <div style={{ background: '#f0fdf4', borderRadius: 10, padding: 16, marginBottom: 16 }}>
-                <h4 style={{ fontSize: 13, fontWeight: 600, color: C.g700, marginBottom: 8 }}>Buscar alumno</h4>
+                <h4 style={{ fontSize: 13, fontWeight: 600, color: C.g700, marginBottom: 8 }}>Asignar alumno</h4>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <select value={filtroGen} onChange={e => handleBuscar(undefined, e.target.value)}
-                    style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13, background: '#fff', minWidth: 140 }}>
-                    <option value="">Todas las generaciones</option>
+                  <select value={filtroGen} onChange={e => cargarAlumnos(e.target.value)}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13, background: '#fff', minWidth: 160 }}>
+                    <option value="">— Selecciona generación —</option>
                     {generaciones.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
-                  <input value={busqueda} onChange={e => handleBuscar(e.target.value)} placeholder="Nombre o matrícula..."
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13 }} />
+                  {resultados.length > 0 && (
+                    <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Filtrar por nombre..."
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13 }} />
+                  )}
                 </div>
-                {buscando && <div style={{ fontSize: 12, color: C.g400 }}>Buscando...</div>}
-                {resultados.length > 0 && <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                {resultados.map(a => (
-                  <div key={a.Id} onClick={() => handleCheckin(a)}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: 6,
-                      background: '#fff', marginBottom: 4, cursor: 'pointer', border: `1px solid ${C.g200}` }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.g800 }}>{a.NombreCompleto}</div>
-                      <div style={{ fontSize: 11, color: C.g500 }}>{a.Matricula} · {a.Empresa}{a.Generacion ? ` · Gen ${a.Generacion}` : ''}</div>
+                {buscando && <div style={{ fontSize: 12, color: C.g400 }}>Cargando alumnos...</div>}
+                {!filtroGen && !buscando && <div style={{ fontSize: 12, color: C.g400 }}>Selecciona una generación para ver los alumnos disponibles</div>}
+                {filtroGen && !buscando && alumnosFiltrados.length === 0 && <div style={{ fontSize: 12, color: C.g400 }}>No hay alumnos disponibles en esta generación</div>}
+                {alumnosFiltrados.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, color: C.g400, marginBottom: 6 }}>{alumnosFiltrados.length} alumno{alumnosFiltrados.length !== 1 ? 's' : ''} disponible{alumnosFiltrados.length !== 1 ? 's' : ''}</div>
+                    <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                    {alumnosFiltrados.map(a => (
+                      <div key={a.Id} onClick={() => handleCheckin(a)}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: 6,
+                          background: '#fff', marginBottom: 4, cursor: 'pointer', border: `1px solid ${C.g200}` }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.g800 }}>{a.NombreCompleto}</div>
+                          <div style={{ fontSize: 11, color: C.g500 }}>{a.Matricula} · {a.Empresa}</div>
+                        </div>
+                        <span style={{ fontSize: 11, color: C.disponible, fontWeight: 600 }}>Asignar →</span>
+                      </div>
+                    ))}
                     </div>
-                    <span style={{ fontSize: 11, color: C.disponible, fontWeight: 600 }}>Asignar →</span>
                   </div>
-                ))}
-                </div>}
+                )}
               </div>
             )}
 
