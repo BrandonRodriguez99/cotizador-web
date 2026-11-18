@@ -881,4 +881,5 @@ export function seedDormitorios() { return fetchJson('dormitorios/seed', { metho
 export function checkinDormitorio(id, data) { return fetchJson(`dormitorios/${id}/checkin`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }) }
 export function checkoutDormitorio(ocupanteId) { return fetchJson(`dormitorios/checkout/${ocupanteId}`, { method: 'POST', headers: authHeaders() }) }
 export function getHistorialDormitorio(id) { return fetchJson(`dormitorios/${id}/historial`, { headers: authHeaders() }) }
-export function buscarAlumnosDormitorio(q) { return fetchJson(`dormitorios/buscar-alumnos?q=${encodeURIComponent(q)}`, { headers: authHeaders() }) }
+export function buscarAlumnosDormitorio(q, generacion) { const params = new URLSearchParams(); if (q) params.set('q', q); if (generacion) params.set('generacion', generacion); return fetchJson(`dormitorios/buscar-alumnos?${params}`, { headers: authHeaders() }) }
+export function getGeneracionesDormitorio() { return fetchJson('dormitorios/generaciones', { headers: authHeaders() }) }

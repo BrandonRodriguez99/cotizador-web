@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { getDormitorios, updateDormitorio, seedDormitorios, checkinDormitorio, checkoutDormitorio, getHistorialDormitorio, buscarAlumnosDormitorio } from './api'
+import { getDormitorios, updateDormitorio, seedDormitorios, checkinDormitorio, checkoutDormitorio, getHistorialDormitorio, buscarAlumnosDormitorio, getGeneracionesDormitorio } from './api'
 
 const C = {
   disponible: '#22c55e', ocupada: '#f59e0b', mantenimiento: '#ef4444',
@@ -135,6 +135,8 @@ export default function Dormitorios() {
   const [resultados, setResultados] = useState([])
   const [buscando, setBuscando] = useState(false)
   const [filtroEstado, setFiltroEstado] = useState('Todos')
+  const [generaciones, setGeneraciones] = useState([])
+  const [filtroGen, setFiltroGen] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -145,7 +147,7 @@ export default function Dormitorios() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(); getGeneracionesDormitorio().then(setGeneraciones).catch(() => {}) }, [load])
 
   useEffect(() => {
     if (dormitorios.length === 0 && !loading) {
@@ -192,12 +194,16 @@ export default function Dormitorios() {
     load()
   }
 
-  const handleBuscar = async (q) => {
-    setBusqueda(q)
-    if (q.length < 2) { setResultados([]); return }
+  const handleBuscar = async (q, gen) => {
+    if (q !== undefined) setBusqueda(q)
+    if (gen !== undefined) setFiltroGen(gen)
+    const qVal = q !== undefined ? q : busqueda
+    const gVal = gen !== undefined ? gen : filtroGen
+    if (!qVal && !gVal) { setResultados([]); return }
+    if (qVal && qVal.length < 2 && !gVal) { setResultados([]); return }
     setBuscando(true)
     try {
-      const r = await buscarAlumnosDormitorio(q)
+      const r = await buscarAlumnosDormitorio(qVal, gVal)
       setResultados(r)
     } catch (e) { console.error(e) }
     setBuscando(false)
@@ -209,6 +215,7 @@ export default function Dormitorios() {
     setShowCheckin(false)
     setBusqueda('')
     setResultados([])
+    setFiltroGen('')
     setShowModal(false)
     load()
   }
@@ -482,21 +489,30 @@ export default function Dormitorios() {
             {/* Check-in form */}
             {showCheckin && (
               <div style={{ background: '#f0fdf4', borderRadius: 10, padding: 16, marginBottom: 16 }}>
-                <h4 style={{ fontSize: 13, fontWeight: 600, color: C.g700, marginBottom: 8 }}>Buscar alumno OPT</h4>
-                <input value={busqueda} onChange={e => handleBuscar(e.target.value)} placeholder="Nombre o matrícula..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13, marginBottom: 8 }} />
+                <h4 style={{ fontSize: 13, fontWeight: 600, color: C.g700, marginBottom: 8 }}>Buscar alumno</h4>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <select value={filtroGen} onChange={e => handleBuscar(undefined, e.target.value)}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13, background: '#fff', minWidth: 140 }}>
+                    <option value="">Todas las generaciones</option>
+                    {generaciones.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  <input value={busqueda} onChange={e => handleBuscar(e.target.value)} placeholder="Nombre o matrícula..."
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13 }} />
+                </div>
                 {buscando && <div style={{ fontSize: 12, color: C.g400 }}>Buscando...</div>}
+                {resultados.length > 0 && <div style={{ maxHeight: 200, overflowY: 'auto' }}>
                 {resultados.map(a => (
-                  <div key={a.Matricula} onClick={() => handleCheckin(a)}
+                  <div key={a.Id} onClick={() => handleCheckin(a)}
                     style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: 6,
                       background: '#fff', marginBottom: 4, cursor: 'pointer', border: `1px solid ${C.g200}` }}>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: C.g800 }}>{a.NombreCompleto}</div>
-                      <div style={{ fontSize: 11, color: C.g500 }}>{a.Matricula} · {a.Empresa}</div>
+                      <div style={{ fontSize: 11, color: C.g500 }}>{a.Matricula} · {a.Empresa}{a.Generacion ? ` · Gen ${a.Generacion}` : ''}</div>
                     </div>
                     <span style={{ fontSize: 11, color: C.disponible, fontWeight: 600 }}>Asignar →</span>
                   </div>
                 ))}
+                </div>}
               </div>
             )}
 
