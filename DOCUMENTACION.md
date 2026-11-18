@@ -1,6 +1,6 @@
 # Cotizador Servicios UDAT — Documentación del Proyecto
 
-**Versión:** 5.2  
+**Versión:** 5.3  
 **Fecha:** Noviembre 2026  
 **Autor:** Brandon Rodriguez
 
@@ -25,7 +25,8 @@
 15. [Módulo Lean 5S](#15-módulo-lean-5s)
 16. [Módulo Seguimiento OPT](#16-módulo-seguimiento-opt)
 17. [Módulo Academia y Catálogo Público](#17-módulo-academia-y-catálogo-público)
-18. [Historial de Cambios](#18-historial-de-cambios)
+18. [Módulo Dormitorios UDAT](#18-módulo-dormitorios-udat)
+19. [Historial de Cambios](#19-historial-de-cambios)
 
 ---
 
@@ -2101,7 +2102,149 @@ new Date(String(d).slice(0, 10) + 'T00:00:00')
 
 ---
 
-## 18. Historial de Cambios
+## 18. Módulo Dormitorios UDAT
+
+### 18.1 Descripción General
+
+Módulo de gestión de dormitorios para alumnos de UDAT. Permite visualizar la ocupación de habitaciones mediante planos interactivos SVG que replican la distribución arquitectónica real del edificio, realizar check-in/check-out de alumnos, y consultar el historial de ocupación.
+
+### 18.2 Distribución de Habitaciones
+
+| Planta | Sección | Habitaciones | Tipo | Total |
+|--------|---------|-------------|------|-------|
+| Baja | Mujeres | M-01 a M-15 | Mujeres | 15 |
+| Baja | Hombres | H-01 a H-20 | Hombres | 20 |
+| Alta | Ala Izquierda | H-21 a H-30 | Hombres | 10 |
+| Alta | Ala Derecha | H-31 a H-46 | Hombres | 16 |
+| **Total** | | | | **61** |
+
+Todas las habitaciones tienen capacidad para 2 ocupantes.
+
+### 18.3 Planos Interactivos SVG
+
+Los planos están construidos con SVG inline en React. Cada habitación es un rectángulo clickeable con código de color según su estado:
+
+| Color | Estado | Condición |
+|-------|--------|-----------|
+| Verde `#22c55e` | Disponible | 0 ocupantes |
+| Azul `#3b82f6` | Parcial | 1 ocupante |
+| Amarillo `#f59e0b` | Ocupada | 2 ocupantes (capacidad llena) |
+| Rojo `#ef4444` | Mantenimiento | Marcada manualmente |
+
+**Planta Baja — Mujeres:**
+- Fila superior (3 hab): M-06, M-04, M-02 (junto a Baños Mujeres)
+- Fila media (6 hab): M-09, M-08, M-07, M-05, M-03, M-01 (con corredor entre M-07 y M-05)
+- Fila inferior (6 hab): M-10 a M-15
+
+**Planta Baja — Hombres:**
+- Patrón alternado: H-01 arriba, H-02 abajo, H-03 arriba, H-04 abajo, H-05 arriba
+- Fila media (7 hab consecutivas): H-02, H-04, H-06, H-07, H-08, H-09, H-10
+- Fila inferior (10 hab): H-20 a H-11 (derecha a izquierda)
+- Facilidades: Cuarto Eléctrico, Lavandería, Baños Hombres
+
+**Planta Alta — Hombres:**
+- Ala izquierda: H-21 a H-30 (patrón alternado como Planta Baja)
+- Ala derecha: H-31 a H-46 (8 arriba alternando, 8 abajo consecutivas)
+- Facilidades: Baños Hombres (ambos lados), Bodega/SNK, Escaleras
+
+### 18.4 Base de Datos
+
+**Tabla `Dormitorios`:**
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| DormitorioId | INT IDENTITY PK | ID único |
+| Codigo | NVARCHAR(20) UNIQUE | Código (ej: DR-H-01, DR-M-15) |
+| Planta | NVARCHAR(20) | 'Baja' o 'Alta' |
+| Tipo | NVARCHAR(20) | 'Hombres' o 'Mujeres' |
+| Capacidad | INT DEFAULT 2 | Capacidad máxima |
+| Estado | NVARCHAR(20) DEFAULT 'Disponible' | Disponible/Mantenimiento |
+
+**Tabla `DormitorioOcupantes`:**
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| OcupanteId | INT IDENTITY PK | ID único |
+| DormitorioId | INT FK | Referencia a Dormitorios |
+| Matricula | NVARCHAR(50) | Matrícula del alumno (sPerfil de OperacionesUDAT) |
+| NombreCompleto | NVARCHAR(200) | Nombre del alumno |
+| Empresa | NVARCHAR(100) | ALA, LARMEX, etc. |
+| FechaCheckIn | DATETIME DEFAULT GETDATE() | Fecha de entrada |
+| FechaCheckOut | DATETIME NULL | Fecha de salida |
+| Activo | BIT DEFAULT 1 | 1=ocupando, 0=histórico |
+
+### 18.5 Endpoints API
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/dormitorios` | Lista dormitorios con ocupantes activos |
+| POST | `/api/dormitorios/seed` | Siembra 61 habitaciones (auto-seed desde frontend) |
+| PUT | `/api/dormitorios/:id` | Actualiza estado (Disponible/Mantenimiento) |
+| POST | `/api/dormitorios/:id/checkin` | Asigna alumno a habitación |
+| POST | `/api/dormitorios/checkout/:ocupanteId` | Libera ocupante |
+| GET | `/api/dormitorios/:id/historial` | Historial de check-in/check-out |
+| GET | `/api/dormitorios/generaciones` | Lista generaciones disponibles (ingreso ≥ 2026) |
+| GET | `/api/dormitorios/buscar-alumnos?generacion=X&q=Y` | Busca alumnos por generación, excluye ya asignados |
+
+### 18.6 Flujo de Check-in
+
+1. Click en habitación disponible o parcial → se abre modal de detalle
+2. Click en **+ Check-in** → aparece selector de generación
+3. Seleccionar generación → se cargan todos los alumnos de esa generación (filtro: `dFechaIngreso >= 2026-01-01`, excluye alumnos con `sEstatus LIKE '%Baja%'`)
+4. Los alumnos ya asignados a cualquier dormitorio **no aparecen** en la lista
+5. Campo de texto opcional para filtrar por nombre dentro de la lista
+6. Click en alumno → se asigna al dormitorio
+7. Si la habitación alcanza capacidad, el estado cambia automáticamente a "Ocupada"
+
+### 18.7 Flujo de Check-out
+
+1. Click en habitación ocupada/parcial → modal muestra ocupantes actuales
+2. Click en **Check-out** junto al nombre del ocupante → confirmación
+3. Se marca `Activo=0` y `FechaCheckOut=GETDATE()` en DormitorioOcupantes
+4. Si la habitación queda sin ocupantes, el estado vuelve a "Disponible"
+
+### 18.8 Auto-seed y Migraciones
+
+- **Auto-seed:** Si el frontend detecta `dormitorios.length === 0`, llama al endpoint seed que crea las 61 habitaciones
+- **Migración al iniciar:** El servidor verifica que existan las tablas `Dormitorios` y `DormitorioOcupantes`, y valida:
+  - Planta Baja Hombres tiene exactamente 20 habitaciones
+  - Planta Alta tiene exactamente 26 habitaciones
+  - Existe DR-H-21 (detecta numeración antigua H-23..H-48)
+  - Si falla alguna validación, elimina y re-seedea
+
+### 18.9 Permisos
+
+- Vista `dormitorios` agregada al panel de permisos (sección Herramientas)
+- Migración al iniciar servidor asegura que el rol `admin` tenga la vista `dormitorios`
+- Icono de cama (bed) en el sidebar bajo el grupo "Operaciones"
+
+### 18.10 Archivos Principales
+
+| Archivo | Descripción |
+|---------|-------------|
+| `src/Dormitorios.jsx` | Componente principal con planos SVG, modal, check-in/check-out |
+| `src/api.js` | Funciones API: getDormitorios, checkinDormitorio, buscarAlumnosDormitorio, getGeneracionesDormitorio, etc. |
+| `src/App.jsx` | Ruta dormitorios en sidebar, breadcrumb, renderizado |
+| `src/PermisosPanel.jsx` | Vista dormitorios en tabla de permisos |
+| `server.js` | Endpoints, migraciones, seed |
+
+---
+
+## 19. Historial de Cambios
+
+### v5.3 — Noviembre 2026
+
+#### Nuevo: Módulo Dormitorios UDAT
+- **Planos interactivos SVG** con 61 habitaciones distribuidas en Planta Baja (Mujeres + Hombres) y Planta Alta (Hombres), replicando la distribución arquitectónica real
+- **Check-in/Check-out** de alumnos desde OperacionesUDAT con selector de generación
+- **Filtro por generación**: muestra todos los alumnos de una generación (ingreso ≥ 2026), excluye automáticamente los ya asignados
+- **Colorimetría de estado**: verde (disponible), azul (parcial), amarillo (ocupada), rojo (mantenimiento)
+- **Historial de ocupación** por habitación con fechas de entrada y salida
+- **Auto-seed** de habitaciones y migración con validación de numeración correcta
+- **Permisos**: vista `dormitorios` integrada al sistema de permisos por rol
+- Tablas: `Dormitorios`, `DormitorioOcupantes`
+- 8 endpoints API bajo `/api/dormitorios/*`
+- Ver [sección 18](#18-módulo-dormitorios-udat) para documentación completa
+
+---
 
 ### v5.2 — Noviembre 2026
 
