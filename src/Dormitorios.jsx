@@ -38,9 +38,9 @@ const PLANTA_BAJA_HOMBRES = [
   { codigo: 'DR-H-01', x: HX + 40, y: HY1, w: RW, h: RH },
   { codigo: 'DR-H-02', x: HX + 40 + (RW + GAP) * 2, y: HY1, w: RW, h: RH },
   { codigo: 'DR-H-03', x: HX + 40 + (RW + GAP) * 4, y: HY1, w: RW, h: RH },
-  // Fila media (7 cuartos): H-04..H-10
+  // Fila media (7 cuartos consecutivos): H-04..H-10
   { codigo: 'DR-H-04', x: HX + 40, y: HY2, w: RW, h: RH },
-  { codigo: 'DR-H-05', x: HX + 40 + (RW + GAP), y: HY2, w: RW, h: RH },
+  { codigo: 'DR-H-05', x: HX + 40 + 1 * (RW + GAP), y: HY2, w: RW, h: RH },
   { codigo: 'DR-H-06', x: HX + 40 + 2 * (RW + GAP), y: HY2, w: RW, h: RH },
   { codigo: 'DR-H-07', x: HX + 40 + 3 * (RW + GAP), y: HY2, w: RW, h: RH },
   { codigo: 'DR-H-08', x: HX + 40 + 4 * (RW + GAP), y: HY2, w: RW, h: RH },
