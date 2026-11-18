@@ -62,13 +62,50 @@ const PLANTA_BAJA_HOMBRES = [
   { codigo: 'DR-H-11', x: HX + HS * 9, y: HY3, w: RW, h: RH },
 ]
 
-const PLANTA_ALTA = []
-for (let i = 23; i <= 48; i++) {
-  const idx = i - 23
-  const col = idx % 13
-  const row = Math.floor(idx / 13)
-  PLANTA_ALTA.push({ codigo: `DR-H-${String(i).padStart(2, '0')}`, x: 60 + col * 62, y: 10 + row * 110, w: 54, h: 50 })
-}
+// Planta Alta: H-21..H-46 (26 cuartos), dos alas separadas
+const AY1 = 10, AY2 = 10 + RH + 24
+
+// Ala izquierda (H-21..H-30): baños izq, bodega/SNK centro
+const ALX = 160
+const PLANTA_ALTA_IZQ = [
+  // Arriba (alternando): H-21, H-23, H-25
+  { codigo: 'DR-H-21', x: ALX, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-23', x: ALX + HS * 2, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-25', x: ALX + HS * 4, y: AY1, w: RW, h: RH },
+  // Abajo: H-22, H-24, H-26, H-27, H-28, H-29, H-30
+  { codigo: 'DR-H-22', x: ALX, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-24', x: ALX + HS, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-26', x: ALX + HS * 2, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-27', x: ALX + HS * 3, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-28', x: ALX + HS * 4, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-29', x: ALX + HS * 5, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-30', x: ALX + HS * 6, y: AY2, w: RW, h: RH },
+]
+
+// Ala derecha (H-31..H-46): cto eléctrico izq, baños der
+const ARX = ALX + HS * 7 + 130
+const PLANTA_ALTA_DER = [
+  // Arriba (alternando): H-31, H-33, H-35, H-37, H-39, H-41, H-43, H-45
+  { codigo: 'DR-H-31', x: ARX, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-33', x: ARX + HS * 2, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-35', x: ARX + HS * 3, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-37', x: ARX + HS * 4, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-39', x: ARX + HS * 5, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-41', x: ARX + HS * 6, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-43', x: ARX + HS * 7, y: AY1, w: RW, h: RH },
+  { codigo: 'DR-H-45', x: ARX + HS * 8, y: AY1, w: RW, h: RH },
+  // Abajo: H-32, H-34, H-36, H-38, H-40, H-42, H-44, H-46
+  { codigo: 'DR-H-32', x: ARX, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-34', x: ARX + HS, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-36', x: ARX + HS * 2, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-38', x: ARX + HS * 3, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-40', x: ARX + HS * 4, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-42', x: ARX + HS * 5, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-44', x: ARX + HS * 6, y: AY2, w: RW, h: RH },
+  { codigo: 'DR-H-46', x: ARX + HS * 7, y: AY2, w: RW, h: RH },
+]
+
+const PLANTA_ALTA = [...PLANTA_ALTA_IZQ, ...PLANTA_ALTA_DER]
 
 function estadoColor(estado, ocupantes, capacidad) {
   if (estado === 'Mantenimiento') return C.mantenimiento
@@ -230,8 +267,8 @@ export default function Dormitorios() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.g500 }}>Cargando dormitorios...</div>
 
   const plantaRooms = planta === 'Baja' ? [...PLANTA_BAJA_MUJERES, ...PLANTA_BAJA_HOMBRES] : PLANTA_ALTA
-  const svgW = planta === 'Baja' ? 1440 : 880
-  const svgH = planta === 'Baja' ? 280 : 220
+  const svgW = planta === 'Baja' ? 1440 : 1440
+  const svgH = planta === 'Baja' ? 280 : 160
 
   return (
     <div style={{ padding: '0 24px 40px' }}>
@@ -338,7 +375,26 @@ export default function Dormitorios() {
             </>
           )}
           {planta === 'Alta' && (
-            <rect x={0} y={0} width={svgW} height={svgH} rx={10} fill="#eff6ff" opacity={0.3} />
+            <>
+              <rect x={0} y={0} width={svgW} height={svgH} rx={10} fill="#eff6ff" opacity={0.3} />
+              {/* Baños Hombres izquierda */}
+              <rect x={10} y={AY1} width={140} height={AY2 + RH - AY1} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <text x={80} y={AY1 + (AY2 + RH - AY1) / 2 - 6} textAnchor="middle" fontSize={9} fill={C.g500}>BAÑOS</text>
+              <text x={80} y={AY1 + (AY2 + RH - AY1) / 2 + 6} textAnchor="middle" fontSize={9} fill={C.g500}>HOMBRES</text>
+              {/* Bodega/SNK + Escaleras (zona central entre alas) */}
+              <rect x={ALX + HS * 6 + RW + 8} y={AY1} width={120} height={RH} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <text x={ALX + HS * 6 + RW + 68} y={AY1 + 22} textAnchor="middle" fontSize={8} fill={C.g500}>BODEGA /</text>
+              <text x={ALX + HS * 6 + RW + 68} y={AY1 + 34} textAnchor="middle" fontSize={8} fill={C.g500}>SNK</text>
+              <rect x={ALX + HS * 6 + RW + 8} y={AY2} width={120} height={RH} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <text x={ALX + HS * 6 + RW + 68} y={AY2 + 30} textAnchor="middle" fontSize={9} fill={C.g500}>ESCALERAS</text>
+              {/* Baños Hombres derecha */}
+              <rect x={ARX + HS * 8 + RW + 10} y={AY1} width={120} height={AY2 + RH - AY1} rx={6} fill={C.g100} stroke={C.g200} strokeWidth={1} />
+              <text x={ARX + HS * 8 + RW + 70} y={AY1 + (AY2 + RH - AY1) / 2 - 6} textAnchor="middle" fontSize={9} fill={C.g500}>BAÑOS</text>
+              <text x={ARX + HS * 8 + RW + 70} y={AY1 + (AY2 + RH - AY1) / 2 + 6} textAnchor="middle" fontSize={9} fill={C.g500}>HOMBRES</text>
+              {/* Labels de alas */}
+              <text x={ALX + HS * 3} y={svgH - 4} textAnchor="middle" fontSize={10} fill={C.hombres} fontWeight={600}>ALA IZQUIERDA (H-21 a H-30)</text>
+              <text x={ARX + HS * 4} y={svgH - 4} textAnchor="middle" fontSize={10} fill={C.hombres} fontWeight={600}>ALA DERECHA (H-31 a H-46)</text>
+            </>
           )}
           {plantaRooms.map(r => renderRoom(r))}
         </svg>
