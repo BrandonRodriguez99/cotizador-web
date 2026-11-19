@@ -888,3 +888,4 @@ export function getHistorialGlobalDormitorios(filtros = {}) { const params = new
 export function getEmpresasOperadores() { return fetchJson('dormitorios/empresas-operadores', { headers: authHeaders() }) }
 export function getDetalleAlumno(matricula) { return fetchJson(`dormitorios/detalle-alumno?matricula=${encodeURIComponent(matricula)}`, { headers: authHeaders() }) }
 export function getDetalleOperador(matricula) { return fetchJson(`dormitorios/detalle-operador?matricula=${encodeURIComponent(matricula)}`, { headers: authHeaders() }) }
+export function getEstadisticasDormitorios(dias = 30) { return fetchJson(`dormitorios/estadisticas?dias=${dias}`, { headers: authHeaders() }) }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { getDormitorios, updateDormitorio, seedDormitorios, checkinDormitorio, checkoutDormitorio, getHistorialDormitorio, buscarAlumnosDormitorio, getGeneracionesDormitorio, buscarOperadoresDormitorio, getHistorialGlobalDormitorios, getEmpresasOperadores, getDetalleAlumno, getDetalleOperador } from './api'
+import { getDormitorios, updateDormitorio, seedDormitorios, checkinDormitorio, checkoutDormitorio, getHistorialDormitorio, buscarAlumnosDormitorio, getGeneracionesDormitorio, buscarOperadoresDormitorio, getHistorialGlobalDormitorios, getEmpresasOperadores, getDetalleAlumno, getDetalleOperador, getEstadisticasDormitorios } from './api'
 
 const C = {
   disponible: '#2d9b4e', ocupada: '#0B2341', mantenimiento: '#b91c1c',
@@ -147,6 +147,11 @@ export default function Dormitorios() {
   const [detallePersona, setDetallePersona] = useState(null)
   const [detalleCargando, setDetalleCargando] = useState(false)
 
+  // Dashboard
+  const [dashData, setDashData] = useState(null)
+  const [dashLoading, setDashLoading] = useState(false)
+  const [dashDias, setDashDias] = useState(30)
+
   const load = useCallback(async () => {
     try {
       const data = await getDormitorios()
@@ -284,7 +289,37 @@ export default function Dormitorios() {
 
   useEffect(() => {
     if (vistaActiva === 'historial') cargarHistorialGlobal()
+    if (vistaActiva === 'dashboard') cargarDashboard()
   }, [vistaActiva])
+
+  const cargarDashboard = async (dias) => {
+    setDashLoading(true)
+    try {
+      const data = await getEstadisticasDormitorios(dias || dashDias)
+      setDashData(data)
+    } catch (e) { console.error(e) }
+    setDashLoading(false)
+  }
+
+  const exportarExcel = () => {
+    if (!histOrdenado.length) return
+    const headers = ['Habitación','Planta','Tipo','Nombre','Matrícula/ID','Empresa','Check-in','Check-out','Estado']
+    const rows = histOrdenado.map(h => [
+      h.Codigo, `${h.Planta} · ${h.Tipo}`, h.TipoOcupante || 'Alumno',
+      h.NombreCompleto, h.Matricula, h.Empresa || '-',
+      fmtFecha(h.FechaCheckIn, true), h.FechaCheckOut ? fmtFecha(h.FechaCheckOut, true) : '-',
+      h.Activo ? 'Hospedado' : 'Finalizado',
+    ])
+    const esc = v => `"${String(v).replace(/"/g, '""')}"`
+    const csv = '﻿' + [headers.map(esc).join(','), ...rows.map(r => r.map(esc).join(','))].join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `dormitorios_historial_${new Date().toISOString().slice(0,10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   function toggleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -390,6 +425,7 @@ export default function Dormitorios() {
         {[
           { id: 'plano', label: 'Plano de Habitaciones' },
           { id: 'historial', label: 'Historial de Ocupación' },
+          { id: 'dashboard', label: 'Dashboard' },
         ].map(t => (
           <button key={t.id} onClick={() => setVistaActiva(t.id)}
             style={{ padding: '10px 24px', border: 'none', borderBottom: vistaActiva === t.id ? `3px solid ${C.navy}` : '3px solid transparent',
@@ -557,6 +593,12 @@ export default function Dormitorios() {
               style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: C.navy, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', height: 36 }}>
               Buscar
             </button>
+            {histGlobal.length > 0 && (
+              <button onClick={exportarExcel}
+                style={{ padding: '8px 20px', borderRadius: 8, border: `1px solid ${C.navy}`, background: '#fff', color: C.navy, fontWeight: 600, fontSize: 13, cursor: 'pointer', height: 36 }}>
+                ⬇ Exportar Excel
+              </button>
+            )}
           </div>
 
           {histLoading ? (
@@ -618,6 +660,156 @@ export default function Dormitorios() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* ==================== VISTA DASHBOARD ==================== */}
+      {vistaActiva === 'dashboard' && (
+        <div>
+          {dashLoading ? (
+            <div style={{ padding: 40, textAlign: 'center', color: C.g400 }}>Cargando estadísticas...</div>
+          ) : !dashData ? (
+            <div style={{ padding: 40, textAlign: 'center', color: C.g400 }}>Sin datos disponibles</div>
+          ) : (() => {
+            const r = dashData.resumen || {}
+            const pctOcupacion = r.CapacidadTotal ? Math.round((r.OcupacionActual / r.CapacidadTotal) * 100) : 0
+            return (
+              <>
+                {/* Selector de período */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 20, alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, color: C.g500, fontWeight: 500 }}>Período:</span>
+                  {[7, 30, 90].map(d => (
+                    <button key={d} onClick={() => { setDashDias(d); cargarDashboard(d) }}
+                      style={{ padding: '6px 16px', borderRadius: 20, border: `1px solid ${dashDias === d ? C.navy : C.g200}`,
+                        background: dashDias === d ? C.navy : '#fff', color: dashDias === d ? '#fff' : C.g600,
+                        fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      {d} días
+                    </button>
+                  ))}
+                </div>
+
+                {/* KPIs principales */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
+                  {[
+                    { label: 'Hospedados ahora', value: r.HospedadosActuales || 0, color: C.disponible },
+                    { label: 'Alumnos activos', value: r.AlumnosActivos || 0, color: C.hombres },
+                    { label: 'Operadores activos', value: r.OperadoresActivos || 0, color: C.parcial },
+                    { label: '% Ocupación', value: `${pctOcupacion}%`, color: pctOcupacion > 80 ? C.mantenimiento : pctOcupacion > 50 ? C.parcial : C.disponible },
+                    { label: 'Capacidad total', value: `${r.OcupacionActual || 0}/${r.CapacidadTotal || 0}`, color: C.navy },
+                    { label: 'Estancia promedio', value: `${(dashData.promedioEstanciaDias || 0).toFixed(1)} días`, color: C.g700 },
+                    { label: 'En mantenimiento', value: r.HabitacionesMantenimiento || 0, color: C.mantenimiento },
+                    { label: 'Total histórico', value: r.TotalHistorico || 0, color: C.g600 },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: '#fff', borderRadius: 10, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: `4px solid ${s.color}` }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 11, color: C.g500, fontWeight: 500, marginTop: 2 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Gráfica de check-ins por día */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginBottom: 20 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, color: C.navy, marginBottom: 16 }}>Check-ins por día (últimos {dashDias} días)</h3>
+                  {(!dashData.checkinsPorDia || dashData.checkinsPorDia.length === 0) ? (
+                    <div style={{ padding: 20, textAlign: 'center', color: C.g400, fontSize: 13 }}>Sin registros en este período</div>
+                  ) : (() => {
+                    const datos = dashData.checkinsPorDia
+                    const maxVal = Math.max(...datos.map(d => d.Total), 1)
+                    const barW = Math.max(Math.floor(700 / datos.length) - 4, 8)
+                    const chartH = 180
+                    return (
+                      <div style={{ overflowX: 'auto' }}>
+                        <svg width={Math.max(datos.length * (barW + 4) + 60, 300)} height={chartH + 40} style={{ display: 'block' }}>
+                          {/* Grid lines */}
+                          {[0, 0.25, 0.5, 0.75, 1].map(pct => (
+                            <g key={pct}>
+                              <line x1={40} y1={chartH - pct * chartH + 10} x2={datos.length * (barW + 4) + 50} y2={chartH - pct * chartH + 10} stroke={C.g100} strokeWidth={1} />
+                              <text x={36} y={chartH - pct * chartH + 14} textAnchor="end" fontSize={9} fill={C.g400}>{Math.round(maxVal * pct)}</text>
+                            </g>
+                          ))}
+                          {/* Barras */}
+                          {datos.map((d, i) => {
+                            const x = 44 + i * (barW + 4)
+                            const hAlumnos = (d.Alumnos / maxVal) * chartH
+                            const hOps = (d.Operadores / maxVal) * chartH
+                            const showLabel = datos.length <= 15 || i % Math.ceil(datos.length / 15) === 0
+                            return (
+                              <g key={d.Fecha}>
+                                <rect x={x} y={chartH - hAlumnos - hOps + 10} width={barW} height={hOps} rx={2} fill={C.parcial} />
+                                <rect x={x} y={chartH - hAlumnos + 10} width={barW} height={hAlumnos} rx={2} fill={C.hombres} />
+                                {d.Total > 0 && <text x={x + barW / 2} y={chartH - hAlumnos - hOps + 6} textAnchor="middle" fontSize={8} fill={C.g600}>{d.Total}</text>}
+                                {showLabel && <text x={x + barW / 2} y={chartH + 24} textAnchor="middle" fontSize={8} fill={C.g400} transform={`rotate(-45, ${x + barW / 2}, ${chartH + 24})`}>{d.Fecha.slice(5)}</text>}
+                              </g>
+                            )
+                          })}
+                        </svg>
+                        <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: C.g500 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: C.hombres }} /> Alumnos</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: C.parcial }} /> Operadores</div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  {/* Top habitaciones */}
+                  <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, color: C.navy, marginBottom: 12 }}>Top habitaciones más usadas</h3>
+                    {(dashData.topHabitaciones || []).length === 0 ? (
+                      <div style={{ padding: 16, textAlign: 'center', color: C.g400, fontSize: 13 }}>Sin datos</div>
+                    ) : (
+                      <div>
+                        {dashData.topHabitaciones.map((h, i) => {
+                          const maxUsos = dashData.topHabitaciones[0]?.TotalUsos || 1
+                          return (
+                            <div key={h.Codigo} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                              <span style={{ fontSize: 11, color: C.g400, width: 20, textAlign: 'right' }}>{i + 1}.</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: C.g800, width: 60 }}>{h.Codigo}</span>
+                              <div style={{ flex: 1, background: C.g100, borderRadius: 4, height: 20, overflow: 'hidden' }}>
+                                <div style={{ width: `${(h.TotalUsos / maxUsos) * 100}%`, height: '100%', background: C.navy, borderRadius: 4, transition: 'width 0.5s' }} />
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: C.navy, width: 30, textAlign: 'right' }}>{h.TotalUsos}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Por empresa */}
+                  <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, color: C.navy, marginBottom: 12 }}>Ocupación por empresa</h3>
+                    {(dashData.porEmpresa || []).length === 0 ? (
+                      <div style={{ padding: 16, textAlign: 'center', color: C.g400, fontSize: 13 }}>Sin datos</div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ borderBottom: `2px solid ${C.g200}` }}>
+                            <th style={{ ...thS }}>Empresa</th>
+                            <th style={{ ...thS, textAlign: 'center' }}>Activos</th>
+                            <th style={{ ...thS, textAlign: 'center' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dashData.porEmpresa.map(e => (
+                            <tr key={e.Empresa} style={{ borderBottom: `1px solid ${C.g100}` }}>
+                              <td style={tdS}><span style={{ fontWeight: 600 }}>{e.Empresa}</span></td>
+                              <td style={{ ...tdS, textAlign: 'center' }}>
+                                {e.Activos > 0 && <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{e.Activos}</span>}
+                                {!e.Activos && <span style={{ color: C.g400 }}>0</span>}
+                              </td>
+                              <td style={{ ...tdS, textAlign: 'center', fontWeight: 600 }}>{e.Total}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              </>
+            )
+          })()}
         </div>
       )}
 
