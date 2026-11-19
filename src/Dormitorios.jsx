@@ -816,6 +816,33 @@ export default function Dormitorios() {
                     )}
                   </div>
                 </div>
+
+                {/* Ocupación por generación */}
+                {(dashData.porGeneracion || []).length > 0 && (
+                  <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, color: C.navy, marginBottom: 12 }}>Ocupación por generación (Alumnos)</h3>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: `2px solid ${C.g200}` }}>
+                          <th style={{ ...thS }}>Generación</th>
+                          <th style={{ ...thS, textAlign: 'center' }}>Activos</th>
+                          <th style={{ ...thS, textAlign: 'center' }}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dashData.porGeneracion.map(g => (
+                          <tr key={g.Generacion} style={{ borderBottom: `1px solid ${C.g100}` }}>
+                            <td style={tdS}><span style={{ fontWeight: 600 }}>{g.Generacion}</span></td>
+                            <td style={{ ...tdS, textAlign: 'center' }}>
+                              {g.Activos > 0 ? <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{g.Activos}</span> : <span style={{ color: C.g400 }}>0</span>}
+                            </td>
+                            <td style={{ ...tdS, textAlign: 'center', fontWeight: 600 }}>{g.Total}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </>
             )
           })()}
