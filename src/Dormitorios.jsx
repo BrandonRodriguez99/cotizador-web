@@ -329,17 +329,33 @@ export default function Dormitorios() {
       (filtroEstado === 'Mantenimiento' && label === 'Mantenimiento')
     const num = room.codigo.split('-').pop()
     const isM = room.codigo.startsWith('DR-M')
+    const cap = d.Capacidad || 2
+    const op = matchesFiltro ? 1 : 0.2
+    const bw = 10, bh = 6, bgap = 4
+    const totalBedsW = cap * bw + (cap - 1) * bgap
+    const bx0 = room.x + (room.w - totalBedsW) / 2
+    const by = room.y + 40
     return (
       <g key={room.codigo} onClick={() => handleRoomClick(room.codigo)} style={{ cursor: 'pointer' }}>
         <rect x={room.x} y={room.y} width={room.w} height={room.h} rx={6} ry={6}
           fill={color} stroke={matchesFiltro ? (isM ? C.mujeres : C.hombres) : '#e5e7eb'}
-          strokeWidth={2} opacity={matchesFiltro ? 1 : 0.2} />
-        <text x={room.x + room.w / 2} y={room.y + 20} textAnchor="middle" fontSize={10} fontWeight={700} fill="#fff" opacity={matchesFiltro ? 1 : 0.2}>
+          strokeWidth={2} opacity={op} />
+        <text x={room.x + room.w / 2} y={room.y + 18} textAnchor="middle" fontSize={10} fontWeight={700} fill="#fff" opacity={op}>
           {isM ? 'M' : 'H'}-{num}
         </text>
-        <text x={room.x + room.w / 2} y={room.y + 36} textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.85)" opacity={matchesFiltro ? 1 : 0.2}>
-          {ocu}/{d.Capacidad}
+        <text x={room.x + room.w / 2} y={room.y + 30} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.8)" opacity={op}>
+          {ocu}/{cap}
         </text>
+        {Array.from({ length: cap }).map((_, i) => {
+          const filled = i < ocu
+          const bx = bx0 + i * (bw + bgap)
+          return (
+            <g key={i} opacity={op}>
+              <rect x={bx} y={by} width={bw} height={bh} rx={1.5} fill={filled ? '#fff' : 'none'} stroke="#fff" strokeWidth={0.8} opacity={filled ? 1 : 0.4} />
+              <rect x={bx + 1} y={by - 1.5} width={bw - 2} height={2} rx={1} fill={filled ? '#fff' : 'none'} stroke="#fff" strokeWidth={0.5} opacity={filled ? 1 : 0.4} />
+            </g>
+          )
+        })}
       </g>
     )
   }
