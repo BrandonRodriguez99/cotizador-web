@@ -886,3 +886,5 @@ export function getGeneracionesDormitorio() { return fetchJson('dormitorios/gene
 export function buscarOperadoresDormitorio(q, empresa) { const params = new URLSearchParams(); if (q) params.set('q', q); if (empresa) params.set('empresa', empresa); return fetchJson(`dormitorios/buscar-operadores?${params}`, { headers: authHeaders() }) }
 export function getHistorialGlobalDormitorios(filtros = {}) { const params = new URLSearchParams(); Object.entries(filtros).forEach(([k, v]) => { if (v) params.set(k, v) }); return fetchJson(`dormitorios/historial-global?${params}`, { headers: authHeaders() }) }
 export function getEmpresasOperadores() { return fetchJson('dormitorios/empresas-operadores', { headers: authHeaders() }) }
+export function getDetalleAlumno(matricula) { return fetchJson(`dormitorios/detalle-alumno?matricula=${encodeURIComponent(matricula)}`, { headers: authHeaders() }) }
+export function getDetalleOperador(matricula) { return fetchJson(`dormitorios/detalle-operador?matricula=${encodeURIComponent(matricula)}`, { headers: authHeaders() }) }

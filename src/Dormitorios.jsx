@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { getDormitorios, updateDormitorio, seedDormitorios, checkinDormitorio, checkoutDormitorio, getHistorialDormitorio, buscarAlumnosDormitorio, getGeneracionesDormitorio, buscarOperadoresDormitorio, getHistorialGlobalDormitorios, getEmpresasOperadores } from './api'
+import { getDormitorios, updateDormitorio, seedDormitorios, checkinDormitorio, checkoutDormitorio, getHistorialDormitorio, buscarAlumnosDormitorio, getGeneracionesDormitorio, buscarOperadoresDormitorio, getHistorialGlobalDormitorios, getEmpresasOperadores, getDetalleAlumno, getDetalleOperador } from './api'
 
 const C = {
   disponible: '#22c55e', ocupada: '#f59e0b', mantenimiento: '#ef4444',
@@ -144,6 +144,8 @@ export default function Dormitorios() {
   const [histTipo, setHistTipo] = useState('')
   const [sortField, setSortField] = useState('FechaCheckIn')
   const [sortDir, setSortDir] = useState('desc')
+  const [detallePersona, setDetallePersona] = useState(null)
+  const [detalleCargando, setDetalleCargando] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -301,6 +303,19 @@ export default function Dormitorios() {
       return 0
     })
   }, [histGlobal, sortField, sortDir])
+
+  const abrirDetalle = async (registro) => {
+    setDetalleCargando(true)
+    setDetallePersona({ ...registro, _detalle: null })
+    try {
+      const tipo = (registro.TipoOcupante || 'Alumno')
+      const data = tipo === 'Operador'
+        ? await getDetalleOperador(registro.Matricula)
+        : await getDetalleAlumno(registro.Matricula)
+      setDetallePersona(prev => ({ ...prev, _detalle: data }))
+    } catch (e) { console.error(e) }
+    setDetalleCargando(false)
+  }
 
   const renderRoom = (room) => {
     const d = dormMap[room.codigo]
@@ -558,7 +573,7 @@ export default function Dormitorios() {
                   </thead>
                   <tbody>
                     {histOrdenado.map(h => (
-                      <tr key={h.OcupanteId} style={{ borderBottom: `1px solid ${C.g100}` }}>
+                      <tr key={h.OcupanteId} onClick={() => abrirDetalle(h)} style={{ borderBottom: `1px solid ${C.g100}`, cursor: 'pointer', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = ''}>
                         <td style={tdS}><span style={{ fontWeight: 600 }}>{h.Codigo}</span></td>
                         <td style={tdS}>{h.Planta} · {h.Tipo}</td>
                         <td style={tdS}>
@@ -757,6 +772,108 @@ export default function Dormitorios() {
           </div>
         </div>
       )}
+
+      {/* ==================== MODAL DETALLE PERSONA ==================== */}
+      {detallePersona && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
+          onClick={() => setDetallePersona(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 520, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.navy, margin: 0 }}>{detallePersona.NombreCompleto}</h3>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                  <span style={{ padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                    background: (detallePersona.TipoOcupante || 'Alumno') === 'Alumno' ? '#dbeafe' : '#fef3c7',
+                    color: (detallePersona.TipoOcupante || 'Alumno') === 'Alumno' ? '#1d4ed8' : '#92400e' }}>
+                    {detallePersona.TipoOcupante || 'Alumno'}
+                  </span>
+                  <span style={{ fontSize: 12, color: C.g500 }}>{detallePersona.Codigo} · {detallePersona.Empresa}</span>
+                </div>
+              </div>
+              <button onClick={() => setDetallePersona(null)}
+                style={{ background: 'none', border: 'none', fontSize: 22, color: C.g400, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {/* Info de hospedaje */}
+            <div style={{ background: C.g50, borderRadius: 10, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.g700, marginBottom: 8 }}>Hospedaje</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <InfoItem label="Habitación" value={detallePersona.Codigo} />
+                <InfoItem label="Matrícula / No. Empleado" value={detallePersona.Matricula} />
+                <InfoItem label="Check-in" value={fmtFecha(detallePersona.FechaCheckIn, true)} />
+                <InfoItem label="Check-out" value={detallePersona.FechaCheckOut ? fmtFecha(detallePersona.FechaCheckOut, true) : 'Hospedado actualmente'} />
+              </div>
+            </div>
+
+            {/* Info personal */}
+            {detalleCargando && <div style={{ padding: 16, textAlign: 'center', color: C.g400, fontSize: 13 }}>Cargando información...</div>}
+            {detallePersona._detalle && (detallePersona.TipoOcupante || 'Alumno') === 'Alumno' && (() => {
+              const d = detallePersona._detalle
+              return (
+                <div style={{ background: '#eff6ff', borderRadius: 10, padding: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1d4ed8', marginBottom: 8 }}>Información del Alumno</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <InfoItem label="Nombre" value={d.NombreCompleto} />
+                    <InfoItem label="Matrícula" value={d.Matricula} />
+                    <InfoItem label="Empresa" value={d.Empresa} />
+                    <InfoItem label="CURP" value={d.CURP} />
+                    <InfoItem label="Teléfono" value={d.Telefono} />
+                    <InfoItem label="Correo" value={d.Correo} />
+                    <InfoItem label="Sexo" value={d.Sexo} />
+                    <InfoItem label="Fecha Nacimiento" value={fmtFecha(d.FechaNacimiento)} />
+                    <InfoItem label="Fecha Ingreso" value={fmtFecha(d.FechaIngreso)} />
+                    <InfoItem label="Fecha Egreso" value={fmtFecha(d.FechaEgreso)} />
+                  </div>
+                </div>
+              )
+            })()}
+            {detallePersona._detalle && (detallePersona.TipoOcupante || 'Alumno') === 'Operador' && (() => {
+              const d = detallePersona._detalle
+              return (
+                <div style={{ background: '#fefce8', borderRadius: 10, padding: 14 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
+                    {d.FotoUrl && <img src={d.FotoUrl} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: `2px solid ${C.g200}` }} />}
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#92400e', marginBottom: 4 }}>Información del Operador</div>
+                      <div style={{ fontSize: 12, color: C.g500 }}>{d.Empresa} · {d.DivisionNombre}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <InfoItem label="Nombre" value={d.NombreCompleto} />
+                    <InfoItem label="No. Empleado" value={d.NumeroEmpleadoCompuesto} />
+                    <InfoItem label="CURP" value={d.CURP} />
+                    <InfoItem label="Edad" value={d.Edad ? `${d.Edad} años` : null} />
+                    <InfoItem label="Fecha Nacimiento" value={fmtFecha(d.FechaNacimiento)} />
+                    <InfoItem label="Fecha Ingreso" value={fmtFecha(d.FechaIngreso)} />
+                    <InfoItem label="Antigüedad" value={d.AntiguedadYears != null ? `${d.AntiguedadYears}a ${d.AntiguedadMonths || 0}m` : null} />
+                    <InfoItem label="Teléfono Móvil" value={d.TelefonoMovil} />
+                    <InfoItem label="Tel. Casa" value={d.TelefonoCasa} />
+                    <InfoItem label="Tel. Emergencia" value={d.TelefonoContactoEmergencia} />
+                    <InfoItem label="Licencia" value={d.LicenciaNumero} />
+                    <InfoItem label="Tipo Licencia" value={d.LicenciaTipoNombre} />
+                    <InfoItem label="Venc. Licencia" value={fmtFecha(d.LicenciaVencimientoFecha)} />
+                    <InfoItem label="Área" value={d.AreaNombre} />
+                    <InfoItem label="Unidad Negocio" value={d.UnidadNegocioNombre} />
+                    <InfoItem label="Unidad Operativa" value={d.UnidadOperativaNombre} />
+                    <InfoItem label="Terminal" value={d.TerminalNombre} />
+                    <InfoItem label="Plaza" value={d.PlazaNombre} />
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function InfoItem({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
+      <div style={{ fontSize: 13, color: '#1f2937', fontWeight: 500 }}>{value || '-'}</div>
     </div>
   )
 }
