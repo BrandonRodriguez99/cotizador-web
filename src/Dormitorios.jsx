@@ -495,7 +495,7 @@ export default function Dormitorios() {
                   <select value={filtroGen} onChange={e => cargarAlumnos(e.target.value)}
                     style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13, background: '#fff', minWidth: 160 }}>
                     <option value="">— Selecciona generación —</option>
-                    {generaciones.map(g => <option key={g} value={g}>{g}</option>)}
+                    {generaciones.map(g => <option key={g.GeneracionId || g} value={g.GeneracionId || g}>{g.Nombre || g}</option>)}
                   </select>
                   {resultados.length > 0 && (
                     <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Filtrar por nombre..."
