@@ -142,6 +142,8 @@ export default function Dormitorios() {
   const [histHabitacion, setHistHabitacion] = useState('')
   const [histActivo, setHistActivo] = useState('')
   const [histTipo, setHistTipo] = useState('')
+  const [sortField, setSortField] = useState('FechaCheckIn')
+  const [sortDir, setSortDir] = useState('desc')
 
   const load = useCallback(async () => {
     try {
@@ -281,6 +283,24 @@ export default function Dormitorios() {
   useEffect(() => {
     if (vistaActiva === 'historial') cargarHistorialGlobal()
   }, [vistaActiva])
+
+  function toggleSort(field) {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir('asc') }
+  }
+  const sortIcon = (field) => sortField === field ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''
+
+  const histOrdenado = useMemo(() => {
+    if (!sortField) return histGlobal
+    return [...histGlobal].sort((a, b) => {
+      let va = a[sortField] ?? '', vb = b[sortField] ?? ''
+      if (typeof va === 'string') va = va.toLowerCase()
+      if (typeof vb === 'string') vb = vb.toLowerCase()
+      if (va < vb) return sortDir === 'asc' ? -1 : 1
+      if (va > vb) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [histGlobal, sortField, sortDir])
 
   const renderRoom = (room) => {
     const d = dormMap[room.codigo]
@@ -514,24 +534,30 @@ export default function Dormitorios() {
             <div style={{ padding: 20, textAlign: 'center', color: C.g400 }}>No se encontraron registros</div>
           ) : (
             <>
-              <div style={{ fontSize: 12, color: C.g400, marginBottom: 8 }}>{histGlobal.length} registro{histGlobal.length !== 1 ? 's' : ''}</div>
+              <div style={{ fontSize: 12, color: C.g400, marginBottom: 8 }}>{histOrdenado.length} registro{histOrdenado.length !== 1 ? 's' : ''}</div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ borderBottom: `2px solid ${C.g200}` }}>
-                      <th style={thS}>Habitación</th>
-                      <th style={thS}>Planta</th>
-                      <th style={thS}>Tipo</th>
-                      <th style={thS}>Nombre</th>
-                      <th style={thS}>Matrícula / ID</th>
-                      <th style={thS}>Empresa</th>
-                      <th style={thS}>Check-in</th>
-                      <th style={thS}>Check-out</th>
-                      <th style={thS}>Estado</th>
+                      {[
+                        { key: 'Codigo', label: 'Habitación' },
+                        { key: 'Planta', label: 'Planta' },
+                        { key: 'TipoOcupante', label: 'Tipo' },
+                        { key: 'NombreCompleto', label: 'Nombre' },
+                        { key: 'Matricula', label: 'Matrícula / ID' },
+                        { key: 'Empresa', label: 'Empresa' },
+                        { key: 'FechaCheckIn', label: 'Check-in' },
+                        { key: 'FechaCheckOut', label: 'Check-out' },
+                        { key: 'Activo', label: 'Estado' },
+                      ].map(col => (
+                        <th key={col.key} style={{ ...thS, cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort(col.key)}>
+                          {col.label}{sortIcon(col.key)}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {histGlobal.map(h => (
+                    {histOrdenado.map(h => (
                       <tr key={h.OcupanteId} style={{ borderBottom: `1px solid ${C.g100}` }}>
                         <td style={tdS}><span style={{ fontWeight: 600 }}>{h.Codigo}</span></td>
                         <td style={tdS}>{h.Planta} · {h.Tipo}</td>
