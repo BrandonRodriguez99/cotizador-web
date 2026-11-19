@@ -296,8 +296,12 @@ export default function Dormitorios() {
     setDashLoading(true)
     try {
       const data = await getEstadisticasDormitorios(dias || dashDias)
-      setDashData(data)
-    } catch (e) { console.error(e) }
+      if (data && data.resumen) setDashData(data)
+      else setDashData(null)
+    } catch (e) {
+      console.error('Error cargando dashboard:', e)
+      setDashData(null)
+    }
     setDashLoading(false)
   }
 
@@ -669,7 +673,12 @@ export default function Dormitorios() {
           {dashLoading ? (
             <div style={{ padding: 40, textAlign: 'center', color: C.g400 }}>Cargando estadísticas...</div>
           ) : !dashData ? (
-            <div style={{ padding: 40, textAlign: 'center', color: C.g400 }}>Sin datos disponibles</div>
+            <div style={{ padding: 40, textAlign: 'center' }}>
+              <div style={{ color: C.g400, marginBottom: 12 }}>Sin datos disponibles</div>
+              <button onClick={() => cargarDashboard()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: C.navy, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                Reintentar
+              </button>
+            </div>
           ) : (() => {
             const r = dashData.resumen || {}
             const pctOcupacion = r.CapacidadTotal ? Math.round((r.OcupacionActual / r.CapacidadTotal) * 100) : 0
