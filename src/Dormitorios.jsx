@@ -141,6 +141,7 @@ export default function Dormitorios() {
   const [histBusqueda, setHistBusqueda] = useState('')
   const [histHabitacion, setHistHabitacion] = useState('')
   const [histActivo, setHistActivo] = useState('')
+  const [histTipo, setHistTipo] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -270,7 +271,7 @@ export default function Dormitorios() {
     try {
       const data = await getHistorialGlobalDormitorios({
         fechaDesde: histFechaDesde, fechaHasta: histFechaHasta,
-        q: histBusqueda, habitacion: histHabitacion, activo: histActivo,
+        q: histBusqueda, habitacion: histHabitacion, activo: histActivo, tipo: histTipo,
       })
       setHistGlobal(data)
     } catch (e) { console.error(e) }
@@ -310,8 +311,10 @@ export default function Dormitorios() {
 
   const fmtFecha = (d, conHora = false) => {
     if (!d) return '-'
-    const raw = String(d)
-    const fecha = new Date(raw.endsWith('Z') ? raw : raw + 'Z')
+    const raw = String(d).replace(/\.000Z?$/, '').replace(/Z$/, '')
+    const parts = raw.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+    if (!parts) return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+    const fecha = new Date(Date.UTC(+parts[1], +parts[2] - 1, +parts[3], +parts[4], +parts[5]))
     const opts = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Mexico_City' }
     if (conHora) { opts.hour = '2-digit'; opts.minute = '2-digit'; opts.hour12 = false }
     return fecha.toLocaleDateString('es-MX', opts)
@@ -325,11 +328,8 @@ export default function Dormitorios() {
 
   return (
     <div style={{ padding: '0 24px 40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: C.navy, margin: 0 }}>Dormitorios UDAT</h2>
-          <p style={{ fontSize: 13, color: C.g500, margin: '4px 0 0' }}>Gestión y ocupación de habitaciones</p>
-        </div>
+      <div style={{ marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: C.g500, margin: 0 }}>Gestión y ocupación de habitaciones</p>
       </div>
 
       {/* Tabs principales: Plano / Historial */}
@@ -489,6 +489,15 @@ export default function Dormitorios() {
                 <option value="">Todos</option>
                 <option value="1">Activos (hospedados)</option>
                 <option value="0">Finalizados (check-out)</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: C.g500, display: 'block', marginBottom: 4 }}>Tipo</label>
+              <select value={histTipo} onChange={e => setHistTipo(e.target.value)}
+                style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.g200}`, fontSize: 13, background: '#fff' }}>
+                <option value="">Todos</option>
+                <option value="Alumno">Alumno</option>
+                <option value="Operador">Operador</option>
               </select>
             </div>
             <button onClick={cargarHistorialGlobal}
