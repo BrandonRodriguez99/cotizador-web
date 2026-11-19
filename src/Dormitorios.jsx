@@ -818,9 +818,11 @@ export default function Dormitorios() {
                 </div>
 
                 {/* Ocupación por generación */}
-                {(dashData.porGeneracion || []).length > 0 && (
-                  <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 600, color: C.navy, marginBottom: 12 }}>Ocupación por generación (Alumnos)</h3>
+                <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, color: C.navy, marginBottom: 12 }}>Ocupación por generación (Alumnos)</h3>
+                  {(dashData.porGeneracion || []).length === 0 ? (
+                    <div style={{ padding: 16, textAlign: 'center', color: C.g400, fontSize: 13 }}>Sin alumnos registrados</div>
+                  ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                       <thead>
                         <tr style={{ borderBottom: `2px solid ${C.g200}` }}>
@@ -841,8 +843,8 @@ export default function Dormitorios() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                )}
+                  )}
+                </div>
               </>
             )
           })()}
