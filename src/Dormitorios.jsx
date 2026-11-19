@@ -245,7 +245,7 @@ export default function Dormitorios() {
 
   const handleCheckin = async (persona) => {
     if (!selected) return
-    await checkinDormitorio(selected.DormitorioId, persona)
+    await checkinDormitorio(selected.DormitorioId, { ...persona, TipoOcupante: tipoCheckin === 'alumno' ? 'Alumno' : 'Operador' })
     if (tipoCheckin === 'alumno') {
       setResultados(prev => prev.filter(a => a.Id !== persona.Id))
     } else {
@@ -506,6 +506,7 @@ export default function Dormitorios() {
                     <tr style={{ borderBottom: `2px solid ${C.g200}` }}>
                       <th style={thS}>Habitación</th>
                       <th style={thS}>Planta</th>
+                      <th style={thS}>Tipo</th>
                       <th style={thS}>Nombre</th>
                       <th style={thS}>Matrícula / ID</th>
                       <th style={thS}>Empresa</th>
@@ -519,6 +520,13 @@ export default function Dormitorios() {
                       <tr key={h.OcupanteId} style={{ borderBottom: `1px solid ${C.g100}` }}>
                         <td style={tdS}><span style={{ fontWeight: 600 }}>{h.Codigo}</span></td>
                         <td style={tdS}>{h.Planta} · {h.Tipo}</td>
+                        <td style={tdS}>
+                          <span style={{ padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                            background: (h.TipoOcupante || 'Alumno') === 'Alumno' ? '#dbeafe' : '#fef3c7',
+                            color: (h.TipoOcupante || 'Alumno') === 'Alumno' ? '#1d4ed8' : '#92400e' }}>
+                            {h.TipoOcupante || 'Alumno'}
+                          </span>
+                        </td>
                         <td style={tdS}>{h.NombreCompleto}</td>
                         <td style={tdS}>{h.Matricula}</td>
                         <td style={tdS}>{h.Empresa || '-'}</td>
