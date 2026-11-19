@@ -312,12 +312,14 @@ export default function Dormitorios() {
   const fmtFecha = (d, conHora = false) => {
     if (!d) return '-'
     const raw = String(d).replace(/\.000Z?$/, '').replace(/Z$/, '')
-    const parts = raw.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
-    if (!parts) return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
-    const fecha = new Date(Date.UTC(+parts[1], +parts[2] - 1, +parts[3], +parts[4], +parts[5]))
-    const opts = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Mexico_City' }
-    if (conHora) { opts.hour = '2-digit'; opts.minute = '2-digit'; opts.hour12 = false }
-    return fecha.toLocaleDateString('es-MX', opts)
+    const p = raw.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+    if (!p) {
+      const f = new Date(raw + 'T00:00:00')
+      return f.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+    }
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+    const txt = `${p[3]} ${meses[+p[2]-1]} ${p[1]}`
+    return conHora ? `${txt}, ${p[4]}:${p[5]}` : txt
   }
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.g500 }}>Cargando dormitorios...</div>
