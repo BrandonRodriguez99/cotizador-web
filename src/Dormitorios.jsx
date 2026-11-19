@@ -308,9 +308,12 @@ export default function Dormitorios() {
     )
   }
 
-  const fmtFecha = (d) => {
+  const fmtFecha = (d, conHora = false) => {
     if (!d) return '-'
-    return new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+    const fecha = new Date(d)
+    const opts = { day: '2-digit', month: 'short', year: 'numeric' }
+    if (conHora) { opts.hour = '2-digit'; opts.minute = '2-digit'; opts.hour12 = false }
+    return fecha.toLocaleDateString('es-MX', opts)
   }
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.g500 }}>Cargando dormitorios...</div>
@@ -530,8 +533,8 @@ export default function Dormitorios() {
                         <td style={tdS}>{h.NombreCompleto}</td>
                         <td style={tdS}>{h.Matricula}</td>
                         <td style={tdS}>{h.Empresa || '-'}</td>
-                        <td style={tdS}>{fmtFecha(h.FechaCheckIn)}</td>
-                        <td style={tdS}>{h.FechaCheckOut ? fmtFecha(h.FechaCheckOut) : '-'}</td>
+                        <td style={tdS}>{fmtFecha(h.FechaCheckIn, true)}</td>
+                        <td style={tdS}>{h.FechaCheckOut ? fmtFecha(h.FechaCheckOut, true) : '-'}</td>
                         <td style={tdS}>
                           {h.Activo ? (
                             <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>Hospedado</span>
