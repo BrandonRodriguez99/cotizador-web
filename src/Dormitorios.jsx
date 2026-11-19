@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { getDormitorios, updateDormitorio, seedDormitorios, checkinDormitorio, checkoutDormitorio, getHistorialDormitorio, buscarAlumnosDormitorio, getGeneracionesDormitorio, buscarOperadoresDormitorio, getHistorialGlobalDormitorios, getEmpresasOperadores, getDetalleAlumno, getDetalleOperador } from './api'
 
 const C = {
-  disponible: '#22c55e', ocupada: '#f59e0b', mantenimiento: '#ef4444',
-  parcial: '#3b82f6',
-  navy: '#0b2341', white: '#ffffff', g50: '#f9fafb', g100: '#f3f4f6',
+  disponible: '#2d9b4e', ocupada: '#0B2341', mantenimiento: '#b91c1c',
+  parcial: '#FB6500',
+  navy: '#0B2341', white: '#ffffff', g50: '#f9fafb', g100: '#f3f4f6',
   g200: '#e5e7eb', g400: '#9ca3af', g500: '#6b7280', g600: '#4b5563',
   g700: '#374151', g800: '#1f2937', g900: '#111827',
-  mujeres: '#ec4899', hombres: '#3b82f6',
+  mujeres: '#F6A334', hombres: '#1a5276',
 }
 
 const RW = 58, RH = 52, GAP = 6
