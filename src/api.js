@@ -883,3 +883,6 @@ export function checkoutDormitorio(ocupanteId) { return fetchJson(`dormitorios/c
 export function getHistorialDormitorio(id) { return fetchJson(`dormitorios/${id}/historial`, { headers: authHeaders() }) }
 export function buscarAlumnosDormitorio(q, generacion) { const params = new URLSearchParams(); if (q) params.set('q', q); if (generacion) params.set('generacion', generacion); return fetchJson(`dormitorios/buscar-alumnos?${params}`, { headers: authHeaders() }) }
 export function getGeneracionesDormitorio() { return fetchJson('dormitorios/generaciones', { headers: authHeaders() }) }
+export function buscarOperadoresDormitorio(q, empresa) { const params = new URLSearchParams(); if (q) params.set('q', q); if (empresa) params.set('empresa', empresa); return fetchJson(`dormitorios/buscar-operadores?${params}`, { headers: authHeaders() }) }
+export function getHistorialGlobalDormitorios(filtros = {}) { const params = new URLSearchParams(); Object.entries(filtros).forEach(([k, v]) => { if (v) params.set(k, v) }); return fetchJson(`dormitorios/historial-global?${params}`, { headers: authHeaders() }) }
+export function getEmpresasOperadores() { return fetchJson('dormitorios/empresas-operadores', { headers: authHeaders() }) }
