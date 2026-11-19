@@ -310,8 +310,9 @@ export default function Dormitorios() {
 
   const fmtFecha = (d, conHora = false) => {
     if (!d) return '-'
-    const fecha = new Date(d)
-    const opts = { day: '2-digit', month: 'short', year: 'numeric' }
+    const raw = String(d)
+    const fecha = new Date(raw.endsWith('Z') ? raw : raw + 'Z')
+    const opts = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Mexico_City' }
     if (conHora) { opts.hour = '2-digit'; opts.minute = '2-digit'; opts.hour12 = false }
     return fecha.toLocaleDateString('es-MX', opts)
   }
